@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>El Pergamino Perdido</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .contenedor {
+            max-width: 1100px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #f6f6f6;
+            padding: 15px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        img {
+            width: 100%;
+            max-width: 520px;
+            display: block;
+            margin: 20px auto;
+            border-radius: 12px;
+        }
+
+        hr {
+            margin: 30px 0;
+        }
+
+        .imagen-bloque {
+            padding: 20px;
+            margin-top: 25px;
+            border: 1px solid #dddddd;
+            border-radius: 12px;
+            scroll-margin-top: 20px;
+        }
+
+        .estado {
+            padding: 15px;
+            margin-top: 15px;
+            background: #f6f6f6;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .boton-secundario {
+            background: #eeeeee;
+            border: 1px solid #bbbbbb;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <h1>📜 EL PERGAMINO PERDIDO</h1>
+
+    <form method="post" action="/generar">
+        <input
+            type="text"
+            name="tema"
+            value="{{ tema or '' }}"
+            placeholder="Escribe el tema del Pergamino"
+            required
+        >
+
+        <button type="submit">
+            Generar Pergamino
+        </button>
+    </form>
+
+    {% if resultado %}
+
+        <hr>
+
+        <h2>📜 GUION</h2>
+        <pre>{{ resultado.guion }}</pre>
+
+        <hr>
+
+        <h2>🖼 IMÁGENES</h2>
+
+        <div class="estado">
+            Imágenes generadas: {{ imagenes|length }} de 8
+        </div>
+
+        {% for escena in resultado.plan_visual %}
+            {% set numero = loop.index %}
+            {% set imagen_url = imagenes.get(numero) %}
+
+            <div
+                class="imagen-bloque"
+                id="imagen-{{ numero }}"
+            >
+                {% if numero == 1 %}
+                    <h3>Imagen 1 — Portada</h3>
+                {% else %}
+                    <h3>Imagen {{ numero }}</h3>
+                {% endif %}
+
+                <pre>Tipo: {{ escena.tipo }}
+
+Motivo: {{ escena.motivo }}
+
+Edición: {{ escena.edicion }}
+
+Búsquedas:
+{% for busqueda in escena.buscar %}- {{ busqueda }}
+{% endfor %}
+
+Prompt IA: {{ escena.prompt }}</pre>
+
+                {% if imagen_url %}
+                    <img
+                        src="{{ imagen_url }}"
+                        alt="Imagen {{ numero }} generada"
+                    >
+                {% endif %}
+
+                {% if imagen_generando == numero %}
+                    <div class="estado">
+                        Generando la Imagen {{ numero }}.
+                        Puede tardar varios minutos.
+                    </div>
+
+                    <form
+                        id="form-comprobar-imagen-{{ numero }}"
+                        method="post"
+                        action="/comprobar-imagen/{{ numero }}#imagen-{{ numero }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <button
+                            class="boton-secundario"
+                            type="submit"
+                        >
+                            Comprobar si la imagen está lista
+                        </button>
+                    </form>
+
+                    <script>
+                        window.setTimeout(function () {
+                            const formulario =
+                                document.getElementById(
+                                    "form-comprobar-imagen-{{ numero }}"
+                                );
+
+                            if (formulario) {
+                                formulario.submit();
+                            }
+                        }, 10000);
+                    </script>
+
+                {% elif imagen_generando %}
+                    <div class="estado">
+                        Espera a que termine la Imagen
+                        {{ imagen_generando }}.
+                    </div>
+
+                {% else %}
+                    <form
+                        method="post"
+                        action="/generar-imagen/{{ numero }}#imagen-{{ numero }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <button type="submit">
+                            {% if imagen_url %}
+                                Regenerar Imagen {{ numero }}
+                            {% else %}
+                                Generar Imagen {{ numero }}
+                            {% endif %}
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <hr>
+
+        <h2>🎵 MÚSICA</h2>
+        <pre>{{ resultado.musica }}</pre>
+
+        <hr>
+
+        <h2>🎙 MINIMAX</h2>
+        <pre>{{ resultado.minimax }}</pre>
+
+        <hr>
+
+        <h2>📱 PUBLICACIÓN</h2>
+
+        <pre>Título:
+{{ resultado.publicacion.titulo }}
+
+Descripción:
+{{ resultado.publicacion.descripcion }}
+
+Hashtags:
+{% for hashtag in resultado.publicacion.hashtags %}{{ hashtag }} {% endfor %}
+
+Comentario fijado:
+{{ resultado.publicacion.comentario_fijado }}</pre>
+
+    {% endif %}
+
+</div>
+
+</body>
+
+</html>
