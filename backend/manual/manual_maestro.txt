@@ -1,4 +1,24 @@
 
+EL PERGAMINO PERDIDO
+MANUAL MAESTRO — VERSIÓN 1.4
+
+Esta versión sustituye las reglas incompatibles de las versiones anteriores.
+
+Cambios obligatorios de la versión 1.3:
+
+* portada fija de 3 segundos al inicio de todos los Reels;
+* guion aprobado antes de generar la voz;
+* voz generada automáticamente desde proyecto.json;
+* duración real de la voz aprobada antes de preparar imágenes;
+* duración estándar aceptable de hasta 92 segundos;
+* decisión manual entre aprobar o rehacer cuando la voz supera 92 segundos;
+* escucha y aprobación humana obligatorias para todas las voces;
+* proyecto.json como fuente única de verdad;
+* máximo de cinco hashtags;
+* formato final de publicación unificado.
+
+⸻
+
 16. Manual Maestro de Recursos Visuales
 
 Principio fundamental
@@ -116,17 +136,18 @@ Cada Pergamino debe dar la sensación de estar viendo un documental de alta cali
 
 17. Control obligatorio de duración
 
-Límite absoluto
+Objetivo editorial
 
-Ningún Reel de El Pergamino Perdido podrá superar los 90 segundos de duración total una vez exportado.
+La duración objetivo del Reel terminado será de 75 a 90 segundos. Una narración de hasta 92 segundos se considerará aceptable sin aviso de exceso, pero siempre deberá escucharse y aprobarse manualmente.
 
-Este límite no es orientativo. Es obligatorio.
+Si la narración supera los 92 segundos, la aplicación no la rechazará automáticamente: mantendrá las imágenes bloqueadas y mostrará dos decisiones manuales, aprobar la voz igualmente o ajustar el guion y preparar una nueva voz.
 
 Margen de seguridad
 
-* La duración objetivo del Reel terminado será de 75 a 85 segundos.
+* La duración preferente del Reel terminado será de 75 a 90 segundos.
 * La narración deberá quedar preferentemente entre 74 y 80 segundos.
-* La narración nunca podrá superar los 84 segundos, para reservar margen a la apertura, el cierre y las pausas visuales.
+* Una narración de hasta 92 segundos superará automáticamente el control de duración, pero no el control humano de calidad.
+* Una narración superior a 92 segundos requerirá una decisión manual explícita antes de desbloquear las imágenes.
 
 Control del guion
 
@@ -137,16 +158,25 @@ Control del guion
 
 Verificación obligatoria
 
-Después de generar la voz en ElevenLabs:
+El orden obligatorio será:
 
-1. Comprobar la duración exacta del audio.
-2. Si supera los 84 segundos, recortar el guion y generar de nuevo la narración.
-3. No preparar el índice visual definitivo ni generar las ocho imágenes hasta aprobar la duración real de la voz.
-4. Antes de publicar, comprobar que el Reel exportado no supera los 90 segundos.
+1. Redactar y mostrar el guion.
+2. Obtener la aprobación humana del guion.
+3. Recuperar automáticamente el guion aprobado desde proyecto.json.
+4. Generar voz.mp3 mediante ElevenLabs sin pedir que el usuario vuelva a copiar el texto.
+5. Comprobar automáticamente la duración exacta del audio.
+6. Mostrar siempre el reproductor para escuchar la narración completa.
+7. Si dura 92 segundos o menos, permitir su aprobación manual normal.
+8. Si supera los 92 segundos, mantener las imágenes bloqueadas y mostrar dos botones: aprobar la voz igualmente o ajustar el guion y preparar una nueva voz.
+9. Si se ajusta el guion, mostrarlo para una nueva aprobación humana antes de generar otra narración.
+10. Solo después de escuchar y aprobar manualmente la voz, preparar el índice visual definitivo y las ocho imágenes.
+11. Antes de publicar, comprobar la duración final y confirmar expresamente cualquier excepción al objetivo de 90 segundos.
+
+No se volverá a pedir al usuario un guion que ya exista en proyecto.json.
 
 Regla de decisión
 
-Si hay que elegir entre incluir un dato adicional o respetar la duración, se respetará siempre el límite de 90 segundos.
+Se priorizará el objetivo de 90 segundos. Una duración superior solo se conservará cuando el usuario la escuche y la apruebe expresamente porque el contenido o la calidad de la voz justifican la excepción.
 
 ⸻
 
@@ -162,10 +192,14 @@ Estructura visual
 
 Cada Reel utilizará siempre ocho imágenes:
 
-* una portada independiente, colocada al principio durante aproximadamente un segundo;
+* una portada independiente, colocada al principio durante exactamente 3 segundos;
 * siete imágenes para desarrollar el cuerpo del vídeo.
 
 La portada será también el primer impacto visual del Reel. No se considerará un elemento decorativo separado de la narración.
+
+La duración de 3 segundos es una regla fija y no una estimación. Sustituye cualquier referencia anterior a una portada aproximada de un segundo.
+
+La narración podrá comenzar desde el primer segundo mientras la portada permanece visible durante los 3 segundos completos.
 
 Criterios de la primera imagen
 
@@ -217,3 +251,57 @@ Criterio confirmado por rendimiento
 El Pergamino VI, dedicado al Paso Dyatlov, confirmó la importancia de esta regla: su tasa de omisión fue del 29,7 %, frente al 57,9 % del Pergamino IV sobre el mecanismo de Anticitera, y su tiempo medio de reproducción alcanzó 54 segundos, frente a 39 segundos.
 
 Estos datos no garantizan el rendimiento futuro, pero demuestran que una primera escena con conflicto humano inmediato y un gancho claro puede mejorar de forma sustancial la retención y acelerar la distribución del Reel entre personas que todavía no siguen la cuenta.
+
+⸻
+
+19. Fuente única de verdad y persistencia
+
+Cada Pergamino tendrá una carpeta propia y un archivo proyecto.json.
+
+proyecto.json será la fuente única de verdad para:
+
+* identificador del proyecto;
+* tema;
+* guion vigente;
+* plan visual;
+* música;
+* datos de publicación.
+
+La aplicación deberá:
+
+* guardar automáticamente el proyecto después de generarlo;
+* permitir reabrirlo sin repetir datos;
+* guardar voz.mp3 y voz.json dentro de la carpeta del proyecto;
+* guardar las ocho imágenes dentro de la carpeta del proyecto;
+* impedir que un Pergamino sobrescriba archivos de otro;
+* archivar las voces anteriores cuando cambie el guion;
+* detectar si el guion ha cambiado después de generar la voz;
+* bloquear imágenes hasta que la voz correspondiente al guion vigente esté aprobada.
+
+El usuario solo aprobará manualmente los puntos críticos:
+
+1. guion final;
+2. voz final;
+3. fotografías o recreaciones sensibles;
+4. portada;
+5. montaje final;
+6. publicación.
+
+⸻
+
+20. Bloque final de publicación
+
+Título obligatorio:
+
+📜 EL PERGAMINO [número] — [título]
+
+Reglas:
+
+* el título comenzará siempre con el símbolo del pergamino;
+* se utilizarán como máximo cinco hashtags;
+* se entregarán siempre título, pie de foto, hashtags y comentario fijado;
+* se recordará publicar el comentario y fijarlo en Instagram.
+
+Comentario fijado oficial:
+
+📜 ¿Qué otro misterio histórico te gustaría que investigáramos en un próximo Pergamino? Te leo.
