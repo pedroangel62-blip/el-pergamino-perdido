@@ -30,6 +30,15 @@ from starlette.concurrency import run_in_threadpool
 
 from backend.busqueda_imagenes import buscar_imagenes_reales
 from backend.imagenes import generar_imagen
+from backend.voz import (
+    aprobar_voz,
+    cargar_estado_voz,
+    generar_voz,
+    marcar_generacion_iniciada,
+    obtener_configuracion,
+    obtener_ruta_audio,
+    voz_esta_aprobada,
+)
 
 
 TOTAL_IMAGENES = 8
@@ -706,6 +715,132 @@ def obtener_imagenes_generadas(
     return imagenes
 
 
+def obtener_estado_voz_interfaz(
+    proyecto_id: str
+) -> dict | None:
+    directorio = obtener_directorio_proyecto(
+        proyecto_id
+    )
+    estado = cargar_estado_voz(directorio)
+
+    if not estado:
+        return None
+
+    estado = dict(estado)
+
+    if os.path.isfile(obtener_ruta_audio(directorio)):
+        marca_tiempo = int(time.time())
+        estado["audio_url"] = (
+            f"/proyectos/{proyecto_id}/voz.mp3"
+            f"?v={marca_tiempo}"
+        )
+
+    return estado
+
+
+def exigir_voz_aprobada(
+    proyecto_id: str,
+    resultado: dict
+) -> None:
+    guion = str(resultado.get("guion", "")).strip()
+
+    if not voz_esta_aprobada(
+        obtener_directorio_proyecto(proyecto_id),
+        guion
+    ):
+        raise ValueError(
+            "Antes de preparar imágenes debes generar, escuchar "
+            "y aprobar la voz."
+        )
+
+
+def ajustar_guion_a_duracion(
+    guion: str,
+    duracion_actual: float
+) -> str:
+    guion = str(guion).strip()
+
+    if not guion:
+        raise ValueError(
+            "El guion está vacío."
+        )
+
+    if duracion_actual <= 0:
+        raise ValueError(
+            "La duración actual no es válida."
+        )
+
+    palabras_actuales = len(guion.split())
+    proporcion = min(
+        0.95,
+        78.0 / duracion_actual
+    )
+    maximo_palabras = max(
+        60,
+        int(palabras_actuales * proporcion * 0.96)
+    )
+    respuesta = client.responses.create(
+        model="gpt-5.6-luna",
+        input=f"""
+Acorta el siguiente guion de El Pergamino Perdido para que su narración
+quede entre 76 y 80 segundos en la misma voz. El audio actual dura
+{duracion_actual:.2f} segundos.
+
+REGLAS OBLIGATORIAS
+
+- Devuelve únicamente la narración final, sin títulos ni explicaciones.
+- Máximo aproximado: {maximo_palabras} palabras.
+- Conserva el gancho inicial, los hechos esenciales y la conclusión.
+- Mantén exactamente el mismo orden narrativo.
+- No inventes datos, fechas, nombres ni citas.
+- Elimina primero repeticiones, adjetivos y detalles secundarios.
+- Mantén el tono documental, directo y misterioso.
+- No añadas saludos ni instrucciones para locución.
+
+GUION ORIGINAL
+
+{guion}
+"""
+    )
+    guion_ajustado = str(
+        respuesta.output_text
+    ).strip()
+
+    if not guion_ajustado:
+        raise ValueError(
+            "No se pudo obtener el guion ajustado."
+        )
+
+    if len(guion_ajustado.split()) >= palabras_actuales:
+        raise ValueError(
+            "El ajuste no redujo la longitud del guion."
+        )
+
+    return guion_ajustado
+
+
+def archivar_voz_anterior(
+    directorio_proyecto: str
+) -> None:
+    marca = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    for nombre in ("voz.mp3", "voz.json"):
+        ruta = os.path.join(
+            directorio_proyecto,
+            nombre
+        )
+
+        if not os.path.exists(ruta):
+            continue
+
+        base, extension = os.path.splitext(nombre)
+        destino = os.path.join(
+            directorio_proyecto,
+            f"{base}-anterior-{marca}{extension}"
+        )
+        os.replace(ruta, destino)
+
+
 def requiere_fotografia_real(escena: dict) -> bool:
     tipo = normalizar_texto(
         escena.get("tipo", "")
@@ -894,7 +1029,9 @@ async def inicio(request: Request):
             "imagenes": {},
             "candidatas": {},
             "selecciones": {},
-            "imagen_generando": None
+            "imagen_generando": None,
+            "voz": None,
+            "voz_generando": False
         }
     )
 
@@ -943,7 +1080,11 @@ async def abrir_proyecto(
             "selecciones": obtener_selecciones_guardadas(
                 proyecto_id
             ),
-            "imagen_generando": None
+            "imagen_generando": None,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
         }
     )
 
@@ -1002,7 +1143,344 @@ TEMA
             "imagenes": {},
             "candidatas": {},
             "selecciones": {},
-            "imagen_generando": None
+            "imagen_generando": None,
+            "voz": None,
+            "voz_generando": False
+        }
+    )
+
+
+@app.post(
+    "/generar-voz",
+    response_class=HTMLResponse
+)
+async def iniciar_generacion_voz(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    resultado_json: str = Form(...),
+    tema: str = Form("")
+):
+    try:
+        resultado_formulario = json.loads(
+            resultado_json
+        )
+        proyecto_id = obtener_proyecto_id(
+            resultado_formulario
+        )
+        tema_guardado, resultado = cargar_proyecto(
+            proyecto_id
+        )
+        obtener_configuracion()
+    except json.JSONDecodeError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="Los datos del Pergamino no son válidos."
+        ) from error
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error)
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    guion = str(resultado.get("guion", "")).strip()
+
+    if not guion:
+        raise HTTPException(
+            status_code=400,
+            detail="El guion está vacío."
+        )
+
+    directorio = obtener_directorio_proyecto(
+        proyecto_id
+    )
+    estado_actual = cargar_estado_voz(directorio)
+
+    if (
+        estado_actual
+        and estado_actual.get("estado") == "generando"
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="La voz ya se está generando."
+        )
+
+    marcar_generacion_iniciada(
+        directorio,
+        guion
+    )
+    background_tasks.add_task(
+        generar_voz,
+        directorio,
+        guion
+    )
+    resultado_json_guardado = json.dumps(
+        resultado,
+        ensure_ascii=False
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "tema": tema_guardado or tema,
+            "resultado": resultado,
+            "resultado_json": resultado_json_guardado,
+            "imagenes": obtener_imagenes_generadas(
+                proyecto_id
+            ),
+            "candidatas": obtener_candidatas_guardadas(
+                proyecto_id
+            ),
+            "selecciones": obtener_selecciones_guardadas(
+                proyecto_id
+            ),
+            "imagen_generando": None,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": True
+        }
+    )
+
+
+@app.post(
+    "/comprobar-voz",
+    response_class=HTMLResponse
+)
+async def comprobar_voz(
+    request: Request,
+    resultado_json: str = Form(...),
+    tema: str = Form("")
+):
+    try:
+        resultado_formulario = json.loads(
+            resultado_json
+        )
+        proyecto_id = obtener_proyecto_id(
+            resultado_formulario
+        )
+        tema_guardado, resultado = cargar_proyecto(
+            proyecto_id
+        )
+    except json.JSONDecodeError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="Los datos del Pergamino no son válidos."
+        ) from error
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error)
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    voz = obtener_estado_voz_interfaz(
+        proyecto_id
+    )
+    voz_generando = bool(
+        voz and voz.get("estado") == "generando"
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "tema": tema_guardado or tema,
+            "resultado": resultado,
+            "resultado_json": json.dumps(
+                resultado,
+                ensure_ascii=False
+            ),
+            "imagenes": obtener_imagenes_generadas(
+                proyecto_id
+            ),
+            "candidatas": obtener_candidatas_guardadas(
+                proyecto_id
+            ),
+            "selecciones": obtener_selecciones_guardadas(
+                proyecto_id
+            ),
+            "imagen_generando": None,
+            "voz": voz,
+            "voz_generando": voz_generando
+        }
+    )
+
+
+@app.post(
+    "/aprobar-voz",
+    response_class=HTMLResponse
+)
+async def confirmar_voz(
+    request: Request,
+    resultado_json: str = Form(...),
+    tema: str = Form("")
+):
+    try:
+        resultado_formulario = json.loads(
+            resultado_json
+        )
+        proyecto_id = obtener_proyecto_id(
+            resultado_formulario
+        )
+        tema_guardado, resultado = cargar_proyecto(
+            proyecto_id
+        )
+        aprobar_voz(
+            obtener_directorio_proyecto(proyecto_id),
+            str(resultado.get("guion", ""))
+        )
+    except json.JSONDecodeError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="Los datos del Pergamino no son válidos."
+        ) from error
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error)
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "tema": tema_guardado or tema,
+            "resultado": resultado,
+            "resultado_json": json.dumps(
+                resultado,
+                ensure_ascii=False
+            ),
+            "imagenes": obtener_imagenes_generadas(
+                proyecto_id
+            ),
+            "candidatas": obtener_candidatas_guardadas(
+                proyecto_id
+            ),
+            "selecciones": obtener_selecciones_guardadas(
+                proyecto_id
+            ),
+            "imagen_generando": None,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
+        }
+    )
+
+
+@app.post(
+    "/ajustar-guion",
+    response_class=HTMLResponse
+)
+async def ajustar_guion(
+    request: Request,
+    resultado_json: str = Form(...),
+    tema: str = Form("")
+):
+    try:
+        resultado_formulario = json.loads(
+            resultado_json
+        )
+        proyecto_id = obtener_proyecto_id(
+            resultado_formulario
+        )
+        tema_guardado, resultado = cargar_proyecto(
+            proyecto_id
+        )
+        directorio = obtener_directorio_proyecto(
+            proyecto_id
+        )
+        estado = cargar_estado_voz(directorio)
+
+        if (
+            not estado
+            or estado.get("estado") != "excede_limite"
+        ):
+            raise ValueError(
+                "El guion solo puede ajustarse cuando la voz "
+                "supera 92 segundos."
+            )
+
+        duracion = estado.get("duracion_segundos")
+
+        if not isinstance(duracion, (int, float)):
+            raise ValueError(
+                "La duración de la voz no es válida."
+            )
+
+        guion_ajustado = await run_in_threadpool(
+            ajustar_guion_a_duracion,
+            str(resultado.get("guion", "")),
+            float(duracion)
+        )
+        resultado["guion"] = guion_ajustado
+        archivar_voz_anterior(directorio)
+        guardar_proyecto(
+            proyecto_id,
+            tema_guardado,
+            resultado
+        )
+    except json.JSONDecodeError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="Los datos del Pergamino no son válidos."
+        ) from error
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error)
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "No se pudo ajustar el guion automáticamente: "
+                f"{error}"
+            )
+        ) from error
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "tema": tema_guardado or tema,
+            "resultado": resultado,
+            "resultado_json": json.dumps(
+                resultado,
+                ensure_ascii=False
+            ),
+            "imagenes": obtener_imagenes_generadas(
+                proyecto_id
+            ),
+            "candidatas": obtener_candidatas_guardadas(
+                proyecto_id
+            ),
+            "selecciones": obtener_selecciones_guardadas(
+                proyecto_id
+            ),
+            "imagen_generando": None,
+            "voz": None,
+            "voz_generando": False
         }
     )
 
@@ -1048,6 +1526,10 @@ async def buscar_fotografias(
 
     try:
         proyecto_id = obtener_proyecto_id(resultado)
+        exigir_voz_aprobada(
+            proyecto_id,
+            resultado
+        )
     except ValueError as error:
         raise HTTPException(
             status_code=400,
@@ -1096,7 +1578,11 @@ async def buscar_fotografias(
             "selecciones": obtener_selecciones_guardadas(
                 proyecto_id
             ),
-            "imagen_generando": None
+            "imagen_generando": None,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
         }
     )
 
@@ -1150,6 +1636,10 @@ async def seleccionar_fotografia(
 
     try:
         proyecto_id = obtener_proyecto_id(resultado)
+        exigir_voz_aprobada(
+            proyecto_id,
+            resultado
+        )
         candidatas = cargar_candidatas_imagen(
             proyecto_id,
             numero
@@ -1230,7 +1720,11 @@ async def seleccionar_fotografia(
             "selecciones": obtener_selecciones_guardadas(
                 proyecto_id
             ),
-            "imagen_generando": None
+            "imagen_generando": None,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
         }
     )
 
@@ -1266,6 +1760,10 @@ async def iniciar_generacion_imagen(
 
     try:
         proyecto_id = obtener_proyecto_id(resultado)
+        exigir_voz_aprobada(
+            proyecto_id,
+            resultado
+        )
     except ValueError as error:
         raise HTTPException(
             status_code=400,
@@ -1351,7 +1849,11 @@ async def iniciar_generacion_imagen(
             "selecciones": obtener_selecciones_guardadas(
                 proyecto_id
             ),
-            "imagen_generando": numero
+            "imagen_generando": numero,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
         }
     )
 
@@ -1403,6 +1905,10 @@ async def comprobar_imagen(
             "selecciones": obtener_selecciones_guardadas(
                 proyecto_id
             ),
-            "imagen_generando": imagen_generando
+            "imagen_generando": imagen_generando,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
         }
     )

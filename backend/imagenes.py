@@ -4,15 +4,13 @@ import os
 from openai import OpenAI
 
 
-DIRECTORIO_PREDETERMINADO = "backend/imagenes"
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def generar_imagen(
     prompt: str,
     numero: int,
-    directorio_destino: str = DIRECTORIO_PREDETERMINADO
+    directorio_salida: str = "backend/imagenes"
 ) -> str:
     if not prompt.strip():
         raise ValueError("El prompt está vacío.")
@@ -22,9 +20,9 @@ def generar_imagen(
             "El número de imagen debe estar entre 1 y 8."
         )
 
-    if not directorio_destino.strip():
+    if not isinstance(directorio_salida, str) or not directorio_salida:
         raise ValueError(
-            "El directorio de destino está vacío."
+            "La carpeta de salida de la imagen no es válida."
         )
 
     resultado = client.images.generate(
@@ -39,15 +37,13 @@ def generar_imagen(
     )
 
     os.makedirs(
-        directorio_destino,
+        directorio_salida,
         exist_ok=True
     )
 
-    nombre = f"imagen{numero}.png"
-
     ruta = os.path.join(
-        directorio_destino,
-        nombre
+        directorio_salida,
+        f"imagen{numero}.png"
     )
 
     with open(ruta, "wb") as archivo:

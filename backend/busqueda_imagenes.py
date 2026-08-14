@@ -713,10 +713,12 @@ def extraer_grupos_identidad(
     if grupos_fuertes or grupos_nombres:
         grupos = grupos_fuertes + grupos_nombres
     else:
-        grupos = [
-            grupo
-            for _, grupo in grupos_con_prioridad
-        ]
+        # Si solo aparecen nombres propios de una palabra, el primero
+        # suele ser el sujeto solicitado y los siguientes, el contexto
+        # (por ejemplo: "Alaska ... la Movida"). Aceptarlos todos como
+        # alternativas permitiría validar una foto de la Movida sin
+        # Alaska. Conservamos únicamente el sujeto principal.
+        grupos = [grupos_con_prioridad[0][1]]
 
     grupos = [
         grupo
@@ -765,9 +767,6 @@ def coincidencia_contextual(
         return False
 
     coincidencias = tokens_consulta & tokens_metadatos
-    if len(coincidencias) < 2:
-        return False
-
     anclas = {
         token
         for token in tokens_consulta
@@ -777,9 +776,17 @@ def coincidencia_contextual(
     }
 
     if anclas:
+        # En una escena contextual basta una coincidencia distintiva
+        # acreditada (por ejemplo, "Movida" o "Madrid"). Exigir dos
+        # palabras descartaba fotografías válidas con títulos o pies
+        # de foto breves. Los sujetos con nombre propio se validan por
+        # la ruta estricta de coincidencia_consulta_individual().
         return bool(anclas & tokens_metadatos)
 
-    return True
+    # Si la consulta no contiene un ancla distintiva, conservamos una
+    # exigencia mínima de dos rasgos contextuales para no aceptar una
+    # coincidencia genérica aislada.
+    return len(coincidencias) >= 2
 
 
 def coincidencia_consulta_individual(

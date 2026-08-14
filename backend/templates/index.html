@@ -82,6 +82,44 @@
             text-align: center;
         }
 
+        .voz-bloque {
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid #dddddd;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+
+        .voz-bloque audio {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .estado-correcto {
+            color: #174f33;
+            border: 1px solid #1f8f55;
+            background: #eefaf3;
+        }
+
+        .estado-aviso {
+            color: #6b4700;
+            border: 1px solid #e4c75c;
+            background: #fff8df;
+        }
+
+        .estado-error {
+            color: #7a1c1c;
+            border: 1px solid #c65a5a;
+            background: #fff0f0;
+        }
+
+        .duracion-voz {
+            margin: 15px 0 0;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
         .aviso-real {
             padding: 15px;
             margin-top: 15px;
@@ -301,7 +339,195 @@
 
         <hr>
 
+        <h2>🎙 VOZ — ELEVENLABS</h2>
+
+        <div class="voz-bloque">
+            {% if voz_generando or (voz and voz.estado == 'generando') %}
+                <div class="estado estado-aviso">
+                    Generando la narración desde el guion aprobado.
+                    Puede tardar unos minutos.
+                </div>
+
+                <form
+                    id="form-comprobar-voz"
+                    method="post"
+                    action="/comprobar-voz"
+                >
+                    <input
+                        type="hidden"
+                        name="tema"
+                        value="{{ tema or '' }}"
+                    >
+
+                    <textarea
+                        name="resultado_json"
+                        hidden
+                    >{{ resultado_json }}</textarea>
+
+                    <button
+                        class="boton-secundario"
+                        type="submit"
+                    >
+                        Comprobar si la voz está lista
+                    </button>
+                </form>
+
+                <script>
+                    window.setTimeout(function () {
+                        const formulario =
+                            document.getElementById(
+                                "form-comprobar-voz"
+                            );
+
+                        if (formulario) {
+                            formulario.submit();
+                        }
+                    }, 5000);
+                </script>
+
+            {% elif voz and voz.estado == 'error' %}
+                <div class="estado estado-error">
+                    {{ voz.error }}
+                </div>
+
+                <form method="post" action="/generar-voz">
+                    <input
+                        type="hidden"
+                        name="tema"
+                        value="{{ tema or '' }}"
+                    >
+
+                    <textarea
+                        name="resultado_json"
+                        hidden
+                    >{{ resultado_json }}</textarea>
+
+                    <button type="submit">
+                        Reintentar generación de voz
+                    </button>
+                </form>
+
+            {% elif voz and voz.audio_url %}
+                <audio controls preload="metadata">
+                    <source
+                        src="{{ voz.audio_url }}"
+                        type="audio/mpeg"
+                    >
+                    Tu navegador no puede reproducir este audio.
+                </audio>
+
+                <p class="duracion-voz">
+                    Duración: {{ '%.2f'|format(voz.duracion_segundos) }}
+                    segundos
+                </p>
+
+                {% if voz.estado == 'excede_limite' %}
+                    <div class="estado estado-error">
+                        La narración supera los 92 segundos. Escúchala
+                        completa y decide si la apruebas igualmente o
+                        si prefieres ajustar el guion y rehacerla.
+                    </div>
+
+                    <form method="post" action="/aprobar-voz">
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <button type="submit">
+                            Aprobar voz igualmente
+                        </button>
+                    </form>
+
+                    <form method="post" action="/ajustar-guion">
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <button type="submit">
+                            Ajustar guion y preparar nueva voz
+                        </button>
+                    </form>
+
+                {% elif voz.estado == 'pendiente_aprobacion' %}
+                    <div class="estado estado-aviso">
+                        Escucha el audio completo. Si la pronunciación,
+                        el ritmo y la duración son correctos, apruébalo.
+                    </div>
+
+                    <form method="post" action="/aprobar-voz">
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <button type="submit">
+                            Aprobar voz y desbloquear imágenes
+                        </button>
+                    </form>
+
+                {% elif voz.estado == 'aprobada' %}
+                    <div class="estado estado-correcto">
+                        Voz aprobada. Ya puedes continuar con las imágenes.
+                    </div>
+                {% endif %}
+
+            {% else %}
+                <div class="estado estado-aviso">
+                    Revisa el guion. Al continuar, quedará aprobado y se
+                    enviará automáticamente a ElevenLabs.
+                </div>
+
+                <form method="post" action="/generar-voz">
+                    <input
+                        type="hidden"
+                        name="tema"
+                        value="{{ tema or '' }}"
+                    >
+
+                    <textarea
+                        name="resultado_json"
+                        hidden
+                    >{{ resultado_json }}</textarea>
+
+                    <button type="submit">
+                        Aprobar guion y generar voz
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        <hr>
+
         <h2>🖼 IMÁGENES</h2>
+
+        {% set voz_aprobada = voz and voz.estado == 'aprobada' %}
+
+        {% if not voz_aprobada %}
+            <div class="estado estado-aviso">
+                La preparación de imágenes está bloqueada hasta aprobar
+                manualmente la voz después de escucharla.
+            </div>
+        {% endif %}
 
         <div class="estado">
             Imágenes guardadas: {{ imagenes|length }} de 8
@@ -358,7 +584,13 @@ Prompt IA: {{ escena.prompt }}</pre>
                     {% endif %}
                 {% endif %}
 
-                {% if requiere_foto_real %}
+                {% if not voz_aprobada %}
+
+                    <div class="estado estado-aviso">
+                        Controles bloqueados hasta aprobar la voz.
+                    </div>
+
+                {% elif requiere_foto_real %}
 
                     <div class="aviso-real">
                         Esta escena requiere una fotografía real.
