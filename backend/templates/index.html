@@ -82,9 +82,192 @@
             text-align: center;
         }
 
+        .aviso-real {
+            padding: 15px;
+            margin-top: 15px;
+            background: #fff8df;
+            border: 1px solid #e4c75c;
+            border-radius: 8px;
+        }
+
         .boton-secundario {
             background: #eeeeee;
             border: 1px solid #bbbbbb;
+        }
+
+        .candidatas-titulo {
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+
+        .candidatas-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(240px, 1fr)
+            );
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .candidata {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .candidata-seleccionada {
+            border: 3px solid #1f8f55;
+            background: #eefaf3;
+        }
+
+        .candidata img {
+            width: 100%;
+            height: 260px;
+            max-width: none;
+            margin: 0 0 12px;
+            border-radius: 8px;
+            object-fit: contain;
+            background: #eeeeee;
+        }
+
+        .candidata-descripcion {
+            margin: 0 0 12px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .candidata-enlaces {
+            margin-top: auto;
+        }
+
+        .form-seleccionar {
+            margin: 0;
+        }
+
+        .boton-seleccionar {
+            margin-top: 8px;
+            border: 1px solid #176f43;
+            border-radius: 7px;
+            color: #ffffff;
+            background: #1f8f55;
+        }
+
+        .boton-seleccionar:hover:not(:disabled) {
+            background: #176f43;
+        }
+
+        .boton-seleccionar:disabled {
+            cursor: default;
+            border-color: #1f8f55;
+            color: #1f5139;
+            background: #cfeedd;
+        }
+
+        .confirmacion-seleccion {
+            padding: 12px;
+            margin-top: 12px;
+            border: 1px solid #1f8f55;
+            border-radius: 8px;
+            color: #174f33;
+            background: #eefaf3;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .enlace-candidata {
+            display: block;
+            box-sizing: border-box;
+            padding: 11px;
+            margin-top: 8px;
+            border: 1px solid #777777;
+            border-radius: 7px;
+            color: #111111;
+            background: #ffffff;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .enlace-candidata:hover {
+            background: #eeeeee;
+        }
+
+        .nota-candidatas {
+            margin-top: 15px;
+            padding: 12px;
+            background: #eef5ff;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .alternativa-ia {
+            margin-top: 18px;
+            padding: 14px;
+            border: 1px solid #b86b00;
+            border-radius: 8px;
+            background: #fff4e5;
+        }
+
+        .alternativa-ia summary {
+            padding: 14px;
+            border: 1px solid #8a4f00;
+            border-radius: 7px;
+            color: #ffffff;
+            background: #b86b00;
+            cursor: pointer;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            list-style: none;
+        }
+
+        .alternativa-ia summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .alternativa-ia summary:hover {
+            background: #8a4f00;
+        }
+
+        .alternativa-ia[open] summary {
+            margin-bottom: 14px;
+        }
+
+        .alternativa-ia p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .boton-generar-ia {
+            border: 1px solid #8a4f00;
+            border-radius: 7px;
+            color: #ffffff;
+            background: #b86b00;
+        }
+
+        .boton-generar-ia:hover {
+            background: #8a4f00;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 15px;
+            }
+
+            .contenedor {
+                padding: 18px;
+            }
+
+            .imagen-bloque {
+                padding: 15px;
+            }
+
+            .candidatas-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -121,12 +304,23 @@
         <h2>🖼 IMÁGENES</h2>
 
         <div class="estado">
-            Imágenes generadas: {{ imagenes|length }} de 8
+            Imágenes guardadas: {{ imagenes|length }} de 8
         </div>
 
         {% for escena in resultado.plan_visual %}
             {% set numero = loop.index %}
             {% set imagen_url = imagenes.get(numero) %}
+            {% set candidatas_escena = candidatas.get(numero, []) %}
+            {% set seleccion_escena = selecciones.get(numero) %}
+            {% set tipo_normalizado =
+                escena.tipo|default('')|lower|replace('_', ' ')|replace('-', ' ')
+            %}
+            {% set requiere_foto_real =
+                'fotografía real' in tipo_normalizado
+                or 'fotografia real' in tipo_normalizado
+                or 'restauración' in tipo_normalizado
+                or 'restauracion' in tipo_normalizado
+            %}
 
             <div
                 class="imagen-bloque"
@@ -153,11 +347,200 @@ Prompt IA: {{ escena.prompt }}</pre>
                 {% if imagen_url %}
                     <img
                         src="{{ imagen_url }}"
-                        alt="Imagen {{ numero }} generada"
+                        alt="Imagen {{ numero }} guardada"
                     >
+
+                    {% if seleccion_escena %}
+                        <div class="confirmacion-seleccion">
+                            Fotografía real seleccionada y guardada como
+                            Imagen {{ numero }}.
+                        </div>
+                    {% endif %}
                 {% endif %}
 
-                {% if imagen_generando == numero %}
+                {% if requiere_foto_real %}
+
+                    <div class="aviso-real">
+                        Esta escena requiere una fotografía real.
+                        No se generará automáticamente con inteligencia
+                        artificial.
+                    </div>
+
+                    {% if imagen_generando %}
+                        <div class="estado">
+                            Espera a que termine la Imagen
+                            {{ imagen_generando }}.
+                        </div>
+                    {% else %}
+                        <form
+                            method="post"
+                            action="/buscar-imagenes/{{ numero }}#imagen-{{ numero }}"
+                        >
+                            <input
+                                type="hidden"
+                                name="tema"
+                                value="{{ tema or '' }}"
+                            >
+
+                            <textarea
+                                name="resultado_json"
+                                hidden
+                            >{{ resultado_json }}</textarea>
+
+                            <button type="submit">
+                                {% if candidatas_escena %}
+                                    Volver a buscar fotografías reales
+                                {% else %}
+                                    Buscar fotografías reales
+                                {% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    {% if candidatas_escena %}
+                        <h4 class="candidatas-titulo">
+                            Fotografías encontradas
+                        </h4>
+
+                        <div class="candidatas-grid">
+                            {% for candidata in candidatas_escena %}
+                                {% set candidata_seleccionada =
+                                    imagen_url
+                                    and seleccion_escena
+                                    and seleccion_escena.get('fotografia', {}).get('imagen_url') == candidata.imagen_url
+                                %}
+                                {% set candidata_simulada =
+                                    candidata.imagen_url
+                                    and candidata.imagen_url[:5] == 'data:'
+                                %}
+
+                                <article class="candidata{% if candidata_seleccionada %} candidata-seleccionada{% endif %}">
+                                    <img
+                                        src="{{ candidata.miniatura_url }}"
+                                        alt="Candidata {{ loop.index }} para la Imagen {{ numero }}"
+                                        loading="lazy"
+                                        referrerpolicy="no-referrer"
+                                    >
+
+                                    {% if candidata.descripcion %}
+                                        <p class="candidata-descripcion">
+                                            {{ candidata.descripcion }}
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="candidata-enlaces">
+                                        {% if candidata.imagen_url %}
+                                            <a
+                                                class="enlace-candidata"
+                                                href="{{ candidata.imagen_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                Abrir fotografía original
+                                            </a>
+                                        {% endif %}
+
+                                        {% if candidata.fuente_url %}
+                                            <a
+                                                class="enlace-candidata"
+                                                href="{{ candidata.fuente_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                Ver página de origen
+                                            </a>
+                                        {% endif %}
+
+                                        <form
+                                            class="form-seleccionar"
+                                            method="post"
+                                            action="/seleccionar-fotografia/{{ numero }}#imagen-{{ numero }}"
+                                        >
+                                            <input
+                                                type="hidden"
+                                                name="tema"
+                                                value="{{ tema or '' }}"
+                                            >
+
+                                            <input
+                                                type="hidden"
+                                                name="indice_candidata"
+                                                value="{{ loop.index0 }}"
+                                            >
+
+                                            <textarea
+                                                name="resultado_json"
+                                                hidden
+                                            >{{ resultado_json }}</textarea>
+
+                                            <button
+                                                class="boton-seleccionar"
+                                                type="{% if candidata_seleccionada or candidata_simulada %}button{% else %}submit{% endif %}"
+                                                {% if candidata_seleccionada or candidata_simulada %}disabled{% endif %}
+                                            >
+                                                {% if candidata_seleccionada %}
+                                                    Fotografía seleccionada
+                                                {% elif candidata_simulada %}
+                                                    Simulación no seleccionable
+                                                {% else %}
+                                                    Seleccionar esta fotografía
+                                                {% endif %}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+
+                        <div class="nota-candidatas">
+                            Revisa la fotografía y su página de origen antes
+                            de elegirla. La búsqueda no garantiza que la
+                            imagen tenga derechos de uso adecuados.
+                        </div>
+
+                        {% if not seleccion_escena and not imagen_generando %}
+                            <details class="alternativa-ia">
+                                <summary>
+                                    Ninguna fotografía sirve: preparar
+                                    recreación IA
+                                </summary>
+
+                                <p>
+                                    Este primer paso no genera ninguna imagen
+                                    ni consume saldo. Revisa el Prompt IA de
+                                    esta escena y confirma la generación solo
+                                    si la recreación es fiel al caso.
+                                </p>
+
+                                <form
+                                    method="post"
+                                    action="/generar-imagen/{{ numero }}#imagen-{{ numero }}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="tema"
+                                        value="{{ tema or '' }}"
+                                    >
+
+                                    <textarea
+                                        name="resultado_json"
+                                        hidden
+                                    >{{ resultado_json }}</textarea>
+
+                                    <button
+                                        class="boton-generar-ia"
+                                        type="submit"
+                                    >
+                                        Confirmar y generar recreación IA de
+                                        la Imagen {{ numero }}
+                                    </button>
+                                </form>
+                            </details>
+                        {% endif %}
+                    {% endif %}
+
+                {% elif imagen_generando == numero %}
+
                     <div class="estado">
                         Generando la Imagen {{ numero }}.
                         Puede tardar varios minutos.
@@ -201,12 +584,14 @@ Prompt IA: {{ escena.prompt }}</pre>
                     </script>
 
                 {% elif imagen_generando %}
+
                     <div class="estado">
                         Espera a que termine la Imagen
                         {{ imagen_generando }}.
                     </div>
 
                 {% else %}
+
                     <form
                         method="post"
                         action="/generar-imagen/{{ numero }}#imagen-{{ numero }}"
@@ -226,10 +611,11 @@ Prompt IA: {{ escena.prompt }}</pre>
                             {% if imagen_url %}
                                 Regenerar Imagen {{ numero }}
                             {% else %}
-                                Generar Imagen {{ numero }}
+                                Generar Imagen {{ numero }} con IA
                             {% endif %}
                         </button>
                     </form>
+
                 {% endif %}
             </div>
         {% endfor %}

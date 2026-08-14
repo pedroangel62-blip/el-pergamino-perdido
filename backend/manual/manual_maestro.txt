@@ -1,219 +1,250 @@
-
 16. Manual Maestro de Recursos Visuales
 
 Principio fundamental
 
-La prioridad absoluta será transmitir credibilidad.
+La prioridad absoluta serÃ¡ transmitir credibilidad.
 
-Siempre que exista material real de calidad, se utilizará antes que una recreación mediante IA.
+Siempre que exista material real de calidad, se utilizarÃ¡ antes que una recreaciÃ³n mediante IA.
 
 Orden de prioridad
 
-1. Fotografías reales
+1. FotografÃ­as reales
 
-Siempre se buscarán primero:
+Siempre se buscarÃ¡n primero:
 
-* Fotografías históricas.
-* Fotografías del rodaje.
-* Fotografías promocionales oficiales.
+* FotografÃ­as histÃ³ricas.
+* FotografÃ­as del rodaje.
+* FotografÃ­as promocionales oficiales.
 * Documentos.
 * Objetos reales.
 * Localizaciones reales.
 * Personas reales.
 
-⸻
+â¸»
 
-2. Mejora de fotografías
+2. Mejora de fotografÃ­as
 
-Si la fotografía original tiene poca calidad, se mejorará mediante IA o herramientas de restauración.
+Si la fotografÃ­a original tiene poca calidad, se mejorarÃ¡ mediante IA o herramientas de restauraciÃ³n.
 
-Se podrá:
+Se podrÃ¡:
 
-* aumentar resolución;
-* restaurar imágenes antiguas;
-* mejorar iluminación;
+* aumentar resoluciÃ³n;
+* restaurar imÃ¡genes antiguas;
+* mejorar iluminaciÃ³n;
 * aumentar nitidez;
 * corregir color;
 * eliminar ruido;
 * adaptar el encuadre al formato vertical.
 
-Nunca se alterará el hecho histórico representado.
+Nunca se alterarÃ¡ el hecho histÃ³rico representado.
 
 El objetivo es mejorar, no falsificar.
 
-⸻
+â¸»
 
-3. Imágenes generadas por IA
+3. ImÃ¡genes generadas por IA
 
-Solo se utilizarán cuando:
+Solo se utilizarÃ¡n cuando:
 
-* no exista documentación gráfica;
+* no exista documentaciÃ³n grÃ¡fica;
 * sea necesario recrear una escena imposible de fotografiar;
 * se quiera ilustrar un concepto abstracto;
-* se necesiten transiciones cinematográficas;
-* se trate de una reconstrucción artística claramente identificable.
+* se necesiten transiciones cinematogrÃ¡ficas;
+* se trate de una reconstrucciÃ³n artÃ­stica claramente identificable.
 
-⸻
+â¸»
 
 Formato obligatorio
 
-Todas las imágenes destinadas a Instagram deberán generarse o adaptarse en:
+Todas las imÃ¡genes destinadas a Instagram deberÃ¡n generarse o adaptarse en:
 
 Formato 9:16 (vertical)
 
 Nunca en horizontal.
 
-⸻
+â¸»
 
 Estilo visual
 
-Todas las imágenes deberán compartir la misma identidad:
+Todas las imÃ¡genes deberÃ¡n compartir la misma identidad:
 
-* documental cinematográfico;
-* iluminación dramática;
-* máximo realismo;
+* documental cinematogrÃ¡fico;
+* iluminaciÃ³n dramÃ¡tica;
+* mÃ¡ximo realismo;
 * alto nivel de detalle;
-* aspecto de producción de Netflix o National Geographic;
-* profundidad cinematográfica;
-* sin aspecto de ilustración salvo que sea imprescindible.
+* aspecto de producciÃ³n de Netflix o National Geographic;
+* profundidad cinematogrÃ¡fica;
+* sin aspecto de ilustraciÃ³n salvo que sea imprescindible.
 
-⸻
+â¸»
 
 Coherencia
 
-En un mismo Pergamino se mezclará IA y fotografía real únicamente cuando sea necesario.
+En un mismo Pergamino se mezclarÃ¡ IA y fotografÃ­a real Ãºnicamente cuando sea necesario.
 
-La transición entre ambas deberá resultar natural.
+La transiciÃ³n entre ambas deberÃ¡ resultar natural.
 
-⸻
+â¸»
 
 Uso de material protegido
 
-Cuando existan fotografías oficiales o fotogramas relevantes para explicar un hecho:
+Cuando existan fotografÃ­as oficiales o fotogramas relevantes para explicar un hecho:
 
-* se utilizarán únicamente como apoyo documental;
-* nunca constituirán la mayor parte del vídeo;
-* se evitará el uso prolongado de escenas completas protegidas por copyright;
-* siempre que sea posible se preferirán fotografías frente a secuencias de vídeo.
+* se utilizarÃ¡n Ãºnicamente como apoyo documental;
+* nunca constituirÃ¡n la mayor parte del vÃ­deo;
+* se evitarÃ¡ el uso prolongado de escenas completas protegidas por copyright;
+* siempre que sea posible se preferirÃ¡n fotografÃ­as frente a secuencias de vÃ­deo.
 
-⸻
+â¸»
 
 Regla de trabajo
 
-Antes de crear cualquier imagen se seguirá siempre este proceso:
+Antes de crear cualquier imagen se seguirÃ¡ siempre este proceso:
 
-1. Buscar fotografías reales.
+1. Buscar fotografÃ­as reales.
 2. Valorar si pueden restaurarse o mejorarse.
-3. Solo si no existe material adecuado, generar una recreación mediante IA.
+3. Solo si no existe material adecuado, generar una recreaciÃ³n mediante IA.
 
-⸻
+â¸»
 
 Objetivo
 
-Cada Pergamino debe dar la sensación de estar viendo un documental de alta calidad, donde el espectador no pueda distinguir cuándo está viendo una fotografía restaurada y cuándo una recreación realizada con IA, manteniendo siempre el máximo rigor histórico y visual.
+Cada Pergamino debe dar la sensaciÃ³n de estar viendo un documental de alta calidad, donde el espectador no pueda distinguir cuÃ¡ndo estÃ¡ viendo una fotografÃ­a restaurada y cuÃ¡ndo una recreaciÃ³n realizada con IA, manteniendo siempre el mÃ¡ximo rigor histÃ³rico y visual.
 
-⸻
+â¸»
 
-17. Control obligatorio de duración
+17. Control obligatorio de duraciÃ³n
 
-Límite absoluto
+LÃ­mite absoluto
 
-Ningún Reel de El Pergamino Perdido podrá superar los 90 segundos de duración total una vez exportado.
+NingÃºn Reel de El Pergamino Perdido podrÃ¡ superar los 90 segundos de duraciÃ³n total una vez exportado.
 
-Este límite no es orientativo. Es obligatorio.
+Este lÃ­mite no es orientativo. Es obligatorio.
 
 Margen de seguridad
 
-* La duración objetivo del Reel terminado será de 75 a 85 segundos.
-* La narración deberá quedar preferentemente entre 74 y 80 segundos.
-* La narración nunca podrá superar los 84 segundos, para reservar margen a la apertura, el cierre y las pausas visuales.
+* La duraciÃ³n objetivo del Reel terminado serÃ¡ de 75 a 85 segundos.
+* La narraciÃ³n deberÃ¡ quedar preferentemente entre 74 y 80 segundos.
+* La narraciÃ³n nunca podrÃ¡ superar los 84 segundos, para reservar margen a la apertura, el cierre y las pausas visuales.
 
 Control del guion
 
-* Los guiones se redactarán inicialmente de forma concisa, evitando repeticiones y datos secundarios.
-* La estimación por número de palabras servirá únicamente como referencia.
-* La duración válida será siempre la duración real del audio generado en ElevenLabs.
-* Las pausas dramáticas también cuentan dentro del tiempo total.
+* Los guiones se redactarÃ¡n inicialmente de forma concisa, evitando repeticiones y datos secundarios.
+* La estimaciÃ³n por nÃºmero de palabras servirÃ¡ Ãºnicamente como referencia.
+* La duraciÃ³n vÃ¡lida serÃ¡ siempre la duraciÃ³n real del audio generado en ElevenLabs.
+* Las pausas dramÃ¡ticas tambiÃ©n cuentan dentro del tiempo total.
 
-Verificación obligatoria
+VerificaciÃ³n obligatoria
 
-Después de generar la voz en ElevenLabs:
+DespuÃ©s de generar la voz en ElevenLabs:
 
-1. Comprobar la duración exacta del audio.
-2. Si supera los 84 segundos, recortar el guion y generar de nuevo la narración.
-3. No preparar el índice visual definitivo ni generar las ocho imágenes hasta aprobar la duración real de la voz.
+1. Comprobar la duraciÃ³n exacta del audio.
+2. Si supera los 84 segundos, recortar el guion y generar de nuevo la narraciÃ³n.
+3. No preparar el Ã­ndice visual definitivo ni generar las ocho imÃ¡genes hasta aprobar la duraciÃ³n real de la voz.
 4. Antes de publicar, comprobar que el Reel exportado no supera los 90 segundos.
 
-Regla de decisión
+Regla de decisiÃ³n
 
-Si hay que elegir entre incluir un dato adicional o respetar la duración, se respetará siempre el límite de 90 segundos.
+Si hay que elegir entre incluir un dato adicional o respetar la duraciÃ³n, se respetarÃ¡ siempre el lÃ­mite de 90 segundos.
 
-⸻
+â¸»
 
-18. Primera imagen y gancho de retención
+18. Primera imagen y gancho de retenciÃ³n
 
 Principio obligatorio
 
-La primera imagen de cada Pergamino deberá ser siempre súper impactante y estar diseñada específicamente para detener el desplazamiento en la pestaña Reels.
+La primera imagen de cada Pergamino deberÃ¡ ser siempre sÃºper impactante y estar diseÃ±ada especÃ­ficamente para detener el desplazamiento en la pestaÃ±a Reels.
 
-No bastará con que sea bonita, misteriosa o representativa del tema. Deberá comunicar en un solo vistazo que existe algo extraño, peligroso, imposible o importante que merece ser descubierto.
+No bastarÃ¡ con que sea bonita, misteriosa o representativa del tema. DeberÃ¡ comunicar en un solo vistazo que existe algo extraÃ±o, peligroso, imposible o importante que merece ser descubierto.
 
 Estructura visual
 
-Cada Reel utilizará siempre ocho imágenes:
+Cada Reel utilizarÃ¡ siempre ocho imÃ¡genes:
 
-* una portada independiente, colocada al principio durante aproximadamente un segundo;
-* siete imágenes para desarrollar el cuerpo del vídeo.
+* una portada independiente, colocada al principio durante 3 segundos;
+* siete imÃ¡genes para desarrollar el cuerpo del vÃ­deo.
 
-La portada será también el primer impacto visual del Reel. No se considerará un elemento decorativo separado de la narración.
+La portada serÃ¡ tambiÃ©n el primer impacto visual del Reel. No se considerarÃ¡ un elemento decorativo separado de la narraciÃ³n.
 
 Criterios de la primera imagen
 
-Siempre que el tema lo permita, la portada deberá mostrar al menos uno de estos elementos:
+Siempre que el tema lo permita, la portada deberÃ¡ mostrar al menos uno de estos elementos:
 
 * personas o rostros relacionados con el misterio;
 * peligro, conflicto o consecuencias humanas;
-* una anomalía visual evidente;
+* una anomalÃ­a visual evidente;
 * un objeto imposible o fuera de contexto;
 * una escena decisiva de la historia;
 * un contraste que provoque una pregunta inmediata.
 
-La imagen deberá:
+La imagen deberÃ¡:
 
 * comprenderse en menos de un segundo;
 * tener un punto focal claro;
-* mantener máxima legibilidad en una pantalla pequeña;
-* transmitir emoción, tensión o curiosidad;
-* evitar composiciones estáticas, genéricas, confusas o excesivamente oscuras;
-* funcionar incluso sin leer el título o el pie de foto;
-* conservar el formato vertical 9:16 y la identidad documental cinematográfica del proyecto.
+* mantener mÃ¡xima legibilidad en una pantalla pequeÃ±a;
+* transmitir emociÃ³n, tensiÃ³n o curiosidad;
+* evitar composiciones estÃ¡ticas, genÃ©ricas, confusas o excesivamente oscuras;
+* funcionar incluso sin leer el tÃ­tulo o el pie de foto;
+* conservar el formato vertical 9:16 y la identidad documental cinematogrÃ¡fica del proyecto.
+
+Prioridad de impacto humano
+
+Cuando el caso incluya de forma real y documentada muertes, vÃ­ctimas, cadÃ¡veres, desapariciones, peligro extremo o consecuencias humanas graves, la bÃºsqueda de portada priorizarÃ¡ una fotografÃ­a autÃ©ntica que muestre ese elemento o su consecuencia directa.
+
+La imagen podrÃ¡ resultar dura o incÃ³moda, pero no mostrarÃ¡ gore explÃ­cito. Se evitarÃ¡n primeros planos de heridas, sangre como punto focal, mutilaciones o detalles corporales explÃ­citos. DeberÃ¡ tratar a las vÃ­ctimas con respeto y estar directamente vinculada al caso. Nunca se aÃ±adirÃ¡n muertos, heridos, cuerpos ni tragedias genÃ©ricas a temas que no los contengan.
+
+La presencia de muerte no convierte automÃ¡ticamente una fotografÃ­a en una buena portada. TambiÃ©n deberÃ¡ tener un punto focal claro, relaciÃ³n directa con el gancho y lectura inmediata en mÃ³vil.
+
+Flujo hÃ­brido obligatorio para la portada
+
+1. Buscar primero la fotografÃ­a real mÃ¡s impactante y relevante.
+2. Mostrar un mÃ¡ximo de 6 candidatas para aprobaciÃ³n humana.
+3. Si alguna representa fielmente el caso, seleccionarla y guardarla como Imagen 1.
+4. Si ninguna sirve, permitir que el usuario apruebe la preparaciÃ³n de una recreaciÃ³n mediante IA.
+5. La recreaciÃ³n IA no se generarÃ¡ automÃ¡ticamente: requerirÃ¡ un segundo clic de aprobaciÃ³n.
+6. La recreaciÃ³n se basarÃ¡ exclusivamente en hechos verificados, sin inventar vÃ­ctimas, identidades, lugares ni acontecimientos.
 
 Gancho narrativo
 
-La narración comenzará desde el primer segundo con el dato, conflicto o anomalía más potente del caso.
+La narraciÃ³n comenzarÃ¡ desde el primer segundo con el dato, conflicto o anomalÃ­a mÃ¡s potente del caso.
 
-El inicio no utilizará saludos, introducciones genéricas ni explicaciones previas. Deberá plantear inmediatamente una consecuencia humana, un hecho imposible, una contradicción o una promesa concreta de descubrimiento.
+El inicio no utilizarÃ¡ saludos, introducciones genÃ©ricas ni explicaciones previas. DeberÃ¡ plantear inmediatamente una consecuencia humana, un hecho imposible, una contradicciÃ³n o una promesa concreta de descubrimiento.
 
-Coordinación entre imagen y voz
+CoordinaciÃ³n entre imagen y voz
 
-La primera imagen y la primera frase deberán contar juntas la misma promesa narrativa.
+La primera imagen y la primera frase deberÃ¡n contar juntas la misma promesa narrativa.
 
-No se aprobará una portada espectacular si no está conectada con el comienzo del guion. Tampoco se aprobará un buen gancho narrativo acompañado de una imagen débil o genérica.
+No se aprobarÃ¡ una portada espectacular si no estÃ¡ conectada con el comienzo del guion. Tampoco se aprobarÃ¡ un buen gancho narrativo acompaÃ±ado de una imagen dÃ©bil o genÃ©rica.
 
-Prueba obligatoria de aprobación
+Prueba obligatoria de aprobaciÃ³n
 
-Antes de continuar con el resto de imágenes se comprobará:
+Antes de continuar con el resto de imÃ¡genes se comprobarÃ¡:
 
-1. Si la portada detiene la atención en menos de un segundo.
-2. Si se entiende visualmente que existe un misterio, peligro, conflicto o anomalía.
-3. Si el elemento principal se distingue claramente en la pantalla de un teléfono.
-4. Si la primera frase amplía la curiosidad creada por la imagen.
+1. Si la portada detiene la atenciÃ³n en menos de un segundo.
+2. Si se entiende visualmente que existe un misterio, peligro, conflicto o anomalÃ­a.
+3. Si el elemento principal se distingue claramente en la pantalla de un telÃ©fono.
+4. Si la primera frase amplÃ­a la curiosidad creada por la imagen.
 5. Si la escena representa fielmente el contenido y no genera una expectativa falsa.
 
-Si falla cualquiera de estos puntos, la portada o el gancho deberán rehacerse antes de continuar.
+Si falla cualquiera de estos puntos, la portada o el gancho deberÃ¡n rehacerse antes de continuar.
 
 Criterio confirmado por rendimiento
 
-El Pergamino VI, dedicado al Paso Dyatlov, confirmó la importancia de esta regla: su tasa de omisión fue del 29,7 %, frente al 57,9 % del Pergamino IV sobre el mecanismo de Anticitera, y su tiempo medio de reproducción alcanzó 54 segundos, frente a 39 segundos.
+El Pergamino VI, dedicado al Paso Dyatlov, confirmÃ³ la importancia de esta regla: su tasa de omisiÃ³n fue del 29,7 %, frente al 57,9 % del Pergamino IV sobre el mecanismo de Anticitera, y su tiempo medio de reproducciÃ³n alcanzÃ³ 54 segundos, frente a 39 segundos.
 
-Estos datos no garantizan el rendimiento futuro, pero demuestran que una primera escena con conflicto humano inmediato y un gancho claro puede mejorar de forma sustancial la retención y acelerar la distribución del Reel entre personas que todavía no siguen la cuenta.
+Estos datos no garantizan el rendimiento futuro, pero demuestran que una primera escena con conflicto humano inmediato y un gancho claro puede mejorar de forma sustancial la retenciÃ³n y acelerar la distribuciÃ³n del Reel entre personas que todavÃ­a no siguen la cuenta.
+
+HipÃ³tesis de optimizaciÃ³n de portadas
+
+Se ha observado que algunos Pergaminos con imÃ¡genes de muertos o consecuencias humanas graves han obtenido mÃ¡s reproducciones. Se tratarÃ¡ como una hipÃ³tesis de rendimiento, no como una relaciÃ³n causal demostrada.
+
+Para comprobarla se compararÃ¡n Reels equivalentes y se registrarÃ¡n, como mÃ­nimo:
+
+* reproducciones;
+* tasa de omisiÃ³n;
+* tiempo medio de reproducciÃ³n;
+* porcentaje medio visto;
+* porcentaje de visualizaciÃ³n completa, cuando Instagram lo facilite;
+* compartidos, guardados y seguidores obtenidos.
+
+Una portada no se considerarÃ¡ mejor Ãºnicamente por conseguir mÃ¡s reproducciones. DeberÃ¡ aumentar tambiÃ©n la retenciÃ³n sin provocar una caÃ­da inmediata causada por una promesa visual que el Reel no cumple.
