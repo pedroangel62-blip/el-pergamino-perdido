@@ -27,8 +27,10 @@ jobs:
       - name: Comprobar FFmpeg
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install --yes ffmpeg
+            sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
+              apt-get update --quiet
+            sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a \
+              apt-get install --yes --no-install-recommends ffmpeg
           fi
           ffmpeg -version | head -n 1
 
