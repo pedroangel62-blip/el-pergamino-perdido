@@ -10,7 +10,12 @@ Aplicación web para preparar Reels documentales de El Pergamino Perdido con con
 4. ElevenLabs genera la narración desde el guion aprobado.
 5. El usuario escucha y aprueba la voz; hasta entonces las imágenes permanecen bloqueadas.
 6. Se buscan fotografías reales antes de ofrecer una recreación con IA.
-7. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
+7. Las ocho imágenes definitivas se confirman antes del montaje.
+8. La aplicación prepara una sincronización por frase y tiempo, con portada fija de 3 segundos.
+9. El usuario carga y aprueba la música antes de mezclarla con la voz.
+10. FFmpeg genera un borrador vertical 1080×1920 a 30 fps con subtítulos y transiciones.
+11. El borrador aprobado se convierte en vídeo final y paquete ZIP descargable.
+12. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
 
 ## Índice maestro
 
@@ -29,15 +34,36 @@ El estado resumido del catálogo y el siguiente tema recomendado también están
 
 ## Ejecución local
 
-Configure las variables indicadas en `.env.example` y ejecute:
+Requisitos del sistema:
+
+- Python 3.12;
+- FFmpeg y FFprobe;
+- las variables indicadas en `.env.example`.
+
+Instale las dependencias y ejecute:
 
 ```bash
+python -m pip install -r requirements.txt
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+## Producción final
+
+La pantalla `Producción final` se desbloquea cuando la voz y las ocho imágenes están preparadas. Mantiene controles humanos independientes para:
+
+- confirmar las ocho imágenes definitivas;
+- revisar y aprobar la sincronización;
+- escuchar y aprobar la música;
+- revisar el vídeo borrador;
+- autorizar la creación del vídeo final.
+
+El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, subtítulos, sincronización, metadatos y textos de publicación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 
 ## Comprobaciones
 
 ```bash
-python -m py_compile backend/main.py backend/imagenes.py backend/busqueda_imagenes.py backend/voz.py backend/indice_temas.py
+python -m py_compile backend/main.py backend/imagenes.py backend/busqueda_imagenes.py backend/voz.py backend/indice_temas.py backend/produccion.py
 python -m unittest discover -s tests -v
 ```
+
+GitHub Actions ejecuta estas comprobaciones automáticamente en cada PR y en cada cambio de `main`.

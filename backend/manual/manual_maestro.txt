@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.5
+MANUAL MAESTRO — VERSIÓN 1.6
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.5:
+Cambios obligatorios de la versión 1.6:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -21,7 +21,12 @@ Cambios obligatorios de la versión 1.5:
 * bloqueo de temas repetidos y expedientes sin evidencia suficiente;
 * fichas documentales de El Caso integradas en la generación;
 * generación de un solo Pergamino cada vez, con los controles humanos
-  obligatorios.
+  obligatorios;
+* portada fija de 3 segundos en el montaje final;
+* confirmación de las ocho imágenes antes de sincronizar;
+* aprobación separada de sincronización, música y vídeo borrador;
+* montaje FFmpeg vertical 1080 por 1920 a 30 fps;
+* vídeo final y paquete ZIP solo después de aprobación humana.
 
 ⸻
 
@@ -378,3 +383,50 @@ No se permitirá:
 * confundir el semanario original El Caso con cabeceras posteriores o medios actuales del mismo nombre.
 
 La automatización avanzará un Pergamino cada vez y conservará todas las aprobaciones humanas definidas en este Manual Maestro.
+
+⸻
+
+22. Producción final y montaje
+
+Requisitos previos
+
+El montaje solo podrá comenzar cuando:
+
+* la voz esté aprobada y corresponda al guion vigente;
+* existan exactamente ocho imágenes;
+* las ocho imágenes se hayan confirmado como definitivas;
+* la sincronización se haya revisado y aprobado;
+* la música se haya escuchado y aprobado.
+
+Sincronización
+
+La Imagen 1 será siempre la portada y ocupará exactamente los primeros 3 segundos.
+
+Cada cambio de imagen quedará documentado con:
+
+* la frase del guion que marca su entrada;
+* el segundo exacto de inicio;
+* el segundo exacto de final;
+* coincidencia entre el final de una imagen y el inicio de la siguiente.
+
+Montaje
+
+El vídeo se generará en formato vertical 9:16, resolución 1080 por 1920, 30 fotogramas por segundo y codificación H.264 con audio AAC.
+
+Las fotografías horizontales conservarán su orientación y se adaptarán mediante un fondo derivado y difuminado de la propia imagen. No se girarán ni recortarán de forma que se pierda el sujeto principal.
+
+El montaje incluirá transiciones discretas, subtítulos legibles, voz principal y música de fondo a volumen subordinado.
+
+Aprobación y entrega
+
+FFmpeg generará primero `video_borrador.mp4`.
+
+Solo una aprobación humana explícita permitirá crear:
+
+* `video_final.mp4`;
+* `publicacion.txt`;
+* `proyecto_completo.zip`.
+
+El paquete conservará vídeo, imágenes, voz, música, subtítulos, sincronización, metadatos y textos de publicación.
+
+La aplicación no publicará en Instagram ni copiará archivos a un servicio externo sin autorización expresa de Pedro Ángel.

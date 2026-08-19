@@ -95,6 +95,20 @@
             cursor: pointer;
         }
 
+        .boton-enlace {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            background: #174f33;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+        }
+
         pre {
             background: #f6f6f6;
             padding: 15px;
@@ -992,6 +1006,29 @@ Prompt IA: {{ escena.prompt }}</pre>
                 {% endif %}
             </div>
         {% endfor %}
+
+        <hr>
+
+        <h2>🎬 PRODUCCIÓN FINAL</h2>
+
+        {% if voz_aprobada and imagenes|length == 8 %}
+            <div class="estado estado-correcto">
+                La voz y las ocho imágenes están preparadas. Ya puedes
+                sincronizar, añadir música y montar el vídeo.
+            </div>
+
+            <a
+                class="boton-enlace"
+                href="/produccion/{{ resultado._proyecto_id }}"
+            >
+                Abrir producción final
+            </a>
+        {% else %}
+            <div class="estado estado-aviso">
+                La producción final se desbloquea cuando la voz y las ocho
+                imágenes están aprobadas.
+            </div>
+        {% endif %}
 
         <hr>
 

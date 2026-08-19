@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Producción final — El Pergamino Perdido</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --fondo: #f5efe2;
+            --papel: #fffdf8;
+            --tinta: #2f251c;
+            --oro: #9b6b24;
+            --verde: #23613d;
+            --rojo: #8e2d2d;
+            --borde: #d9c49f;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--fondo);
+            color: var(--tinta);
+            font-family: Arial, sans-serif;
+            line-height: 1.5;
+        }
+
+        main {
+            width: min(980px, calc(100% - 28px));
+            margin: 28px auto;
+            padding: 28px;
+            border: 1px solid var(--borde);
+            border-radius: 16px;
+            background: var(--papel);
+            box-shadow: 0 10px 35px rgba(47, 37, 28, 0.09);
+        }
+
+        h1, h2 { line-height: 1.2; }
+        h1 { margin-bottom: 6px; }
+        h2 { margin-top: 0; }
+
+        section {
+            margin-top: 24px;
+            padding: 22px;
+            border: 1px solid var(--borde);
+            border-radius: 12px;
+        }
+
+        .volver { color: var(--oro); font-weight: 700; }
+        .resumen { color: #655544; }
+
+        .estado {
+            margin: 12px 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #f2eadc;
+        }
+
+        .correcto { background: #e5f4ea; color: var(--verde); }
+        .error { background: #f9e5e5; color: var(--rojo); }
+
+        button, .descarga {
+            display: inline-block;
+            min-height: 44px;
+            padding: 11px 17px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--verde);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            margin: 12px 0;
+            padding: 12px;
+            border: 1px solid var(--borde);
+            border-radius: 8px;
+            background: white;
+        }
+
+        audio, video { width: 100%; margin: 12px 0; }
+        video { max-height: 70vh; background: black; }
+
+        pre {
+            overflow-x: auto;
+            white-space: pre-wrap;
+            padding: 14px;
+            border-radius: 8px;
+            background: #f6f1e8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid var(--borde);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th { background: #f3ead9; }
+
+        @media (max-width: 640px) {
+            main { padding: 18px; }
+            section { padding: 16px; }
+            table { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <a class="volver" href="/proyecto/{{ proyecto_id }}">← Volver al Pergamino</a>
+    <h1>🎬 PRODUCCIÓN FINAL</h1>
+    <div class="resumen">{{ tema }}</div>
+
+    {% if produccion.error %}
+        <div class="estado error">{{ produccion.error }}</div>
+    {% endif %}
+
+    <section>
+        <h2>1. Preparación</h2>
+        <div class="estado{% if voz and voz.estado == 'aprobada' %} correcto{% endif %}">
+            Voz: {{ 'aprobada' if voz and voz.estado == 'aprobada' else 'pendiente' }}
+        </div>
+        <div class="estado{% if produccion.imagenes_aprobadas %} correcto{% endif %}">
+            Imágenes: {{ produccion.total_imagenes }} de 8 ·
+            {{ 'aprobadas' if produccion.imagenes_aprobadas else 'pendientes de aprobación' }}
+        </div>
+
+        {% if produccion.total_imagenes == 8 and not produccion.imagenes_aprobadas %}
+            <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-imagenes">
+                <button type="submit">Confirmar las 8 imágenes como definitivas</button>
+            </form>
+        {% endif %}
+
+        {% if voz and voz.estado == 'aprobada' and produccion.imagenes_aprobadas %}
+            <form method="post" action="/produccion/{{ proyecto_id }}/sincronizacion">
+                <button type="submit">
+                    {% if produccion.sincronizacion %}
+                        Recalcular sincronización
+                    {% else %}
+                        Preparar sincronización automática
+                    {% endif %}
+                </button>
+            </form>
+        {% elif not produccion.sincronizacion %}
+            <div class="estado">
+                La sincronización se desbloquea cuando la voz y las ocho imágenes están aprobadas.
+            </div>
+        {% endif %}
+
+        {% if produccion.sincronizacion %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Imagen</th>
+                        <th>Frase de entrada</th>
+                        <th>Inicio</th>
+                        <th>Final</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for segmento in produccion.sincronizacion %}
+                        <tr>
+                            <td>{{ segmento.numero }}</td>
+                            <td>{{ segmento.frase_entrada }}</td>
+                            <td>{{ '%.3f'|format(segmento.inicio) }} s</td>
+                            <td>{{ '%.3f'|format(segmento.fin) }} s</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if not produccion.sincronizacion_aprobada %}
+                <div class="estado">
+                    Comprueba las frases y los tiempos antes de aprobar la sincronización.
+                </div>
+                <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-sincronizacion">
+                    <button type="submit">Aprobar sincronización</button>
+                </form>
+            {% else %}
+                <div class="estado correcto">Sincronización aprobada.</div>
+            {% endif %}
+        {% endif %}
+    </section>
+
+    <section>
+        <h2>2. Música</h2>
+        <p>Prompt preparado para generar la música:</p>
+        <pre>{{ resultado.musica }}</pre>
+
+        <form
+            method="post"
+            action="/produccion/{{ proyecto_id }}/musica"
+            enctype="multipart/form-data"
+        >
+            <label for="musica">Cargar pista musical definitiva</label>
+            <input
+                id="musica"
+                type="file"
+                name="musica"
+                accept="audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg"
+                required
+            >
+            <button type="submit">Guardar música</button>
+        </form>
+
+        {% if musica_url %}
+            <audio controls preload="metadata" src="{{ musica_url }}"></audio>
+
+            {% if not produccion.musica_aprobada %}
+                <div class="estado">Escucha la pista completa antes de aprobarla.</div>
+                <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-musica">
+                    <button type="submit">Aprobar música</button>
+                </form>
+            {% else %}
+                <div class="estado correcto">Música aprobada.</div>
+            {% endif %}
+        {% endif %}
+    </section>
+
+    <section>
+        <h2>3. Vídeo borrador</h2>
+
+        {% if produccion.estado == 'generando_borrador' %}
+            <div class="estado">
+                FFmpeg está montando el vídeo 1080×1920 a 30 fps. Esta página se actualizará automáticamente.
+            </div>
+            <script>
+                window.setTimeout(function () { window.location.reload(); }, 10000);
+            </script>
+        {% elif produccion.sincronizacion_aprobada and produccion.musica_aprobada %}
+            <form method="post" action="/produccion/{{ proyecto_id }}/generar-borrador">
+                <button type="submit">
+                    {% if borrador_url %}Regenerar vídeo borrador{% else %}Generar vídeo borrador{% endif %}
+                </button>
+            </form>
+        {% else %}
+            <div class="estado">
+                Antes de montar el vídeo deben aprobarse las imágenes, la sincronización y la música.
+            </div>
+        {% endif %}
+
+        {% if borrador_url %}
+            <video controls preload="metadata" src="{{ borrador_url }}"></video>
+
+            {% if produccion.estado == 'borrador_pendiente_aprobacion' %}
+                <div class="estado">
+                    Revisa imágenes, subtítulos, voz, música y transiciones antes de aprobar.
+                </div>
+                <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-borrador">
+                    <button type="submit">Aprobar borrador y crear vídeo final</button>
+                </form>
+            {% endif %}
+        {% endif %}
+    </section>
+
+    <section>
+        <h2>4. Entrega final</h2>
+
+        {% if final_url %}
+            <div class="estado correcto">Vídeo final aprobado.</div>
+            <video controls preload="metadata" src="{{ final_url }}"></video>
+
+            <form method="post" action="/produccion/{{ proyecto_id }}/crear-paquete">
+                <button type="submit">
+                    {% if paquete_url %}Regenerar paquete ZIP{% else %}Crear paquete completo{% endif %}
+                </button>
+            </form>
+        {% else %}
+            <div class="estado">El vídeo final aparecerá después de aprobar el borrador.</div>
+        {% endif %}
+
+        {% if paquete_url %}
+            <div class="estado correcto">
+                Paquete preparado. Incluye vídeo, imágenes, audio, subtítulos, sincronización y textos de publicación.
+            </div>
+            <a class="descarga" href="{{ paquete_url }}" download>Descargar proyecto completo</a>
+        {% endif %}
+    </section>
+</main>
+</body>
+</html>
