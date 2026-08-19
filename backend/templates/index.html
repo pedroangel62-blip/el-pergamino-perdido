@@ -31,11 +31,60 @@
             text-align: center;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        select {
             width: 100%;
             padding: 12px;
             font-size: 18px;
             box-sizing: border-box;
+        }
+
+        select {
+            margin-top: 8px;
+            background: #ffffff;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            font-weight: 700;
+        }
+
+        .indice-panel {
+            padding: 20px;
+            margin-bottom: 22px;
+            border: 1px solid #d7c49a;
+            border-radius: 12px;
+            background: #fffaf0;
+        }
+
+        .indice-panel h2 {
+            margin-top: 0;
+        }
+
+        .indice-resumen {
+            line-height: 1.5;
+        }
+
+        .indice-recomendado {
+            padding: 14px;
+            margin-top: 15px;
+            border: 1px solid #1f8f55;
+            border-radius: 8px;
+            background: #eefaf3;
+        }
+
+        .indice-ayuda {
+            display: block;
+            margin-top: 8px;
+            color: #555555;
+            line-height: 1.4;
+        }
+
+        .boton-recomendado {
+            background: #174f33;
+            color: #ffffff;
+            border: 1px solid #174f33;
         }
 
         button {
@@ -317,12 +366,104 @@
     <h1>📜 EL PERGAMINO PERDIDO</h1>
 
     <form method="post" action="/generar">
+        <section class="indice-panel">
+            <h2>ÍNDICE MAESTRO DE TEMAS</h2>
+
+            <p class="indice-resumen">
+                {{ indice_totales.temas }} temas en
+                {{ indice_categorias|length }} categorías ·
+                {{ indice_totales.pendientes }} pendientes ·
+                {{ indice_totales.usados }} ya utilizados ·
+                {{ indice_totales.bloqueados }} bloqueado pendiente
+                de verificación.
+            </p>
+
+            {% if indice_recomendado %}
+                <div class="indice-recomendado">
+                    <strong>Siguiente recomendado:</strong>
+                    {{ indice_recomendado.titulo }}
+                    — {{ indice_recomendado.categoria.nombre }}
+
+                    {% if indice_recomendado.origen == 'archivo-el-caso' %}
+                        · evidencia
+                        {{ indice_recomendado.verificacion.grado }}
+                    {% endif %}
+                </div>
+
+                <button
+                    class="boton-recomendado"
+                    id="usar-recomendado"
+                    type="button"
+                >
+                    Cargar siguiente recomendado no utilizado
+                </button>
+            {% endif %}
+
+            <label for="tema-indice">
+                Elegir un tema del índice
+            </label>
+
+            <select id="filtro-categoria">
+                <option value="">
+                    Todas las categorías
+                </option>
+
+                {% for categoria in indice_categorias %}
+                    <option value="{{ categoria.id }}">
+                        {{ categoria.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select id="tema-indice" name="tema_id">
+                <option value="">
+                    — Elegir tema o escribir uno nuevo —
+                </option>
+
+                {% for categoria in indice_categorias %}
+                    <optgroup label="{{ categoria.nombre }}">
+                        {% for ficha in categoria.temas %}
+                            <option
+                                value="{{ ficha.id }}"
+                                data-titulo="{{ ficha.titulo }}"
+                                data-categoria="{{ ficha.categoria_id }}"
+                                {% if ficha.usado or not ficha.generable %}
+                                    disabled
+                                {% endif %}
+                            >
+                                {{ ficha.titulo }}
+                                {% if ficha.origen == 'archivo-el-caso' %}
+                                    · evidencia {{ ficha.grado }}
+                                {% endif %}
+                                {% if ficha.usado %}
+                                    · YA UTILIZADO
+                                {% elif not ficha.generable %}
+                                    · BLOQUEADO
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+
+            <small class="indice-ayuda">
+                Los casos de El Caso con evidencia A o B están
+                habilitados. Los registros bloqueados no pueden
+                seleccionarse. Un tema utilizado queda marcado para
+                evitar repeticiones.
+            </small>
+        </section>
+
+        <label for="tema-libre">
+            Tema seleccionado o tema nuevo
+        </label>
+
         <input
+            id="tema-libre"
             type="text"
             name="tema"
             value="{{ tema or '' }}"
             placeholder="Escribe el tema del Pergamino"
-            required
         >
 
         <button type="submit">
@@ -881,6 +1022,74 @@ Comentario fijado:
     {% endif %}
 
 </div>
+
+<script>
+    (function () {
+        const selector = document.getElementById("tema-indice");
+        const filtroCategoria = document.getElementById(
+            "filtro-categoria"
+        );
+        const campoTema = document.getElementById("tema-libre");
+        const botonRecomendado = document.getElementById(
+            "usar-recomendado"
+        );
+
+        if (!selector || !campoTema) {
+            return;
+        }
+
+        selector.addEventListener("change", function () {
+            const opcion = selector.options[selector.selectedIndex];
+
+            if (opcion && opcion.dataset.titulo) {
+                campoTema.value = opcion.dataset.titulo;
+            }
+        });
+
+        if (filtroCategoria) {
+            filtroCategoria.addEventListener("change", function () {
+                const categoria = filtroCategoria.value;
+
+                Array.from(selector.options).forEach(function (opcion) {
+                    if (!opcion.value) {
+                        return;
+                    }
+
+                    opcion.hidden = Boolean(categoria) &&
+                        opcion.dataset.categoria !== categoria;
+                });
+
+                const opcionActual =
+                    selector.options[selector.selectedIndex];
+
+                if (opcionActual && opcionActual.hidden) {
+                    selector.value = "";
+                }
+            });
+        }
+
+        if (botonRecomendado) {
+            botonRecomendado.addEventListener("click", function () {
+                const recomendadoId =
+                    {{ (indice_recomendado.id if indice_recomendado else '')|tojson }};
+                const recomendadoCategoria =
+                    {{ (indice_recomendado.categoria.id if indice_recomendado else '')|tojson }};
+
+                if (filtroCategoria) {
+                    filtroCategoria.value = recomendadoCategoria;
+                    filtroCategoria.dispatchEvent(new Event("change"));
+                }
+
+                selector.value = recomendadoId;
+                selector.dispatchEvent(new Event("change"));
+                campoTema.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            });
+        }
+    }());
+</script>
 
 </body>
 

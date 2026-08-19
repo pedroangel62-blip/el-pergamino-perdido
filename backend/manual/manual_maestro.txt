@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.4
+MANUAL MAESTRO — VERSIÓN 1.5
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.3:
+Cambios obligatorios de la versión 1.5:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -15,7 +15,13 @@ Cambios obligatorios de la versión 1.3:
 * escucha y aprobación humana obligatorias para todas las voces;
 * proyecto.json como fuente única de verdad;
 * máximo de cinco hashtags;
-* formato final de publicación unificado.
+* formato final de publicación unificado;
+* índice maestro versionado de categorías y temas;
+* recomendación automática del siguiente tema no utilizado;
+* bloqueo de temas repetidos y expedientes sin evidencia suficiente;
+* fichas documentales de El Caso integradas en la generación;
+* generación de un solo Pergamino cada vez, con los controles humanos
+  obligatorios.
 
 ⸻
 
@@ -305,3 +311,70 @@ Reglas:
 Comentario fijado oficial:
 
 📜 ¿Qué otro misterio histórico te gustaría que investigáramos en un próximo Pergamino? Te leo.
+
+⸻
+
+21. Índice maestro y automatización de temas
+
+Fuente única del catálogo
+
+El archivo backend/data/indice_temas.json será la fuente única de verdad para:
+
+* categorías editoriales;
+* identificadores estables de cada tema;
+* títulos y alias;
+* estado de verificación;
+* prioridad de producción;
+* sensibilidad editorial;
+* fuentes documentales disponibles;
+* bloqueo o habilitación para generar.
+
+Control de repetidos
+
+La aplicación comprobará los archivos proyecto.json existentes antes de recomendar o aceptar un tema indexado.
+
+Un tema ya utilizado:
+
+* aparecerá marcado en la interfaz;
+* no se recomendará de nuevo;
+* no podrá generarse otra vez desde el índice sin una decisión editorial futura y explícita.
+
+Selección automática segura
+
+La aplicación propondrá el siguiente tema disponible y no utilizado.
+
+La recomendación seguirá este orden:
+
+1. mayor puntuación editorial cuando exista;
+2. prioridad documental asignada;
+3. orden estable del índice.
+
+La recomendación solo cargará el tema. No iniciará la generación ni consumirá créditos hasta que el usuario pulse Generar Pergamino.
+
+Categoría Crónica negra española — Archivo El Caso
+
+Los expedientes de esta categoría utilizarán los siguientes grados:
+
+* A: ejemplar, fecha, portada, titular o páginas identificadas;
+* B: cobertura confirmada por una fuente institucional, académica o por periodistas de El Caso, con ejemplar exacto pendiente;
+* C: relación insuficientemente probada con el semanario original;
+* X: excluido por error, periodo o cabecera distinta.
+
+Solo los grados A y B podrán utilizarse para generar.
+
+Los grados C y X permanecerán bloqueados.
+
+Cada caso habilitado incorporará al prompt su resumen verificado, estado del caso, gancho, sensibilidad, material visual probable y fuentes. El guion distinguirá siempre hechos, sentencias, hipótesis y aspectos no resueltos.
+
+Protección editorial
+
+No se permitirá:
+
+* atribuir culpabilidad sin respaldo judicial o documental;
+* presentar una hipótesis como solución confirmada;
+* inventar fechas, citas, víctimas o pruebas;
+* usar detalles morbosos innecesarios;
+* explotar imágenes de cadáveres o menores;
+* confundir el semanario original El Caso con cabeceras posteriores o medios actuales del mismo nombre.
+
+La automatización avanzará un Pergamino cada vez y conservará todas las aprobaciones humanas definidas en este Manual Maestro.
