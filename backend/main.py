@@ -29,6 +29,14 @@ from openai import OpenAI
 from starlette.concurrency import run_in_threadpool
 
 from backend.busqueda_imagenes import buscar_imagenes_reales
+from backend.indice_temas import (
+    construir_contexto_indice,
+    crear_dossier_generacion,
+    crear_referencia_tema,
+    obtener_tema_por_id,
+    obtener_tema_por_titulo,
+    validar_seleccion,
+)
 from backend.imagenes import generar_imagen
 from backend.voz import (
     aprobar_voz,
@@ -72,7 +80,16 @@ app.mount(
     name="proyectos"
 )
 
-templates = Jinja2Templates(directory="backend/templates")
+def contexto_indice_temas(request: Request) -> dict:
+    return construir_contexto_indice(
+        DIRECTORIO_PROYECTOS
+    )
+
+
+templates = Jinja2Templates(
+    directory="backend/templates",
+    context_processors=[contexto_indice_temas]
+)
 
 
 def normalizar_texto(texto: str) -> str:
@@ -209,12 +226,31 @@ def obtener_proyecto_id(resultado: dict) -> str:
 def guardar_proyecto(
     proyecto_id: str,
     tema: str,
-    resultado: dict
+    resultado: dict,
+    tema_indice: dict | None = None
 ) -> None:
     ruta = os.path.join(
         obtener_directorio_proyecto(proyecto_id),
         "proyecto.json"
     )
+
+    if tema_indice is None and os.path.isfile(ruta):
+        try:
+            with open(
+                ruta,
+                "r",
+                encoding="utf-8"
+            ) as archivo:
+                datos_anteriores = json.load(archivo)
+
+            referencia_anterior = datos_anteriores.get(
+                "tema_indice"
+            )
+
+            if isinstance(referencia_anterior, dict):
+                tema_indice = referencia_anterior
+        except (OSError, json.JSONDecodeError):
+            pass
 
     datos = {
         "proyecto_id": proyecto_id,
@@ -224,6 +260,9 @@ def guardar_proyecto(
         ),
         "resultado": resultado
     }
+
+    if tema_indice:
+        datos["tema_indice"] = tema_indice
 
     with open(ruta, "w", encoding="utf-8") as archivo:
         json.dump(
@@ -1017,6 +1056,13 @@ def crear_imagen(
     )
 
 
+@app.get("/api/indice-temas")
+async def consultar_indice_temas():
+    return construir_contexto_indice(
+        DIRECTORIO_PROYECTOS
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def inicio(request: Request):
     return templates.TemplateResponse(
@@ -1092,14 +1138,55 @@ async def abrir_proyecto(
 @app.post("/generar", response_class=HTMLResponse)
 async def generar(
     request: Request,
-    tema: str = Form(...)
+    tema: str = Form(""),
+    tema_id: str = Form("")
 ):
+    tema = tema.strip()
+    tema_id = tema_id.strip()
+    ficha_indice = None
+
+    try:
+        if tema_id:
+            ficha_indice = obtener_tema_por_id(
+                tema_id
+            )
+            validar_seleccion(
+                ficha_indice,
+                DIRECTORIO_PROYECTOS
+            )
+            tema = ficha_indice["titulo"]
+        elif tema:
+            ficha_indice = obtener_tema_por_titulo(
+                tema
+            )
+
+            if ficha_indice:
+                validar_seleccion(
+                    ficha_indice,
+                    DIRECTORIO_PROYECTOS
+                )
+                tema = ficha_indice["titulo"]
+        else:
+            raise ValueError(
+                "Seleccione un tema del índice o escriba uno nuevo."
+            )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    dossier_generacion = crear_dossier_generacion(
+        ficha_indice
+    )
+
     respuesta = client.responses.create(
         model="gpt-5.6-luna",
         input=f"""
 {manual_maestro}
 
 {plantilla_generacion}
+{dossier_generacion}
 
 TEMA
 
@@ -1125,7 +1212,10 @@ TEMA
     guardar_proyecto(
         proyecto_id,
         tema,
-        resultado
+        resultado,
+        crear_referencia_tema(ficha_indice)
+        if ficha_indice
+        else None
     )
 
     resultado_json = json.dumps(

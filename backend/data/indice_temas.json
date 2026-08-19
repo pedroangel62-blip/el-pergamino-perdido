@@ -1,0 +1,3401 @@
+{
+  "schema_version": "1.0",
+  "actualizado": "2026-08-18",
+  "nombre": "Índice maestro de temas — El Pergamino Perdido",
+  "reglas": {
+    "fuente_unica_de_verdad": true,
+    "evitar_repetidos": true,
+    "generacion_masiva_automatica": false,
+    "aprobacion_humana_obligatoria": true,
+    "estados_permitidos_para_generar": [
+      "disponible"
+    ],
+    "grados_el_caso_permitidos": [
+      "A",
+      "B"
+    ]
+  },
+  "categorias": [
+    {
+      "id": "historia-antigua",
+      "nombre": "Historia Antigua",
+      "orden": 1,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-001",
+          "titulo": "El Gran Vacío de la Pirámide de Keops",
+          "slug": "el-gran-vacio-de-la-piramide-de-keops",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 1,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            1
+          ]
+        },
+        {
+          "id": "banco-002",
+          "titulo": "El mecanismo de Anticitera",
+          "slug": "el-mecanismo-de-anticitera",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 2,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            2
+          ]
+        },
+        {
+          "id": "banco-003",
+          "titulo": "La Batería de Bagdad",
+          "slug": "la-bateria-de-bagdad",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 3,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            3
+          ]
+        },
+        {
+          "id": "banco-004",
+          "titulo": "Göbekli Tepe",
+          "slug": "gobekli-tepe",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 4,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            4
+          ]
+        },
+        {
+          "id": "banco-005",
+          "titulo": "Puma Punku",
+          "slug": "puma-punku",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 5,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            5
+          ]
+        },
+        {
+          "id": "banco-006",
+          "titulo": "Las Líneas de Nazca",
+          "slug": "las-lineas-de-nazca",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 6,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            6
+          ]
+        },
+        {
+          "id": "banco-007",
+          "titulo": "El Disco de Festo",
+          "slug": "el-disco-de-festo",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 7,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            7
+          ]
+        },
+        {
+          "id": "banco-008",
+          "titulo": "El hormigón romano",
+          "slug": "el-hormigon-romano",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 8,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            8
+          ]
+        },
+        {
+          "id": "banco-009",
+          "titulo": "El fuego griego",
+          "slug": "el-fuego-griego",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 9,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            9
+          ]
+        },
+        {
+          "id": "banco-010",
+          "titulo": "La Biblioteca de Alejandría",
+          "slug": "la-biblioteca-de-alejandria",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 10,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manuscritos-y-libros",
+      "nombre": "Manuscritos y Libros",
+      "orden": 2,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-011",
+          "titulo": "El Manuscrito Voynich",
+          "slug": "el-manuscrito-voynich",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 11,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            11
+          ]
+        },
+        {
+          "id": "banco-012",
+          "titulo": "El Codex Gigas",
+          "slug": "el-codex-gigas",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 12,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            12
+          ]
+        },
+        {
+          "id": "banco-013",
+          "titulo": "El Libro de Soyga",
+          "slug": "el-libro-de-soyga",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 13,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            13
+          ]
+        },
+        {
+          "id": "banco-014",
+          "titulo": "El Codex Rohonczi",
+          "slug": "el-codex-rohonczi",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 14,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            14
+          ]
+        },
+        {
+          "id": "banco-015",
+          "titulo": "Los Rollos del Mar Muerto",
+          "slug": "los-rollos-del-mar-muerto",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 15,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            15
+          ]
+        },
+        {
+          "id": "banco-016",
+          "titulo": "El Evangelio de Judas",
+          "slug": "el-evangelio-de-judas",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 16,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            16
+          ]
+        },
+        {
+          "id": "banco-017",
+          "titulo": "El mapa de Piri Reis",
+          "slug": "el-mapa-de-piri-reis",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 17,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            17
+          ]
+        },
+        {
+          "id": "banco-018",
+          "titulo": "El Libro de Kells",
+          "slug": "el-libro-de-kells",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 18,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            18
+          ]
+        },
+        {
+          "id": "banco-019",
+          "titulo": "El Pergamino de Cobre",
+          "slug": "el-pergamino-de-cobre",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 19,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            19
+          ]
+        },
+        {
+          "id": "banco-020",
+          "titulo": "Los códices mayas",
+          "slug": "los-codices-mayas",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 20,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "id": "objetos-misteriosos",
+      "nombre": "Objetos Misteriosos",
+      "orden": 3,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-021",
+          "titulo": "Los cráneos de cristal",
+          "slug": "los-craneos-de-cristal",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 21,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            21
+          ]
+        },
+        {
+          "id": "banco-022",
+          "titulo": "La Lanza de Longinos",
+          "slug": "la-lanza-de-longinos",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 22,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            22
+          ]
+        },
+        {
+          "id": "banco-023",
+          "titulo": "El Santo Grial",
+          "slug": "el-santo-grial",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 23,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            23
+          ]
+        },
+        {
+          "id": "banco-024",
+          "titulo": "El Arca de la Alianza",
+          "slug": "el-arca-de-la-alianza",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 24,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            24
+          ]
+        },
+        {
+          "id": "banco-025",
+          "titulo": "Las esferas de Costa Rica",
+          "slug": "las-esferas-de-costa-rica",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 25,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            25
+          ]
+        },
+        {
+          "id": "banco-026",
+          "titulo": "El martillo de Londres",
+          "slug": "el-martillo-de-londres",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 26,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            26
+          ]
+        },
+        {
+          "id": "banco-027",
+          "titulo": "El disco de Nebra",
+          "slug": "el-disco-de-nebra",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 27,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            27
+          ]
+        },
+        {
+          "id": "banco-028",
+          "titulo": "La espada de Ulfberht",
+          "slug": "la-espada-de-ulfberht",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 28,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            28
+          ]
+        },
+        {
+          "id": "banco-029",
+          "titulo": "El tesoro de Guarrazar",
+          "slug": "el-tesoro-de-guarrazar",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 29,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            29
+          ]
+        },
+        {
+          "id": "banco-030",
+          "titulo": "El reloj del castillo de Praga",
+          "slug": "el-reloj-del-castillo-de-praga",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 30,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "personajes-enigmaticos",
+      "nombre": "Personajes Enigmáticos",
+      "orden": 4,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-031",
+          "titulo": "Rasputín",
+          "slug": "rasputin",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 31,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            31
+          ]
+        },
+        {
+          "id": "banco-032",
+          "titulo": "Nicolás Flamel",
+          "slug": "nicolas-flamel",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 32,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            32
+          ]
+        },
+        {
+          "id": "banco-033",
+          "titulo": "Saint Germain",
+          "slug": "saint-germain",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 33,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            33
+          ]
+        },
+        {
+          "id": "banco-034",
+          "titulo": "Fulcanelli",
+          "slug": "fulcanelli",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 34,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            34
+          ]
+        },
+        {
+          "id": "banco-035",
+          "titulo": "D. B. Cooper",
+          "slug": "d-b-cooper",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 35,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            35
+          ]
+        },
+        {
+          "id": "banco-036",
+          "titulo": "Jack el Destripador",
+          "slug": "jack-el-destripador",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 36,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            36
+          ]
+        },
+        {
+          "id": "banco-037",
+          "titulo": "Kaspar Hauser",
+          "slug": "kaspar-hauser",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 37,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            37
+          ]
+        },
+        {
+          "id": "banco-038",
+          "titulo": "Billy the Kid",
+          "slug": "billy-the-kid",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 38,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            38
+          ]
+        },
+        {
+          "id": "banco-039",
+          "titulo": "Mata Hari",
+          "slug": "mata-hari",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 39,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            39
+          ]
+        },
+        {
+          "id": "banco-040",
+          "titulo": "Anastasia Romanov",
+          "slug": "anastasia-romanov",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 40,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lugares-misteriosos",
+      "nombre": "Lugares Misteriosos",
+      "orden": 5,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-041",
+          "titulo": "Stonehenge",
+          "slug": "stonehenge",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 41,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            41
+          ]
+        },
+        {
+          "id": "banco-042",
+          "titulo": "Isla de Pascua",
+          "slug": "isla-de-pascua",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 42,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            42
+          ]
+        },
+        {
+          "id": "banco-043",
+          "titulo": "Machu Picchu",
+          "slug": "machu-picchu",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 43,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            43
+          ]
+        },
+        {
+          "id": "banco-044",
+          "titulo": "Petra",
+          "slug": "petra",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 44,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            44
+          ]
+        },
+        {
+          "id": "banco-045",
+          "titulo": "El Monte Kailash",
+          "slug": "el-monte-kailash",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 45,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            45
+          ]
+        },
+        {
+          "id": "banco-046",
+          "titulo": "El Triángulo de las Bermudas",
+          "slug": "el-triangulo-de-las-bermudas",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 46,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            46
+          ]
+        },
+        {
+          "id": "banco-047",
+          "titulo": "El bosque Hoia Baciu",
+          "slug": "el-bosque-hoia-baciu",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 47,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            47
+          ]
+        },
+        {
+          "id": "banco-048",
+          "titulo": "La isla de Oak",
+          "slug": "la-isla-de-oak",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 48,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            48
+          ]
+        },
+        {
+          "id": "banco-049",
+          "titulo": "Yonaguni",
+          "slug": "yonaguni",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 49,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            49
+          ]
+        },
+        {
+          "id": "banco-050",
+          "titulo": "La Puerta del Sol de Tiahuanaco",
+          "slug": "la-puerta-del-sol-de-tiahuanaco",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 50,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "id": "misterios-del-cine",
+      "nombre": "Misterios del Cine",
+      "orden": 6,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-051",
+          "titulo": "La maldición de Poltergeist",
+          "slug": "la-maldicion-de-poltergeist",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 51,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            51
+          ]
+        },
+        {
+          "id": "banco-052",
+          "titulo": "El supuesto fantasma de “Tres hombres y un bebé”",
+          "slug": "el-supuesto-fantasma-de-tres-hombres-y-un-bebe",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 52,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            52
+          ]
+        },
+        {
+          "id": "banco-053",
+          "titulo": "El verdadero caso de Annabelle",
+          "slug": "el-verdadero-caso-de-annabelle",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 53,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            53
+          ]
+        },
+        {
+          "id": "banco-054",
+          "titulo": "El origen real de Expediente Warren",
+          "slug": "el-origen-real-de-expediente-warren",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 54,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            54
+          ]
+        },
+        {
+          "id": "banco-055",
+          "titulo": "La maldición de Superman",
+          "slug": "la-maldicion-de-superman",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 55,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            55
+          ]
+        },
+        {
+          "id": "banco-056",
+          "titulo": "Los accidentes durante El Exorcista",
+          "slug": "los-accidentes-durante-el-exorcista",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 56,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            56
+          ]
+        },
+        {
+          "id": "banco-057",
+          "titulo": "La maldición de La Profecía (The Omen)",
+          "slug": "la-maldicion-de-la-profecia-the-omen",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 57,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            57
+          ]
+        },
+        {
+          "id": "banco-058",
+          "titulo": "¿Kubrick grabó el alunizaje?",
+          "slug": "kubrick-grabo-el-alunizaje",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 58,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            58
+          ]
+        },
+        {
+          "id": "banco-059",
+          "titulo": "Los mensajes ocultos de El Resplandor",
+          "slug": "los-mensajes-ocultos-de-el-resplandor",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 59,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            59
+          ]
+        },
+        {
+          "id": "banco-060",
+          "titulo": "La historia real tras La Matanza de Texas",
+          "slug": "la-historia-real-tras-la-matanza-de-texas",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 60,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            60
+          ]
+        },
+        {
+          "id": "banco-061",
+          "titulo": "El misterio de Nosferatu",
+          "slug": "el-misterio-de-nosferatu",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 61,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            61
+          ]
+        },
+        {
+          "id": "banco-062",
+          "titulo": "Curiosidades ocultas de El Señor de los Anillos",
+          "slug": "curiosidades-ocultas-de-el-senor-de-los-anillos",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 62,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            62
+          ]
+        },
+        {
+          "id": "banco-063",
+          "titulo": "Los secretos del rodaje de Indiana Jones",
+          "slug": "los-secretos-del-rodaje-de-indiana-jones",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 63,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            63
+          ]
+        },
+        {
+          "id": "banco-064",
+          "titulo": "Las leyendas de Regreso al Futuro",
+          "slug": "las-leyendas-de-regreso-al-futuro",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 64,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            64
+          ]
+        },
+        {
+          "id": "banco-065",
+          "titulo": "El misterio del Joker de Heath Ledger",
+          "slug": "el-misterio-del-joker-de-heath-ledger",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 65,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            65
+          ]
+        },
+        {
+          "id": "banco-066",
+          "titulo": "Titanic: errores y curiosidades reales",
+          "slug": "titanic-errores-y-curiosidades-reales",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 66,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            66
+          ]
+        },
+        {
+          "id": "banco-067",
+          "titulo": "El Club de la Lucha: detalles ocultos",
+          "slug": "el-club-de-la-lucha-detalles-ocultos",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 67,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            67
+          ]
+        },
+        {
+          "id": "banco-068",
+          "titulo": "Matrix y sus teorías",
+          "slug": "matrix-y-sus-teorias",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 68,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            68
+          ]
+        },
+        {
+          "id": "banco-069",
+          "titulo": "La inspiración real de Alien",
+          "slug": "la-inspiracion-real-de-alien",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 69,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            69
+          ]
+        },
+        {
+          "id": "banco-070",
+          "titulo": "La historia detrás de Jurassic Park",
+          "slug": "la-historia-detras-de-jurassic-park",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 70,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            70
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ciencia-y-espacio",
+      "nombre": "Ciencia y Espacio",
+      "orden": 7,
+      "descripcion": "Banco histórico original de El Pergamino Perdido.",
+      "temas": [
+        {
+          "id": "banco-071",
+          "titulo": "La señal Wow!",
+          "slug": "la-senal-wow",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 71,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            71
+          ]
+        },
+        {
+          "id": "banco-072",
+          "titulo": "Oumuamua",
+          "slug": "oumuamua",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 72,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            72
+          ]
+        },
+        {
+          "id": "banco-073",
+          "titulo": "El Caballero Negro",
+          "slug": "el-caballero-negro",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 73,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            73
+          ]
+        },
+        {
+          "id": "banco-074",
+          "titulo": "Tunguska",
+          "slug": "tunguska",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 74,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            74
+          ]
+        },
+        {
+          "id": "banco-075",
+          "titulo": "Roswell",
+          "slug": "roswell",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 75,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            75
+          ]
+        },
+        {
+          "id": "banco-076",
+          "titulo": "MK Ultra",
+          "slug": "mk-ultra",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 76,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            76
+          ]
+        },
+        {
+          "id": "banco-077",
+          "titulo": "Proyecto Filadelfia",
+          "slug": "proyecto-filadelfia",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 77,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [
+            "El experimento de Filadelfia"
+          ],
+          "numeros_origen": [
+            77,
+            79
+          ]
+        },
+        {
+          "id": "banco-078",
+          "titulo": "Nikola Tesla y sus inventos perdidos",
+          "slug": "nikola-tesla-y-sus-inventos-perdidos",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 78,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            78
+          ]
+        },
+        {
+          "id": "banco-080",
+          "titulo": "El misterio del Paso Dyatlov",
+          "slug": "el-misterio-del-paso-dyatlov",
+          "origen": "banco-historico",
+          "estado": "disponible",
+          "resumen": "",
+          "gancho": "",
+          "tipo": [],
+          "produccion": {
+            "prioridad": 80,
+            "puntuacion": null,
+            "sensibilidad": "por_evaluar"
+          },
+          "verificacion": {
+            "grado": "pendiente",
+            "nota": "Tema del banco histórico; exige investigación factual antes de redactar."
+          },
+          "fuentes": [],
+          "aliases": [],
+          "numeros_origen": [
+            80
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cronica-negra-archivo-el-caso",
+      "nombre": "Crónica negra española — Archivo El Caso",
+      "orden": 8,
+      "descripcion": "Expedientes reales con cobertura verificada o confirmada en el semanario original El Caso (1952–1987).",
+      "politica_evidencia": {
+        "A": "Ejemplar, número, fecha, portada, titular o páginas identificadas",
+        "B": "Cobertura confirmada por institución, estudio o periodista de El Caso; ejemplar exacto pendiente",
+        "C": "Caso real, pero relación insuficientemente probada con el semanario original",
+        "X": "Excluido por error, periodo o cabecera distinta"
+      },
+      "generacion_permitida": [
+        "A",
+        "B"
+      ],
+      "revision_humana_obligatoria": true,
+      "fuentes_base": [
+        "https://bibliotecaceu.wordpress.com/2019/06/05/el-fondo-bibliografico-de-el-caso-se-conserva-en-la-biblioteca-de-la-universidad/",
+        "https://hemerotecadigital.bne.es/hd/ca/card?sid=129271158",
+        "https://dialnet.unirioja.es/descarga/articulo/4333866.pdf",
+        "https://dialnet.unirioja.es/descarga/articulo/7073247.pdf",
+        "https://www.rtve.es/play/noticias/20160211/siete-cosas-no-sabias-sobre-caso-van-a-dejar-estupefacto/1308969.shtml"
+      ],
+      "temas": [
+        {
+          "id": "el-caso-001",
+          "titulo": "El niño desaparecido de Somosierra",
+          "slug": "nino-desaparecido-somosierra",
+          "fecha_hecho": "1986-06-24",
+          "ubicacion": "Puerto de Somosierra, Madrid-Segovia",
+          "tipo": [
+            "desaparicion",
+            "misterio",
+            "narcotrafico"
+          ],
+          "estado_caso": "sin_resolver",
+          "resumen": "Juan Pedro Martínez, de diez años, desapareció tras el accidente del camión cisterna en el que murieron sus padres. Un año después apareció heroína oculta en el vehículo y El Caso abrió en portada la hipótesis de un secuestro.",
+          "gancho": "Dos adultos muertos, un camión volcado y un niño que no estaba en ninguna parte.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fecha": "1987-07-04",
+            "tipo": "portada",
+            "nota": "Portada reproducida por Juan Rada"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 1,
+            "puntuacion": 96,
+            "misterio": 5,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "camion",
+            "puerto",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/20160731/143736406_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": "Portada reproducida por Juan Rada"
+          }
+        },
+        {
+          "id": "el-caso-002",
+          "titulo": "El crimen de las tres copas de Mazarrón",
+          "slug": "tres-copas-mazarron",
+          "fecha_hecho": "1956-01-15",
+          "ubicacion": "Mazarrón, Murcia",
+          "tipo": [
+            "muerte-sospechosa",
+            "desaparicion",
+            "misterio"
+          ],
+          "estado_caso": "explicacion_oficial_discutida",
+          "resumen": "Dos hermanos aparecieron muertos junto a tres copas en una playa. La tercera hermana desapareció y nunca se aclaró si hubo suicidio, asesinato o una cuarta persona.",
+          "gancho": "Había dos cuerpos, tres copas y una hermana que se desvaneció.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "portada_y_reportaje",
+            "nota": "Portada y siete páginas reproducidas; falta número exacto"
+          },
+          "produccion": {
+            "estado": "listo_con_aviso",
+            "prioridad": 2,
+            "puntuacion": 94,
+            "misterio": 5,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "playa",
+            "hermanos",
+            "copas",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20160902/152485306_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Portada y siete páginas reproducidas; falta número exacto"
+          }
+        },
+        {
+          "id": "el-caso-003",
+          "titulo": "Los cinco crímenes de Los Galindos",
+          "slug": "cinco-crimenes-galindos",
+          "fecha_hecho": "1975-07-22",
+          "ubicacion": "Paradas, Sevilla",
+          "tipo": [
+            "homicidio-multiple",
+            "misterio-rural"
+          ],
+          "estado_caso": "sin_resolver_prescrito",
+          "resumen": "Cinco personas fueron asesinadas en distintos puntos del cortijo Los Galindos. La investigación acumuló contradicciones y el caso terminó prescribiendo sin condena.",
+          "gancho": "Cinco víctimas en una finca y ninguna respuesta medio siglo después.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fecha": "1975-08-02",
+            "tipo": "portada_y_seguimiento",
+            "nota": "Cobertura continuada de Margarita Landi"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 3,
+            "puntuacion": 93,
+            "misterio": 5,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "cortijo",
+            "victimas",
+            "investigadores",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.rtve.es/noticias/20250722/cinco-asesinatos-ningun-culpable-aniversario-crimen-galindos/16673146.shtml",
+            "https://www.elespanol.com/reportajes/grandes-historias/20161030/165984248_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": "Cobertura continuada de Margarita Landi"
+          }
+        },
+        {
+          "id": "el-caso-004",
+          "titulo": "El misterio de la joven de la tinaja",
+          "slug": "joven-tinaja",
+          "fecha_hecho": "1969-08",
+          "ubicacion": "Madrid",
+          "tipo": [
+            "homicidio",
+            "misterio"
+          ],
+          "estado_caso": "sin_resolver",
+          "resumen": "Natividad Romero fue hallada muerta dentro de una tinaja. El Caso publicó dos portadas consecutivas mientras se reconstruían sus últimas horas.",
+          "gancho": "Una joven desaparecida y una tinaja que ocultaba el misterio.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fechas": [
+              "1969-08-23",
+              "1969-08-30"
+            ],
+            "tipo": "dos_portadas"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 4,
+            "puntuacion": 92,
+            "misterio": 5,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "tinaja-no-grafica",
+            "calles",
+            "portadas"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/corazon/bluper/20200508/crimen-tinaja-historia-basa-primer-asesinato-caso/109989432_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-005",
+          "titulo": "El misterio de la mano cortada",
+          "slug": "misterio-mano-cortada",
+          "fecha_hecho": "1954",
+          "ubicacion": "Madrid",
+          "tipo": [
+            "investigacion-forense",
+            "misterio"
+          ],
+          "estado_caso": "resuelto_con_controversias",
+          "resumen": "El hallazgo de una mano humana conservada en un domicilio madrileño desencadenó una investigación que se convirtió en símbolo de El Caso.",
+          "gancho": "Una mano sin cuerpo y una vivienda llena de versiones contradictorias.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "tipo": "portada_y_expediente",
+            "nota": "Caso destacado por CEU y RTVE"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 5,
+            "puntuacion": 91,
+            "misterio": 5,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "vivienda",
+            "retratos",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.rtve.es/play/noticias/20160509/caso-cronica-sucesos-investiga-misterio-mano-cortada/1349287.shtml"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": "Caso destacado por CEU y RTVE"
+          }
+        },
+        {
+          "id": "el-caso-006",
+          "titulo": "Los dos cadáveres de Ituren",
+          "slug": "cadaveres-ituren",
+          "fecha_hecho": "1966",
+          "ubicacion": "Ituren, Navarra",
+          "tipo": [
+            "identidad-desconocida",
+            "misterio",
+            "hipotesis-politica"
+          ],
+          "estado_caso": "sin_resolver",
+          "resumen": "Dos hombres sin identificar aparecieron en Ituren. La posible conexión con la desaparición de Mehdi Ben Barka fue una teoría periodística posterior, no una conclusión probada.",
+          "gancho": "Dos cuerpos sin nombre y una teoría que cruzó fronteras.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "investigacion_periodistica",
+            "nota": "Vínculo confirmado por Juan Rada; teoría Ben Barka controvertida"
+          },
+          "produccion": {
+            "estado": "listo_con_cautela",
+            "prioridad": 6,
+            "puntuacion": 91,
+            "misterio": 5,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "paisaje",
+            "fichas",
+            "recortes"
+          ],
+          "fuentes": [
+            "https://www.naiz.eus/es/hemeroteca/gara/editions/2016-09-11/hemeroteca_articles/50-anos-de-misterio-sobre-dos-cadaveres-hallados-en-ituren"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Vínculo confirmado por Juan Rada; teoría Ben Barka controvertida"
+          }
+        },
+        {
+          "id": "el-caso-007",
+          "titulo": "El asesinato de los marqueses de Urquijo",
+          "slug": "marqueses-urquijo",
+          "fecha_hecho": "1980-08-01",
+          "ubicacion": "Somosaguas, Madrid",
+          "tipo": [
+            "doble-homicidio",
+            "alta-sociedad",
+            "controversia-judicial"
+          ],
+          "estado_caso": "resuelto_con_controversias",
+          "resumen": "Los marqueses de Urquijo fueron asesinados en su chalet. Rafael Escobedo fue condenado, pero persistieron dudas sobre colaboradores y autoría intelectual.",
+          "gancho": "Una mansión, dos disparos y una sentencia que no cerró todas las preguntas.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "cobertura_directa",
+            "nota": "Expediente entre los más consultados del fondo CEU"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 7,
+            "puntuacion": 90,
+            "misterio": 4,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "chalet",
+            "retratos",
+            "juicio",
+            "prensa"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161117/171483454_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Expediente entre los más consultados del fondo CEU"
+          }
+        },
+        {
+          "id": "el-caso-008",
+          "titulo": "Los cuatro asesinatos de Jarabo",
+          "slug": "cuatro-asesinatos-jarabo",
+          "fecha_hecho": "1958-07",
+          "ubicacion": "Madrid",
+          "tipo": [
+            "homicidio-multiple",
+            "cronica-judicial"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "José María Jarabo asesinó a cuatro personas al intentar recuperar una joya y ocultar deudas. El proceso disparó las ventas del semanario.",
+          "gancho": "Una joya empeñada llevó a cuatro asesinatos y a un fenómeno de masas.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "numero": 368,
+            "fecha": "1959-05-23",
+            "paginas": "5-7"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 8,
+            "puntuacion": 89,
+            "misterio": 3,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "retratos",
+            "edificios",
+            "juicio",
+            "portadas"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161127/173483022_0.html",
+            "https://dialnet.unirioja.es/descarga/articulo/10809830.pdf"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-009",
+          "titulo": "El niño pintor de Málaga",
+          "slug": "nino-pintor-malaga",
+          "fecha_hecho": "1987-04-06",
+          "ubicacion": "Málaga",
+          "tipo": [
+            "desaparicion",
+            "menor",
+            "misterio"
+          ],
+          "estado_caso": "sin_resolver",
+          "resumen": "David Guerrero Guevara, de trece años, desapareció en un trayecto muy corto entre su casa, una exposición y su academia de arte.",
+          "gancho": "Un niño con talento salió a ver su propio cuadro y desapareció en 150 metros.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "tipo": "portada",
+            "nota": "Portada reproducida por Juan Rada"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 9,
+            "puntuacion": 88,
+            "misterio": 5,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "cuadros",
+            "galeria",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20160811/146985965_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": "Portada reproducida por Juan Rada"
+          }
+        },
+        {
+          "id": "el-caso-010",
+          "titulo": "El crimen de Paquito Reyes en Torreblanca",
+          "slug": "paquito-reyes-torreblanca",
+          "fecha_hecho": "1984-10-28",
+          "ubicacion": "Torreblanca, Sevilla",
+          "tipo": [
+            "homicidio",
+            "menor",
+            "misterio"
+          ],
+          "estado_caso": "sin_resolver",
+          "resumen": "Francisco José Reyes Romero, de cuatro años, desapareció en Torreblanca y fue hallado muerto. Las detenciones y sospechas no terminaron en condena.",
+          "gancho": "Un barrio entero buscó a un niño; el crimen sigue sin culpable.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "seguimiento",
+            "nota": "Cobertura atribuida al semanario; ejemplar exacto pendiente"
+          },
+          "produccion": {
+            "estado": "listo_con_aviso",
+            "prioridad": 10,
+            "puntuacion": 88,
+            "misterio": 5,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "barrio",
+            "hemeroteca"
+          ],
+          "fuentes": [
+            "https://elpais.com/diario/1984/12/01/espana/470703625_850215.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Cobertura atribuida al semanario; ejemplar exacto pendiente"
+          }
+        },
+        {
+          "id": "el-caso-011",
+          "titulo": "El doble crimen de Pedralbes",
+          "slug": "doble-crimen-pedralbes",
+          "fecha_hecho": "1974-05-04",
+          "ubicacion": "Pedralbes, Barcelona",
+          "tipo": [
+            "doble-homicidio",
+            "cronica-judicial"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "José Luis Cervetó asesinó al matrimonio Juan Roig y María Rosa Recolons en la vivienda para la que había trabajado.",
+          "gancho": "El antiguo empleado volvió de noche a la casa de sus señores.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "expediente",
+            "nota": "Entre los casos más consultados del fondo CEU"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 11,
+            "puntuacion": 86,
+            "misterio": 3,
+            "visual": 5,
+            "gancho": 4,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "vivienda",
+            "retratos",
+            "documental",
+            "juicio"
+          ],
+          "fuentes": [
+            "https://www.lacasaencendida.es/cine/proyeccion-el-asesino-pedralbes-gonzalo-herralde"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Entre los casos más consultados del fondo CEU"
+          }
+        },
+        {
+          "id": "el-caso-012",
+          "titulo": "Manuel Delgado Villegas, el Arropiero",
+          "slug": "arropiero",
+          "fecha_hecho": "1964-1971",
+          "ubicacion": "Varias localidades de España y Europa",
+          "tipo": [
+            "asesino-en-serie",
+            "investigacion"
+          ],
+          "estado_caso": "parcialmente_esclarecido",
+          "resumen": "El Arropiero confesó decenas de homicidios, pero solo una parte pudo comprobarse. La cifra de víctimas debe distinguir siempre confesiones, investigaciones y hechos probados.",
+          "gancho": "Confesó decenas de muertes, pero la justicia nunca pudo ordenar toda la verdad.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "seguimiento_y_retrospectiva",
+            "nota": "Confirmado por periodistas del semanario"
+          },
+          "produccion": {
+            "estado": "listo_con_precision_judicial",
+            "prioridad": 12,
+            "puntuacion": 86,
+            "misterio": 4,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retratos",
+            "mapa",
+            "lugares",
+            "recortes"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161006/160984825_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Confirmado por periodistas del semanario"
+          }
+        },
+        {
+          "id": "el-caso-013",
+          "titulo": "El crimen de las estanqueras",
+          "slug": "crimen-estanqueras",
+          "fecha_hecho": "1952-07",
+          "ubicacion": "Sevilla",
+          "tipo": [
+            "doble-homicidio",
+            "error-judicial"
+          ],
+          "estado_caso": "condena_historica_cuestionada",
+          "resumen": "Matilde y Encarnación Silva Montero fueron asesinadas en su estanco. Tres hombres fueron ejecutados pese a contradicciones y otra persona afirmó después ser el autor.",
+          "gancho": "Tres hombres fueron al garrote por un crimen que otro confesó años después.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "tipo": "titular_y_seguimiento",
+            "titular": "Han confesado los asesinos de las estanqueras"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 13,
+            "puntuacion": 86,
+            "misterio": 4,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "estanco",
+            "acusados",
+            "documentos",
+            "prensa"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20160910/154235559_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-014",
+          "titulo": "La casa del número 3 de Antonio Grilo",
+          "slug": "casa-antonio-grilo",
+          "fecha_hecho": "1945-1962",
+          "ubicacion": "Madrid",
+          "tipo": [
+            "historia-de-lugar",
+            "leyenda-urbana",
+            "sucesos-multiples"
+          ],
+          "estado_caso": "sucesos_independientes",
+          "resumen": "Diversas muertes y un crimen familiar alimentaron la fama de casa maldita del número 3 de Antonio Grilo. No existe una causa única que explique toda la secuencia.",
+          "gancho": "Una dirección de Madrid acumuló tantos sucesos que terminó convertida en leyenda.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "cobertura_de_sucesos",
+            "nota": "Incluido en la serie de grandes expedientes del semanario"
+          },
+          "produccion": {
+            "estado": "listo_como_historia_de_lugar",
+            "prioridad": 14,
+            "puntuacion": 85,
+            "misterio": 4,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "fachada",
+            "calle",
+            "planos",
+            "recortes"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161106/168233316_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Incluido en la serie de grandes expedientes del semanario"
+          }
+        },
+        {
+          "id": "el-caso-015",
+          "titulo": "La envenenadora de Pollença",
+          "slug": "envenenadora-pollenca",
+          "fecha_hecho": "decada-1960",
+          "ubicacion": "Pollença, Mallorca",
+          "tipo": [
+            "envenenamiento",
+            "muertes-familiares"
+          ],
+          "estado_caso": "nucleo_resuelto_otras_sospechas",
+          "resumen": "Catalina Domingo fue relacionada con varias muertes familiares por arsénico. El Caso dedicó portada y seis páginas al expediente.",
+          "gancho": "En una misma familia, las muertes se repetían con el mismo veneno.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fecha": "1970-02-28",
+            "tipo": "portada_y_seis_paginas"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 15,
+            "puntuacion": 84,
+            "misterio": 4,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "retratos",
+            "Pollenca",
+            "documentos",
+            "portada"
+          ],
+          "fuentes": [
+            "https://elpais.com/politica/2019/09/28/cronica_negra/1569694082_778850.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-016",
+          "titulo": "El crimen de Esplús, la dulce Neus",
+          "slug": "dulce-neus-esplus",
+          "fecha_hecho": "1981-06-28",
+          "ubicacion": "Esplús, Huesca",
+          "tipo": [
+            "parricidio",
+            "familia",
+            "violencia-intrafamiliar"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Juan Vila Carbonell fue asesinado por su hija menor dentro de un plan que la sentencia atribuyó a la influencia de Neus Soldevila y otros miembros de la familia.",
+          "gancho": "La familia denunció a unos encapuchados, pero la verdad estaba dentro de la casa.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "numero": 1570,
+            "fecha": "1982",
+            "tipo": "portada"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 16,
+            "puntuacion": 84,
+            "misterio": 3,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "finca",
+            "familia",
+            "juicio",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.todocoleccion.net/coleccionismo-revistas-periodicos/semanario-caso-n-1570-ano-1982-huesca-crimen-esplus-romy-schneider-marcada-por-trag~x226898870",
+            "https://www.lavanguardia.com/hemeroteca/20120601/54301852209/dulce-neus-victima-verdugo.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-017",
+          "titulo": "Eleuterio Sánchez, el Lute",
+          "slug": "el-lute",
+          "fecha_hecho": "1960s-1980s",
+          "ubicacion": "España",
+          "tipo": [
+            "perfil",
+            "fugas",
+            "reinsercion"
+          ],
+          "estado_caso": "perfil_biografico",
+          "resumen": "El Caso siguió las detenciones y fugas de El Lute, cuya historia pasó de la delincuencia y la persecución a los estudios y la escritura.",
+          "gancho": "El fugitivo más buscado terminó estudiando Derecho y escribiendo su propia historia.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "multiples_portadas_y_seguimiento"
+          },
+          "produccion": {
+            "estado": "listo_como_perfil",
+            "prioridad": 18,
+            "puntuacion": 82,
+            "misterio": 2,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "retratos",
+            "capturas",
+            "prisiones",
+            "portadas"
+          ],
+          "fuentes": [
+            "https://www.economistjurist.es/articulos-juridicos-destacados/el-caso-cronica-de-la-espana-mas-negra/"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-018",
+          "titulo": "El asesinato del monaguillo Paquito",
+          "slug": "monaguillo-paquito",
+          "fecha_hecho": "1971-03-02",
+          "ubicacion": "España",
+          "tipo": [
+            "homicidio",
+            "menor",
+            "abuso-de-poder"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Francisco Calero Navalón, de nueve años, fue asesinado por el sacerdote José Prat. El Caso dedicó portada y siete páginas al expediente.",
+          "gancho": "Un niño humilde desapareció y el semanario obligó al país a mirar.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fecha": "1971-03-13",
+            "tipo": "portada_y_siete_paginas"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 19,
+            "puntuacion": 82,
+            "misterio": 3,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "iglesia",
+            "localidad",
+            "recortes"
+          ],
+          "fuentes": [
+            "https://elpais.com/politica/2019/04/05/cronica_negra/1554485726_193155.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-019",
+          "titulo": "Pilar Prades, la envenenadora de Valencia",
+          "slug": "pilar-prades",
+          "fecha_hecho": "1955",
+          "ubicacion": "Valencia",
+          "tipo": [
+            "envenenamiento",
+            "cronica-judicial"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Pilar Prades fue acusada de utilizar arsénico contra mujeres para las que trabajaba. Fue ejecutada en 1959.",
+          "gancho": "El veneno estaba en las casas donde ella trabajaba.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "portada_y_proceso",
+            "nota": "Ejemplar exacto pendiente"
+          },
+          "produccion": {
+            "estado": "listo_con_aviso",
+            "prioridad": 20,
+            "puntuacion": 82,
+            "misterio": 3,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "domicilios",
+            "juicio",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.rtve.es/play/noticias/20120725/ultimo-garrote-vil-caso-envenenadas-valencia-2/550223.shtml"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Ejemplar exacto pendiente"
+          }
+        },
+        {
+          "id": "el-caso-020",
+          "titulo": "El crimen del párroco de Alcaudete",
+          "slug": "parroco-alcaudete",
+          "fecha_hecho": "1970-01-18",
+          "ubicacion": "Alcaudete, Jaén",
+          "tipo": [
+            "homicidio",
+            "obsesion"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Francisco Sánchez mató al párroco Facundo Caballero. El Caso publicó la crónica seis días después y reconstruyó los antecedentes del agresor.",
+          "gancho": "Una obsesión personal terminó en crimen dentro de una pequeña comunidad.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fecha": "1970-01-24",
+            "tipo": "cronica"
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 21,
+            "puntuacion": 81,
+            "misterio": 2,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "parroquia",
+            "pueblo",
+            "retratos",
+            "recortes"
+          ],
+          "fuentes": [
+            "https://elpais.com/politica/2019/10/07/cronica_negra/1570458316_469982.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-021",
+          "titulo": "La niña Piedad y sus cuatro hermanos",
+          "slug": "nina-piedad",
+          "fecha_hecho": "1965",
+          "ubicacion": "Murcia",
+          "tipo": [
+            "envenenamiento",
+            "menor",
+            "familia"
+          ],
+          "estado_caso": "resuelto_en_justicia_de_menores",
+          "resumen": "Piedad, de doce años, fue relacionada con el envenenamiento de cuatro hermanos menores. El Caso siguió intensamente el expediente.",
+          "gancho": "La sospechosa tenía doce años y las víctimas eran sus hermanos.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "seguimiento",
+            "nota": "Confirmado por Juan Rada"
+          },
+          "produccion": {
+            "estado": "listo_alta_sensibilidad",
+            "prioridad": 22,
+            "puntuacion": 80,
+            "misterio": 3,
+            "visual": 3,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "recortes"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161204/174983447_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Confirmado por Juan Rada"
+          }
+        },
+        {
+          "id": "el-caso-022",
+          "titulo": "El crimen de El Plantío",
+          "slug": "crimen-el-plantio",
+          "fecha_hecho": "1952",
+          "ubicacion": "El Plantío, Madrid",
+          "tipo": [
+            "homicidio",
+            "historia-del-periodismo"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "El primer número de El Caso incluyó el asesinato de doña Rogelia por Ángel Murciano y un cómplice. Es la puerta de entrada a la historia del semanario.",
+          "gancho": "El crimen que abrió el primer número del periódico de sucesos más famoso de España.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "fecha": "1952-05-11",
+            "pagina": 3,
+            "tipo": "primer_numero"
+          },
+          "produccion": {
+            "estado": "listo_tras_completar_datos",
+            "prioridad": 23,
+            "puntuacion": 79,
+            "misterio": 2,
+            "visual": 5,
+            "gancho": 4,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "primera-portada",
+            "redaccion",
+            "localizacion"
+          ],
+          "fuentes": [
+            "https://dialnet.unirioja.es/descarga/articulo/4333866.pdf"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-023",
+          "titulo": "Josefina Vilaseca",
+          "slug": "josefina-vilaseca",
+          "fecha_hecho": "1952",
+          "ubicacion": "España",
+          "tipo": [
+            "homicidio",
+            "menor",
+            "impacto-social"
+          ],
+          "estado_caso": "revision_judicial_pendiente",
+          "resumen": "Josefina Vilaseca, de doce años, fue víctima de una agresión que conmocionó a España. El Caso la llevó a portada y siguió el expediente.",
+          "gancho": "Una portada consiguió que un país entero pronunciara el nombre de Josefina.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "portada_y_seguimiento",
+            "nota": "Confirmado por reportaje de Juan Rada"
+          },
+          "produccion": {
+            "estado": "listo_tras_revisar_resolucion",
+            "prioridad": 24,
+            "puntuacion": 77,
+            "misterio": 3,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "portada",
+            "contexto"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161211/176732700_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Confirmado por reportaje de Juan Rada"
+          }
+        },
+        {
+          "id": "el-caso-024",
+          "titulo": "La niña de Loja",
+          "slug": "nina-loja",
+          "fecha_hecho": "1957",
+          "ubicacion": "Loja, Granada",
+          "tipo": [
+            "homicidio",
+            "menor",
+            "violencia-contra-la-mujer"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Ana Cáceres Soldado, de quince años, fue atacada y murió semanas después. El Caso publicó al menos dos entregas sobre la investigación.",
+          "gancho": "Dos números del semanario siguieron una agresión que una joven no logró sobrevivir.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "numeros": [
+              255,
+              259
+            ],
+            "fechas": [
+              "1957-03-22",
+              "1957-04-20"
+            ]
+          },
+          "produccion": {
+            "estado": "listo",
+            "prioridad": 25,
+            "puntuacion": 77,
+            "misterio": 2,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "Loja",
+            "hemeroteca"
+          ],
+          "fuentes": [
+            "https://revistaseug.ugr.es/index.php/arenal/article/download/21025/23492/87186"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-025",
+          "titulo": "El drama pasional de Solsona",
+          "slug": "pilar-orrit-solsona",
+          "fecha_hecho": "1963",
+          "ubicacion": "Solsona, Lleida",
+          "tipo": [
+            "homicidio",
+            "violencia-contra-la-mujer"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Pilar Orrit Alsina, de diecisiete años, fue asesinada por su expareja Eliseo Albets Clotet. La cobertura permite revisar el viejo lenguaje de drama pasional.",
+          "gancho": "El titular decía pasión; los hechos mostraban violencia de un agresor.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "numeros": [
+              571,
+              585,
+              586
+            ],
+            "fechas": [
+              "1963-04-13",
+              "1963-07-20",
+              "1963-07-27"
+            ]
+          },
+          "produccion": {
+            "estado": "listo_con_enfoque_actual",
+            "prioridad": 26,
+            "puntuacion": 76,
+            "misterio": 2,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "Solsona",
+            "paginas"
+          ],
+          "fuentes": [
+            "https://revistaseug.ugr.es/index.php/arenal/article/download/21025/23492/87186"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-026",
+          "titulo": "La envenenadora de Algemesí",
+          "slug": "envenenadora-algemesi",
+          "fecha_hecho": "decada-1950",
+          "ubicacion": "Algemesí, Valencia",
+          "tipo": [
+            "envenenamiento",
+            "supersticion"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Francisco Mollá y Josefa Mas planearon la muerte de Miguel Lerma mediante arsénico, con participación de una mujer descrita por la prensa como bruja.",
+          "gancho": "Veneno, superstición y un plan familiar en la España de posguerra.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "tipo": "portada",
+            "titular": "La envenenadora de Algemesí",
+            "nota": "Fecha exacta pendiente"
+          },
+          "produccion": {
+            "estado": "listo_tras_completar_fecha",
+            "prioridad": 27,
+            "puntuacion": 75,
+            "misterio": 3,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "media"
+          },
+          "imagenes_reales": [
+            "portada",
+            "Algemesi",
+            "retratos",
+            "documentos"
+          ],
+          "fuentes": [
+            "https://dialnet.unirioja.es/descarga/articulo/4333866.pdf"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": "Fecha exacta pendiente"
+          }
+        },
+        {
+          "id": "el-caso-027",
+          "titulo": "El loco del estilete",
+          "slug": "loco-estilete",
+          "fecha_hecho": "1966",
+          "ubicacion": "Madrid",
+          "tipo": [
+            "homicidio",
+            "fuga",
+            "salud-mental"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "Juan Francisco Blanco Villoria mató a Jacinto Alcántara después de escapar de un centro psiquiátrico; anteriormente había matado a Miguel Kreisler Padín.",
+          "gancho": "Un interno escapó y el semanario tituló: segundo crimen.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "tipo": "titular",
+            "titular": "Segundo crimen de un demente",
+            "nota": "Ejemplar exacto pendiente"
+          },
+          "produccion": {
+            "estado": "listo_con_lenguaje_responsable",
+            "prioridad": 28,
+            "puntuacion": 74,
+            "misterio": 2,
+            "visual": 4,
+            "gancho": 4,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retratos",
+            "lugares",
+            "portada"
+          ],
+          "fuentes": [
+            "https://www.libertaddigital.com/cultura/series/2016-04-12/los-crimenes-reales-que-inspiran-a-el-caso-1276571738/"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": "Ejemplar exacto pendiente"
+          }
+        },
+        {
+          "id": "el-caso-028",
+          "titulo": "La catástrofe aérea próxima a Tánger",
+          "slug": "catastrofe-aerea-tanger",
+          "fecha_hecho": "1965-04-03",
+          "ubicacion": "Cerca de Tánger, Marruecos",
+          "tipo": [
+            "catastrofe",
+            "aviacion"
+          ],
+          "estado_caso": "investigado",
+          "resumen": "El Caso informó de un accidente aéreo próximo a Tánger con cincuenta fallecidos. Es una muestra de que el semanario también cubría catástrofes.",
+          "gancho": "El número 674 no abrió con un crimen, sino con una catástrofe de cincuenta víctimas.",
+          "evidencia_el_caso": {
+            "grado": "A",
+            "numero": 674,
+            "fecha": "1965-04-03",
+            "tipo": "cobertura"
+          },
+          "produccion": {
+            "estado": "listo_tras_verificar_informe_tecnico",
+            "prioridad": 29,
+            "puntuacion": 72,
+            "misterio": 2,
+            "visual": 5,
+            "gancho": 4,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "aeronave",
+            "ruta",
+            "rescate",
+            "portada"
+          ],
+          "fuentes": [
+            "https://dialnet.unirioja.es/descarga/articulo/4333866.pdf"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "A",
+            "nota": ""
+          }
+        },
+        {
+          "id": "el-caso-029",
+          "titulo": "La desaparición de Santiago Corella, el Nani",
+          "slug": "desaparicion-el-nani",
+          "fecha_hecho": "1983",
+          "ubicacion": "Madrid",
+          "tipo": [
+            "desaparicion",
+            "corrupcion-policial",
+            "investigacion"
+          ],
+          "estado_caso": "desaparicion_sin_resolver_responsabilidades_parciales",
+          "resumen": "Santiago Corella desapareció tras ser detenido. La investigación judicial destapó una trama policial relacionada con robos a joyerías.",
+          "gancho": "Una desaparición en custodia abrió la puerta a una trama dentro de la policía.",
+          "evidencia_el_caso": {
+            "grado": "B",
+            "tipo": "gran_expediente",
+            "nota": "Vínculo confirmado por Juan Rada; ejemplar exacto pendiente"
+          },
+          "produccion": {
+            "estado": "listo_con_aviso",
+            "prioridad": 17,
+            "puntuacion": 84,
+            "misterio": 4,
+            "visual": 4,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "retrato",
+            "comisaria",
+            "juicio",
+            "prensa"
+          ],
+          "fuentes": [
+            "https://www.elespanol.com/reportajes/grandes-historias/20161002/159484825_0.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "disponible",
+          "verificacion": {
+            "grado": "B",
+            "nota": "Vínculo confirmado por Juan Rada; ejemplar exacto pendiente"
+          }
+        },
+        {
+          "id": "el-caso-030",
+          "titulo": "Álvaro Bustos y el parricidio ritual de Córdoba",
+          "slug": "alvaro-bustos-parricidio",
+          "fecha_hecho": "1987-01-07",
+          "ubicacion": "Córdoba",
+          "tipo": [
+            "parricidio",
+            "ritual",
+            "salud-mental"
+          ],
+          "estado_caso": "resuelto",
+          "resumen": "El exintegrante del grupo Trébol Álvaro Bustos mató a su padre durante un supuesto ritual de exorcismo. El hecho ocurrió dentro del periodo del semanario, pero falta acreditar una publicación concreta.",
+          "gancho": "Un antiguo cantante creyó que debía expulsar al demonio de su propio padre.",
+          "evidencia_el_caso": {
+            "grado": "C",
+            "tipo": "no_confirmada",
+            "nota": "Bloqueado hasta localizar ejemplar"
+          },
+          "produccion": {
+            "estado": "bloqueado",
+            "prioridad": 30,
+            "puntuacion": 78,
+            "misterio": 3,
+            "visual": 5,
+            "gancho": 5,
+            "sensibilidad": "alta"
+          },
+          "imagenes_reales": [
+            "cantante",
+            "grupo",
+            "vivienda",
+            "prensa-general"
+          ],
+          "fuentes": [
+            "https://elpais.com/diario/1987/01/08/espana/537058822_850215.html"
+          ],
+          "origen": "archivo-el-caso",
+          "estado": "bloqueado",
+          "verificacion": {
+            "grado": "C",
+            "nota": "Bloqueado hasta localizar ejemplar"
+          }
+        }
+      ]
+    }
+  ],
+  "reservas_documentales_el_caso": [
+    {
+      "titulo": "El misterio de Torremolinos",
+      "evidencia": "Numero 989, 17 de abril de 1971",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "El diabolico de Valencia",
+      "evidencia": "Numero 1175, noviembre de 1974",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Le liquidaron a machetazos",
+      "evidencia": "Numero 1530, 29 de agosto de 1981",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "El crimen de la calle del Oso",
+      "evidencia": "Portada del 25 de febrero de 1978",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Asesinato del parroco de Calpe",
+      "evidencia": "Portada de 1982",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Los quintillizos de Huelva",
+      "evidencia": "Recuerdo de un redactor",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "El Palmar de Troya",
+      "evidencia": "Recuerdo de un redactor",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "El parricidio de Nervion",
+      "evidencia": "Recuerdo de un redactor",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Corrupcion policial y droga en Sevilla",
+      "evidencia": "Recuerdo de un redactor",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Vacio el cargador sobre el secretario de la Fiscalia de Tasas",
+      "evidencia": "Titular de 1952",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Al ver que se me echaba encima, le tire una pesa",
+      "evidencia": "Titular de 1952",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Aqui encontre muerta a mi madre",
+      "evidencia": "Titular de 1952",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "El pistolero me atizo una patada en la boca",
+      "evidencia": "Titular de 1952",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Asi es el timo de las borregas",
+      "evidencia": "Titular de 1952",
+      "estado": "bloqueado"
+    },
+    {
+      "titulo": "Puente de mando del platillo volante",
+      "evidencia": "Titular de 1952",
+      "estado": "bloqueado"
+    }
+  ]
+}
