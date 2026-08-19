@@ -160,6 +160,15 @@
         {% endif %}
 
         {% if produccion.sincronizacion %}
+            {% if produccion.metodo_sincronizacion == 'elevenlabs_alignment' %}
+                <div class="estado correcto">
+                    Tiempos calculados con las marcas reales de la narración de ElevenLabs.
+                </div>
+            {% else %}
+                <div class="estado error">
+                    Sincronización estimada: esta voz se creó sin marcas temporales. Revísala con especial atención o regenera la voz.
+                </div>
+            {% endif %}
             <table>
                 <thead>
                     <tr>

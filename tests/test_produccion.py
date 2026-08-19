@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import shutil
@@ -66,6 +67,100 @@ class SincronizacionTests(unittest.TestCase):
     def test_rechaza_un_guion_demasiado_corto(self):
         with self.assertRaisesRegex(ValueError, "demasiado corto"):
             crear_sincronizacion("solo siete palabras para un guion corto", 20)
+
+    def test_usa_tiempos_reales_y_limites_naturales_de_elevenlabs(self):
+        guion = (
+            "Primera frase del misterio. Segunda pista bajo la lluvia, "
+            "muy cerca del puerto. Tercera señal en la pared antigua. "
+            "Cuarta huella detrás del reloj. Quinta clave dentro del sobre. "
+            "Sexta sombra junto a la ventana. Séptima respuesta al amanecer. "
+            "Octava verdad que cierra definitivamente el caso."
+        )
+        paso = 0.08
+        alineacion = {
+            "characters": list(guion),
+            "character_start_times_seconds": [
+                round(indice * paso, 3) for indice in range(len(guion))
+            ],
+            "character_end_times_seconds": [
+                round((indice + 1) * paso, 3) for indice in range(len(guion))
+            ],
+        }
+        duracion = len(guion) * paso
+        segmentos = crear_sincronizacion(
+            guion,
+            duracion,
+            alineacion=alineacion,
+        )
+        tiempos_reales = set(alineacion["character_start_times_seconds"])
+
+        self.assertEqual(segmentos[0]["fin"], 3.0)
+        self.assertTrue(
+            all(
+                segmento["metodo"] == "elevenlabs_alignment"
+                for segmento in segmentos
+            )
+        )
+        self.assertTrue(
+            all(
+                segmento["inicio"] in tiempos_reales
+                for segmento in segmentos[2:]
+            )
+        )
+        self.assertTrue(
+            all(segmento.get("palabras_alineadas") for segmento in segmentos)
+        )
+
+        subtitulos = crear_subtitulos(segmentos)
+        primera_palabra = segmentos[0]["palabras_alineadas"][0]
+        self.assertIn("00:00:00,000", subtitulos)
+        self.assertEqual(primera_palabra["texto"], "Primera")
+
+    @unittest.skipUnless(
+        shutil.which("ffmpeg") and shutil.which("ffprobe"),
+        "FFmpeg no está instalado",
+    )
+    def test_preparacion_identifica_alineacion_real(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            voz = os.path.join(directorio, "voz.mp3")
+            crear_audio(voz, 8.0, 440)
+            guion = " ".join(f"palabra{indice}" for indice in range(1, 81))
+            paso = 7.9 / len(guion)
+            alineacion = {
+                "characters": list(guion),
+                "character_start_times_seconds": [
+                    indice * paso for indice in range(len(guion))
+                ],
+                "character_end_times_seconds": [
+                    (indice + 1) * paso for indice in range(len(guion))
+                ],
+            }
+            with open(
+                os.path.join(directorio, "voz-alineacion.json"),
+                "w",
+                encoding="utf-8",
+            ) as archivo:
+                json.dump(
+                    {
+                        "guion_sha256": hashlib.sha256(
+                            guion.encode("utf-8")
+                        ).hexdigest(),
+                        "alignment": alineacion,
+                    },
+                    archivo,
+                )
+
+            segmentos = preparar_sincronizacion(directorio, guion)
+
+            with open(
+                os.path.join(directorio, "sincronizacion.json"),
+                "r",
+                encoding="utf-8",
+            ) as archivo:
+                guardada = json.load(archivo)
+
+            self.assertEqual(guardada["metodo"], "elevenlabs_alignment")
+            self.assertEqual(len(segmentos), 8)
 
 
 class PublicacionTests(unittest.TestCase):

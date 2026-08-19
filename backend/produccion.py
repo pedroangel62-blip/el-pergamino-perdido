@@ -24,6 +24,7 @@ ARCHIVO_BORRADOR = "video_borrador.mp4"
 ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
 ARCHIVO_PAQUETE = "proyecto_completo.zip"
+ARCHIVO_ALINEACION_VOZ = "voz-alineacion.json"
 
 
 def ahora_iso() -> str:
@@ -197,11 +198,143 @@ def _frase_entrada(texto: str, maximo_palabras: int = 12) -> str:
     return frase
 
 
+def _palabras_alineadas(guion: str, alineacion: object) -> list[dict]:
+    if not isinstance(alineacion, dict):
+        return []
+
+    caracteres = alineacion.get("characters")
+    inicios = alineacion.get("character_start_times_seconds")
+    finales = alineacion.get("character_end_times_seconds")
+
+    if not all(
+        isinstance(elemento, list)
+        for elemento in (caracteres, inicios, finales)
+    ):
+        return []
+
+    if (
+        len(caracteres) != len(guion)
+        or len(inicios) != len(guion)
+        or len(finales) != len(guion)
+        or any(
+            not isinstance(caracter, str) or len(caracter) != 1
+            for caracter in caracteres
+        )
+        or "".join(caracteres) != guion
+    ):
+        return []
+
+    if not all(
+        isinstance(valor, (int, float)) and valor >= 0
+        for valor in [*inicios, *finales]
+    ):
+        return []
+
+    palabras = []
+
+    for coincidencia in re.finditer(r"\S+", guion):
+        inicio_indice = coincidencia.start()
+        fin_indice = coincidencia.end() - 1
+        inicio = float(inicios[inicio_indice])
+        fin = float(finales[fin_indice])
+
+        if fin < inicio:
+            return []
+
+        palabras.append(
+            {
+                "texto": coincidencia.group(),
+                "caracter_inicio": inicio_indice,
+                "caracter_fin": coincidencia.end(),
+                "inicio": inicio,
+                "fin": fin,
+            }
+        )
+
+    return palabras
+
+
+def _tipo_limite_natural(guion: str, caracter_inicio: int) -> int:
+    anterior = guion[:caracter_inicio].rstrip()
+
+    if not anterior:
+        return 2
+
+    if anterior[-1] in ".!?":
+        return 0
+
+    if anterior[-1] in ",;:—–-":
+        return 1
+
+    return 2
+
+
+def _indice_activo_en_instante(palabras: list[dict], instante: float) -> int:
+    for indice, palabra in enumerate(palabras):
+        if palabra["inicio"] <= instante < palabra["fin"]:
+            return indice
+
+        if palabra["inicio"] >= instante:
+            return indice
+
+    return len(palabras) - 1
+
+
+def _indices_alineados(
+    guion: str,
+    palabras: list[dict],
+    duracion: float,
+) -> tuple[list[int], list[float]]:
+    total = len(palabras)
+    indice_portada = _indice_activo_en_instante(palabras, PORTADA_SEGUNDOS)
+    indice_portada = max(1, min(indice_portada, total - (TOTAL_IMAGENES - 1)))
+    indices = [0, indice_portada]
+    inicios = [0.0, PORTADA_SEGUNDOS]
+    tramo = (duracion - PORTADA_SEGUNDOS) / (TOTAL_IMAGENES - 1)
+
+    for posicion in range(2, TOTAL_IMAGENES):
+        objetivo = PORTADA_SEGUNDOS + tramo * (posicion - 1)
+        minimo = indices[-1] + 1
+        maximo = total - (TOTAL_IMAGENES - posicion)
+        candidatos = []
+
+        for indice in range(minimo, maximo + 1):
+            inicio = float(palabras[indice]["inicio"])
+
+            if inicio <= inicios[-1] or inicio >= duracion:
+                continue
+
+            tipo = _tipo_limite_natural(
+                guion,
+                int(palabras[indice]["caracter_inicio"]),
+            )
+            penalizacion = (0.0, 0.35, 0.9)[tipo]
+            candidatos.append(
+                (
+                    abs(inicio - objetivo) + penalizacion,
+                    abs(inicio - objetivo),
+                    indice,
+                )
+            )
+
+        if not candidatos:
+            raise ValueError(
+                "Las marcas temporales no permiten repartir el guion en 8 imágenes."
+            )
+
+        _, _, elegido = min(candidatos)
+        indices.append(elegido)
+        inicios.append(float(palabras[elegido]["inicio"]))
+
+    return indices, inicios
+
+
 def crear_sincronizacion(
     guion: str,
     duracion: float,
+    alineacion: dict | None = None,
 ) -> list[dict]:
-    guion = re.sub(r"\s+", " ", str(guion)).strip()
+    guion = str(guion).strip()
 
     if not guion:
         raise ValueError("El guion está vacío.")
@@ -214,13 +347,21 @@ def crear_sincronizacion(
     if len(coincidencias) < TOTAL_IMAGENES:
         raise ValueError("El guion es demasiado corto para repartirlo en 8 imágenes.")
 
-    indices = _indices_inicio(len(coincidencias), duracion)
-    tramo = (duracion - PORTADA_SEGUNDOS) / (TOTAL_IMAGENES - 1)
-    inicios = [0.0, PORTADA_SEGUNDOS]
-    inicios.extend(
-        PORTADA_SEGUNDOS + tramo * indice
-        for indice in range(1, TOTAL_IMAGENES - 1)
-    )
+    palabras = _palabras_alineadas(guion, alineacion)
+
+    if len(palabras) == len(coincidencias):
+        indices, inicios = _indices_alineados(guion, palabras, duracion)
+        metodo = "elevenlabs_alignment"
+    else:
+        indices = _indices_inicio(len(coincidencias), duracion)
+        tramo = (duracion - PORTADA_SEGUNDOS) / (TOTAL_IMAGENES - 1)
+        inicios = [0.0, PORTADA_SEGUNDOS]
+        inicios.extend(
+            PORTADA_SEGUNDOS + tramo * indice
+            for indice in range(1, TOTAL_IMAGENES - 1)
+        )
+        metodo = "estimado"
+
     finales = inicios[1:] + [duracion]
     sincronizacion = []
 
@@ -233,20 +374,34 @@ def crear_sincronizacion(
         )
         caracter_inicio = coincidencias[palabra_inicio].start()
         caracter_fin = coincidencias[palabra_fin - 1].end()
-        texto = guion[caracter_inicio:caracter_fin].strip()
+        texto = re.sub(
+            r"\s+",
+            " ",
+            guion[caracter_inicio:caracter_fin],
+        ).strip()
         inicio = round(inicios[indice], 3)
         fin = round(finales[indice], 3)
+        segmento = {
+            "numero": indice + 1,
+            "frase_entrada": _frase_entrada(texto),
+            "texto": texto,
+            "inicio": inicio,
+            "fin": fin,
+            "duracion": round(fin - inicio, 3),
+            "metodo": metodo,
+        }
 
-        sincronizacion.append(
-            {
-                "numero": indice + 1,
-                "frase_entrada": _frase_entrada(texto),
-                "texto": texto,
-                "inicio": inicio,
-                "fin": fin,
-                "duracion": round(fin - inicio, 3),
-            }
-        )
+        if metodo == "elevenlabs_alignment":
+            segmento["palabras_alineadas"] = [
+                {
+                    "texto": palabra["texto"],
+                    "inicio": round(float(palabra["inicio"]), 3),
+                    "fin": round(float(palabra["fin"]), 3),
+                }
+                for palabra in palabras[palabra_inicio:palabra_fin]
+            ]
+
+        sincronizacion.append(segmento)
 
     return sincronizacion
 
@@ -264,6 +419,33 @@ def crear_subtitulos(sincronizacion: list[dict]) -> str:
     contador = 1
 
     for segmento in sincronizacion:
+        palabras_alineadas = segmento.get("palabras_alineadas")
+
+        if isinstance(palabras_alineadas, list) and palabras_alineadas:
+            fragmentos_alineados = [
+                palabras_alineadas[indice:indice + 9]
+                for indice in range(0, len(palabras_alineadas), 9)
+            ]
+
+            for fragmento in fragmentos_alineados:
+                inicio = float(fragmento[0]["inicio"])
+                fin = float(fragmento[-1]["fin"])
+                bloques.append(
+                    "\n".join(
+                        [
+                            str(contador),
+                            f"{_marca_srt(inicio)} --> {_marca_srt(fin)}",
+                            " ".join(
+                                str(palabra["texto"])
+                                for palabra in fragmento
+                            ),
+                        ]
+                    )
+                )
+                contador += 1
+
+            continue
+
         palabras = str(segmento["texto"]).split()
         fragmentos = [
             palabras[indice:indice + 9]
@@ -298,13 +480,32 @@ def preparar_sincronizacion(
 ) -> list[dict]:
     voz = os.path.join(directorio_proyecto, "voz.mp3")
     duracion = obtener_duracion(voz)
-    sincronizacion = crear_sincronizacion(guion, duracion)
+    guion_limpio = str(guion).strip()
+    datos_alineacion = cargar_json(
+        os.path.join(directorio_proyecto, ARCHIVO_ALINEACION_VOZ)
+    )
+    alineacion = None
+
+    if (
+        datos_alineacion
+        and datos_alineacion.get("guion_sha256")
+        == hashlib.sha256(guion_limpio.encode("utf-8")).hexdigest()
+    ):
+        alineacion = datos_alineacion.get("alignment")
+
+    sincronizacion = crear_sincronizacion(
+        guion_limpio,
+        duracion,
+        alineacion=alineacion,
+    )
+    metodo = str(sincronizacion[0].get("metodo", "estimado"))
     invalidar_salidas(directorio_proyecto)
     guardar_json_atomico(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION),
         {
             "duracion_voz": duracion,
             "portada_segundos": PORTADA_SEGUNDOS,
+            "metodo": metodo,
             "segmentos": sincronizacion,
             "actualizado": ahora_iso(),
         },
@@ -321,6 +522,7 @@ def preparar_sincronizacion(
         directorio_proyecto,
         "sincronizacion_preparada",
         sincronizacion_aprobada=False,
+        metodo_sincronizacion=metodo,
         error="",
         duracion_voz=duracion,
     )
@@ -864,6 +1066,9 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
 def obtener_resumen(directorio_proyecto: str) -> dict:
     estado = cargar_estado(directorio_proyecto)
     sincronizacion = cargar_sincronizacion(directorio_proyecto)
+    datos_sincronizacion = cargar_json(
+        os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
+    ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
@@ -873,6 +1078,10 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
     estado.update(
         {
             "sincronizacion": sincronizacion,
+            "metodo_sincronizacion": datos_sincronizacion.get(
+                "metodo",
+                estado.get("metodo_sincronizacion", "estimado"),
+            ),
             "total_imagenes": total_imagenes,
             "imagenes_aprobadas": imagenes_estan_aprobadas(
                 directorio_proyecto
