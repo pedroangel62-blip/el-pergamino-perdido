@@ -1,4 +1,6 @@
 from datetime import datetime
+import base64
+import binascii
 import hashlib
 import json
 import os
@@ -12,7 +14,9 @@ LIMITE_DURACION_VOZ = 92.0
 FORMATO_AUDIO = "mp3_44100_128"
 MODELO_PREDETERMINADO = "eleven_multilingual_v2"
 MAXIMO_BYTES_AUDIO = 50 * 1024 * 1024
+MAXIMO_BYTES_RESPUESTA = 70 * 1024 * 1024
 TIEMPO_MAXIMO_GENERACION = 180
+ARCHIVO_ALINEACION = "voz-alineacion.json"
 
 
 def ahora_iso() -> str:
@@ -32,6 +36,13 @@ def obtener_ruta_estado(directorio_proyecto: str) -> str:
     return os.path.join(
         directorio_proyecto,
         "voz.json"
+    )
+
+
+def obtener_ruta_alineacion(directorio_proyecto: str) -> str:
+    return os.path.join(
+        directorio_proyecto,
+        ARCHIVO_ALINEACION
     )
 
 
@@ -303,10 +314,11 @@ def solicitar_audio_elevenlabs(
     api_key: str,
     voice_id: str,
     model_id: str
-) -> bytes:
+) -> tuple[bytes, dict]:
     url = (
         "https://api.elevenlabs.io/v1/text-to-speech/"
         f"{quote(voice_id, safe='')}"
+        "/with-timestamps"
         f"?output_format={FORMATO_AUDIO}"
     )
     cuerpo = json.dumps(
@@ -322,7 +334,7 @@ def solicitar_audio_elevenlabs(
         headers={
             "xi-api-key": api_key,
             "Content-Type": "application/json",
-            "Accept": "audio/mpeg"
+            "Accept": "application/json"
         },
         method="POST"
     )
@@ -337,7 +349,7 @@ def solicitar_audio_elevenlabs(
                 ""
             ).lower()
             contenido = respuesta.read(
-                MAXIMO_BYTES_AUDIO + 1
+                MAXIMO_BYTES_RESPUESTA + 1
             )
     except HTTPError as error:
         detalle = error.read(4096).decode(
@@ -353,27 +365,120 @@ def solicitar_audio_elevenlabs(
             "No se pudo conectar con ElevenLabs."
         ) from error
 
-    if len(contenido) > MAXIMO_BYTES_AUDIO:
+    if len(contenido) > MAXIMO_BYTES_RESPUESTA:
         raise RuntimeError(
-            "El audio generado supera el límite de 50 MB."
+            "La respuesta de ElevenLabs supera el límite permitido."
         )
 
     if not contenido:
         raise RuntimeError(
-            "ElevenLabs no devolvió ningún audio."
+            "ElevenLabs no devolvió ningún resultado."
         )
 
-    if tipo and "audio" not in tipo:
-        detalle = contenido[:4096].decode(
-            "utf-8",
-            errors="replace"
-        )
+    if tipo and "json" not in tipo:
         raise RuntimeError(
-            "ElevenLabs devolvió una respuesta no válida: "
-            f"{detalle}"
+            "ElevenLabs devolvió una respuesta no válida."
         )
 
-    return contenido
+    return decodificar_respuesta_elevenlabs(contenido)
+
+
+def validar_alineacion(alineacion: object) -> dict:
+    if not isinstance(alineacion, dict):
+        raise RuntimeError(
+            "ElevenLabs no devolvió las marcas temporales de la voz."
+        )
+
+    caracteres = alineacion.get("characters")
+    inicios = alineacion.get("character_start_times_seconds")
+    finales = alineacion.get("character_end_times_seconds")
+
+    if not all(
+        isinstance(elemento, list)
+        for elemento in (caracteres, inicios, finales)
+    ):
+        raise RuntimeError(
+            "Las marcas temporales de ElevenLabs no tienen un formato válido."
+        )
+
+    if (
+        not caracteres
+        or len(caracteres) != len(inicios)
+        or len(inicios) != len(finales)
+    ):
+        raise RuntimeError(
+            "Las marcas temporales de ElevenLabs están incompletas."
+        )
+
+    if not all(isinstance(caracter, str) for caracter in caracteres):
+        raise RuntimeError(
+            "Los caracteres alineados por ElevenLabs no son válidos."
+        )
+
+    tiempos = [*inicios, *finales]
+
+    if not all(
+        isinstance(valor, (int, float)) and valor >= 0
+        for valor in tiempos
+    ):
+        raise RuntimeError(
+            "Los tiempos devueltos por ElevenLabs no son válidos."
+        )
+
+    if any(
+        float(fin) < float(inicio)
+        for inicio, fin in zip(inicios, finales, strict=True)
+    ):
+        raise RuntimeError(
+            "Los tiempos devueltos por ElevenLabs no son coherentes."
+        )
+
+    return {
+        "characters": caracteres,
+        "character_start_times_seconds": [float(valor) for valor in inicios],
+        "character_end_times_seconds": [float(valor) for valor in finales],
+    }
+
+
+def decodificar_respuesta_elevenlabs(contenido: bytes) -> tuple[bytes, dict]:
+    try:
+        respuesta = json.loads(contenido.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError(
+            "ElevenLabs devolvió una respuesta JSON no válida."
+        ) from error
+
+    if not isinstance(respuesta, dict):
+        raise RuntimeError(
+            "ElevenLabs devolvió una respuesta no válida."
+        )
+
+    audio_base64 = respuesta.get("audio_base64")
+
+    if not isinstance(audio_base64, str) or not audio_base64:
+        raise RuntimeError(
+            "ElevenLabs no devolvió el audio de la narración."
+        )
+
+    try:
+        audio = base64.b64decode(audio_base64, validate=True)
+    except (ValueError, binascii.Error) as error:
+        raise RuntimeError(
+            "ElevenLabs devolvió un audio codificado no válido."
+        ) from error
+
+    if not audio:
+        raise RuntimeError(
+            "ElevenLabs devolvió un audio vacío."
+        )
+
+    if len(audio) > MAXIMO_BYTES_AUDIO:
+        raise RuntimeError(
+            "El audio generado supera el límite de 50 MB."
+        )
+
+    alineacion = validar_alineacion(respuesta.get("alignment"))
+    return audio, alineacion
 
 
 def generar_voz(
@@ -390,7 +495,7 @@ def generar_voz(
     api_key, voice_id, model_id = obtener_configuracion()
 
     try:
-        contenido = solicitar_audio_elevenlabs(
+        contenido, alineacion = solicitar_audio_elevenlabs(
             guion,
             api_key,
             voice_id,
@@ -418,6 +523,17 @@ def generar_voz(
                 os.remove(ruta_temporal)
             raise
 
+        guardar_json_atomico(
+            obtener_ruta_alineacion(directorio),
+            {
+                "guion_sha256": crear_hash_guion(guion),
+                "modelo": model_id,
+                "formato": FORMATO_AUDIO,
+                "alignment": alineacion,
+                "actualizado": ahora_iso()
+            }
+        )
+
         if duracion > LIMITE_DURACION_VOZ:
             nombre_estado = "excede_limite"
         else:
@@ -432,6 +548,7 @@ def generar_voz(
             "aprobada": False,
             "modelo": model_id,
             "formato": FORMATO_AUDIO,
+            "alineacion_temporal": True,
             "actualizado": ahora_iso(),
             "error": ""
         }

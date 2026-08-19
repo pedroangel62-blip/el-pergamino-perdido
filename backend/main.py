@@ -18,11 +18,13 @@ from urllib.request import (
 from fastapi import (
     BackgroundTasks,
     FastAPI,
+    File,
     Form,
     HTTPException,
     Request,
+    UploadFile,
 )
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from openai import OpenAI
@@ -38,6 +40,21 @@ from backend.indice_temas import (
     validar_seleccion,
 )
 from backend.imagenes import generar_imagen
+from backend.produccion import (
+    MAXIMO_BYTES_MUSICA,
+    aprobar_borrador,
+    aprobar_imagenes,
+    aprobar_musica,
+    aprobar_sincronizacion,
+    cargar_estado as cargar_estado_produccion,
+    crear_paquete,
+    generar_borrador_seguro,
+    guardar_estado as guardar_estado_produccion,
+    guardar_musica,
+    obtener_imagenes as obtener_imagenes_produccion,
+    obtener_resumen as obtener_resumen_produccion,
+    preparar_sincronizacion,
+)
 from backend.voz import (
     aprobar_voz,
     cargar_estado_voz,
@@ -56,8 +73,6 @@ TIEMPO_MAXIMO_DESCARGA = 30
 
 os.makedirs(DIRECTORIO_PROYECTOS, exist_ok=True)
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 with open(
     "backend/manual/manual_maestro.txt",
     "r",
@@ -73,6 +88,15 @@ with open(
     plantilla_generacion = f.read()
 
 app = FastAPI()
+
+
+def obtener_cliente_openai() -> OpenAI:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+    if not api_key:
+        raise ValueError("Falta el secreto OPENAI_API_KEY.")
+
+    return OpenAI(api_key=api_key)
 
 app.mount(
     "/proyectos",
@@ -818,7 +842,7 @@ def ajustar_guion_a_duracion(
         60,
         int(palabras_actuales * proporcion * 0.96)
     )
-    respuesta = client.responses.create(
+    respuesta = obtener_cliente_openai().responses.create(
         model="gpt-5.6-luna",
         input=f"""
 Acorta el siguiente guion de El Pergamino Perdido para que su narración
@@ -1180,7 +1204,7 @@ async def generar(
         ficha_indice
     )
 
-    respuesta = client.responses.create(
+    respuesta = obtener_cliente_openai().responses.create(
         model="gpt-5.6-luna",
         input=f"""
 {manual_maestro}
@@ -2002,3 +2026,231 @@ async def comprobar_imagen(
             "voz_generando": False
         }
     )
+
+
+def redirigir_produccion(proyecto_id: str) -> RedirectResponse:
+    return RedirectResponse(
+        url=f"/produccion/{proyecto_id}",
+        status_code=303,
+    )
+
+
+def cargar_contexto_produccion(proyecto_id: str) -> dict:
+    tema, resultado = cargar_proyecto(proyecto_id)
+    directorio = obtener_directorio_proyecto(proyecto_id)
+    resumen = obtener_resumen_produccion(directorio)
+    marca_tiempo = int(time.time())
+
+    return {
+        "proyecto_id": proyecto_id,
+        "tema": tema,
+        "resultado": resultado,
+        "produccion": resumen,
+        "voz": obtener_estado_voz_interfaz(proyecto_id),
+        "musica_url": (
+            f"/proyectos/{proyecto_id}/{resumen['musica_url']}?v={marca_tiempo}"
+            if resumen.get("musica_url")
+            else None
+        ),
+        "borrador_url": (
+            f"/proyectos/{proyecto_id}/video_borrador.mp4?v={marca_tiempo}"
+            if resumen.get("borrador_disponible")
+            else None
+        ),
+        "final_url": (
+            f"/proyectos/{proyecto_id}/video_final.mp4?v={marca_tiempo}"
+            if resumen.get("final_disponible")
+            else None
+        ),
+        "paquete_url": (
+            f"/proyectos/{proyecto_id}/proyecto_completo.zip?v={marca_tiempo}"
+            if resumen.get("paquete_disponible")
+            else None
+        ),
+    }
+
+
+@app.get(
+    "/produccion/{proyecto_id}",
+    response_class=HTMLResponse,
+)
+async def abrir_produccion(
+    proyecto_id: str,
+    request: Request,
+):
+    try:
+        contexto = cargar_contexto_produccion(proyecto_id)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    contexto["request"] = request
+    return templates.TemplateResponse(
+        request=request,
+        name="produccion.html",
+        context=contexto,
+    )
+
+
+@app.post("/produccion/{proyecto_id}/sincronizacion")
+async def preparar_sincronizacion_proyecto(
+    proyecto_id: str,
+):
+    try:
+        _, resultado = cargar_proyecto(proyecto_id)
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        exigir_voz_aprobada(proyecto_id, resultado)
+        obtener_imagenes_produccion(directorio)
+
+        if not obtener_resumen_produccion(directorio)["imagenes_aprobadas"]:
+            raise ValueError("Primero deben confirmarse las ocho imágenes.")
+
+        preparar_sincronizacion(
+            directorio,
+            str(resultado.get("guion", "")),
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/aprobar-imagenes")
+async def aprobar_imagenes_proyecto(proyecto_id: str):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        aprobar_imagenes(directorio)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/aprobar-sincronizacion")
+async def aprobar_sincronizacion_proyecto(proyecto_id: str):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        aprobar_sincronizacion(directorio)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/musica")
+async def cargar_musica_proyecto(
+    proyecto_id: str,
+    musica: UploadFile = File(...),
+):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+
+        if not os.path.isdir(directorio):
+            raise FileNotFoundError("La carpeta del proyecto no existe.")
+
+        contenido = await musica.read(MAXIMO_BYTES_MUSICA + 1)
+        guardar_musica(
+            directorio,
+            musica.filename or "musica.mp3",
+            contenido,
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    finally:
+        await musica.close()
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/aprobar-musica")
+async def aprobar_musica_proyecto(proyecto_id: str):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        aprobar_musica(directorio)
+    except (FileNotFoundError, ValueError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/generar-borrador")
+async def iniciar_borrador_proyecto(
+    proyecto_id: str,
+    background_tasks: BackgroundTasks,
+):
+    try:
+        _, resultado = cargar_proyecto(proyecto_id)
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        exigir_voz_aprobada(proyecto_id, resultado)
+        obtener_imagenes_produccion(directorio)
+        estado = cargar_estado_produccion(directorio)
+
+        resumen = obtener_resumen_produccion(directorio)
+
+        if not resumen["imagenes_aprobadas"]:
+            raise ValueError("Las ocho imágenes deben estar aprobadas.")
+
+        if len(resumen["sincronizacion"]) != 8:
+            raise ValueError("Primero debe prepararse la sincronización.")
+
+        if not estado.get("sincronizacion_aprobada"):
+            raise ValueError("La sincronización debe revisarse y aprobarse.")
+
+        if not estado.get("musica_aprobada"):
+            raise ValueError("La música debe cargarse, escucharse y aprobarse.")
+
+        if estado.get("estado") == "generando_borrador":
+            raise ValueError("El vídeo borrador ya se está generando.")
+
+        guardar_estado_produccion(
+            directorio,
+            "generando_borrador",
+            error="",
+            borrador_aprobado=False,
+        )
+        background_tasks.add_task(
+            generar_borrador_seguro,
+            directorio,
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/aprobar-borrador")
+async def aprobar_borrador_proyecto(proyecto_id: str):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        aprobar_borrador(directorio)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/crear-paquete")
+async def crear_paquete_proyecto(proyecto_id: str):
+    try:
+        _, resultado = cargar_proyecto(proyecto_id)
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        crear_paquete(directorio, resultado)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)

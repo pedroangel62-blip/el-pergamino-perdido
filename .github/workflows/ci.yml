@@ -1,0 +1,53 @@
+name: Pruebas
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Comprobar FFmpeg
+        run: |
+          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
+            ffmpeg -version | head -n 1
+          else
+            echo "FFmpeg no está disponible; la prueba de montaje se omitirá."
+          fi
+
+      - name: Instalar dependencias
+        run: python -m pip install -r requirements.txt
+
+      - name: Comprobar sintaxis
+        run: |
+          python -m py_compile \
+            backend/main.py \
+            backend/imagenes.py \
+            backend/busqueda_imagenes.py \
+            backend/voz.py \
+            backend/indice_temas.py \
+            backend/produccion.py
+
+      - name: Ejecutar pruebas
+        run: python -m unittest discover -s tests -v

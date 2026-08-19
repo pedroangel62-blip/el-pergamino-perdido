@@ -4,7 +4,13 @@ import os
 from openai import OpenAI
 
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def obtener_cliente() -> OpenAI:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+    if not api_key:
+        raise ValueError("Falta el secreto OPENAI_API_KEY.")
+
+    return OpenAI(api_key=api_key)
 
 
 def generar_imagen(
@@ -25,7 +31,7 @@ def generar_imagen(
             "La carpeta de salida de la imagen no es válida."
         )
 
-    resultado = client.images.generate(
+    resultado = obtener_cliente().images.generate(
         model="gpt-image-2",
         prompt=prompt,
         size="1024x1536",
