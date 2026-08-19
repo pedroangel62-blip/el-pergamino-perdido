@@ -24,10 +24,13 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Instalar FFmpeg
+      - name: Comprobar FFmpeg
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes ffmpeg
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --yes ffmpeg
+          fi
+          ffmpeg -version | head -n 1
 
       - name: Instalar dependencias
         run: python -m pip install -r requirements.txt
