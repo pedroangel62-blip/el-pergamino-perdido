@@ -146,7 +146,17 @@
         ],
         "motivo": "Relacionar el debate sobre su función con el paisaje ceremonial real.",
         "edicion": "Fotografía real de líneas convergentes o de Cahuachi; tono misterioso sin añadir iconografía extraterrestre.",
-        "prompt": ""
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "fuente": "Wikimedia Commons",
+          "autor": "Antonio Campoy",
+          "pagina": "https://commons.wikimedia.org/wiki/File:Cahuachi_2019.jpg",
+          "archivo": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Cahuachi_2019.jpg",
+          "licencia": "CC BY 2.0",
+          "licencia_url": "https://creativecommons.org/licenses/by/2.0/",
+          "uso": "Imagen 6, tramo de 00:57.654 a 01:23.440"
+        }
       },
       {
         "numero": 7,
@@ -159,8 +169,19 @@
           "Nazca Institute drone field survey geoglyphs 2024"
         ],
         "motivo": "Documentar el descubrimiento científico contemporáneo citado en el guion.",
-        "edicion": "Usar únicamente material identificable del estudio o de sus autores, comprobando fuente y permiso antes de descargar.",
-        "prompt": ""
+        "edicion": "Fotografía real representativa, adaptada a 9:16 con zoom suave y sin texto; no presentarla como uno de los 303 geoglifos descubiertos en 2024.",
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "fuente": "Wikimedia Commons",
+          "autor": "Colegota",
+          "pagina": "https://commons.wikimedia.org/wiki/File:Nazca-lineas-perro-c01.jpg",
+          "archivo": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Nazca-lineas-perro-c01.jpg",
+          "licencia": "CC BY-SA 2.5 ES",
+          "licencia_url": "https://creativecommons.org/licenses/by-sa/2.5/es/deed.en",
+          "nota_contextual": "Fotografía representativa de un geoglifo real de Nazca; no corresponde a uno de los 303 geoglifos localizados en 2024.",
+          "uso": "Imagen 7, desde 01:23.440 hasta la entrada de la Imagen 8"
+        }
       },
       {
         "numero": 8,
@@ -173,8 +194,18 @@
           "Nazca lines wide landscape official Peru"
         ],
         "motivo": "Cerrar la narración sobre la amplitud del desierto y la posibilidad de figuras aún ocultas.",
-        "edicion": "Panorámica real adaptada a 9:16, atmósfera de cierre, sin texto y sin alterar ni añadir geoglifos.",
-        "prompt": ""
+        "edicion": "Panorámica real adaptada a 9:16, atmósfera de cierre, zoom lento y suave, sin texto y sin alterar ni añadir geoglifos.",
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "fuente": "Pexels",
+          "autor": "Victor Rodriguez",
+          "pagina": "https://www.pexels.com/photo/aerial-view-of-the-pampa-de-nazca-nazca-desert-peru-17059176/",
+          "archivo": "https://images.pexels.com/photos/17059176/pexels-photo-17059176/free-photo-of-aerial-view-of-the-pampa-de-nazca-nazca-desert-peru.png?auto=compress&dpr=1&h=1200&w=800",
+          "licencia": "Pexels License",
+          "licencia_url": "https://www.pexels.com/license/",
+          "uso": "Imagen 8, desde la frase de entrada aprobada hasta el final de la narración; después entra la Imagen 9 durante 3 segundos"
+        }
       }
     ],
     "musica": "Banda sonora instrumental documental de misterio arqueológico, sin voces ni coros, percusión andina muy sutil, texturas de viento desértico y cuerdas graves contenidas. Evolución lenta, sin golpes de tráiler, dejando espacio completo a la narración. Duración aproximada de 90 segundos, con final preparado para un fundido suave durante los últimos 3 segundos sobre el sello de El Pergamino Perdido.",
