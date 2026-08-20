@@ -8,7 +8,7 @@
     "plan_visual": [
       {
         "numero": 1,
-        "frase_entrada": "El desierto de Nazca esconde un secreto gigantesco.",
+        "frase_entrada": "El desierto de Nazca esconde un secreto",
         "tipo": "FOTOGRAFIA_REAL",
         "generar_ia": false,
         "buscar": [
@@ -22,7 +22,7 @@
       },
       {
         "numero": 2,
-        "frase_entrada": "Hace más de dos mil años, alguien comenzó a dibujar",
+        "frase_entrada": "gigantesco.",
         "tipo": "FOTOGRAFIA_REAL",
         "generar_ia": false,
         "buscar": [
