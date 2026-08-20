@@ -14,7 +14,7 @@ Aplicación web para preparar Reels documentales de El Pergamino Perdido con con
 8. La aplicación sincroniza frases, subtítulos y las ocho imágenes del caso con las marcas reales de la voz, con portada fija de 3 segundos.
 9. El usuario carga y aprueba la música antes de mezclarla con la voz.
 10. FFmpeg añade la Imagen 9 maestra durante 3 segundos: zoom suave, voz ya terminada y fundido final de la música.
-11. FFmpeg genera un borrador vertical 1080×1920 a 30 fps con subtítulos y transiciones, y verifica que la pista de audio sea audible.
+11. FFmpeg genera un borrador vertical 1080×1920 a 30 fps con subtítulos y transiciones, y verifica fotogramas, duración y pista de audio.
 12. El borrador aprobado se convierte en vídeo final y paquete ZIP descargable.
 13. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
 
@@ -60,9 +60,11 @@ La pantalla `Producción final` se desbloquea cuando la voz y las ocho imágenes
 
 Las voces nuevas guardan `voz-alineacion.json` a partir de la misma respuesta de ElevenLabs que contiene el audio; no se realiza una segunda generación. Cada imagen incluye una `frase_entrada` literal y única del guion. La Imagen 2 entra obligatoriamente en el segundo 3 y las Imágenes 3 a 8 usan el tiempo real de su frase según ElevenLabs. Una sincronización estimada o sin correspondencia semántica bloquea la aprobación y el montaje.
 
+Antes del render, cada marca temporal se convierte en su fotograma real más próximo a 30 fps. Los cortes se calculan desde posiciones absolutas para que el redondeo no acumule deriva. FFprobe comprueba el número exacto de fotogramas de cada uno de los nueve clips, del vídeo concatenado y del borrador final; cualquier discrepancia bloquea el montaje. El resultado queda guardado en `verificacion_timeline.json`.
+
 Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.jpeg`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
 
-El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, subtítulos, sincronización, metadatos y textos de publicación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
+El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, subtítulos, sincronización, `verificacion_timeline.json`, metadatos y textos de publicación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 
 ## Comprobaciones
 

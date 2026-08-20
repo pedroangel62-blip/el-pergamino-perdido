@@ -22,6 +22,7 @@ MAXIMO_BYTES_MUSICA = 50 * 1024 * 1024
 EXTENSIONES_MUSICA = {".mp3", ".wav", ".m4a", ".aac", ".ogg"}
 ARCHIVO_ESTADO = "produccion.json"
 ARCHIVO_SINCRONIZACION = "sincronizacion.json"
+ARCHIVO_VERIFICACION_TIMELINE = "verificacion_timeline.json"
 ARCHIVO_SUBTITULOS = "subtitulos.srt"
 ARCHIVO_BORRADOR = "video_borrador.mp4"
 ARCHIVO_FINAL = "video_final.mp4"
@@ -103,6 +104,7 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         ARCHIVO_FINAL,
         ARCHIVO_PUBLICACION,
         ARCHIVO_PAQUETE,
+        ARCHIVO_VERIFICACION_TIMELINE,
     ):
         ruta = os.path.join(directorio_proyecto, nombre)
         if os.path.isfile(ruta):
@@ -633,6 +635,120 @@ def crear_sincronizacion(
     return sincronizacion
 
 
+def crear_plan_fotogramas(
+    sincronizacion: list[dict],
+    fps: int = FPS_VIDEO,
+) -> list[dict]:
+    if fps <= 0:
+        raise ValueError("La frecuencia de fotogramas debe ser positiva.")
+
+    if len(sincronizacion) != TOTAL_IMAGENES:
+        raise ValueError(
+            "La línea de tiempo requiere exactamente 8 imágenes."
+        )
+
+    marcas = [float(segmento["inicio"]) for segmento in sincronizacion]
+    marcas.append(float(sincronizacion[-1]["fin"]))
+
+    for actual, siguiente in zip(sincronizacion, sincronizacion[1:]):
+        if abs(float(actual["fin"]) - float(siguiente["inicio"])) > 0.001:
+            raise ValueError(
+                "Los segmentos de voz no son contiguos y no pueden "
+                "convertirse a fotogramas."
+            )
+
+    fotogramas = [round(marca * fps) for marca in marcas]
+    fotogramas[0] = 0
+
+    if any(
+        actual >= siguiente
+        for actual, siguiente in zip(fotogramas, fotogramas[1:])
+    ):
+        raise ValueError(
+            "Dos cortes coinciden en el mismo fotograma. Debe revisarse "
+            "la sincronización."
+        )
+
+    tolerancia_ms = 1000.0 / fps
+    plan = []
+
+    for indice, segmento in enumerate(sincronizacion):
+        fotograma_inicio = fotogramas[indice]
+        fotograma_fin = fotogramas[indice + 1]
+        inicio_video = fotograma_inicio / fps
+        fin_video = fotograma_fin / fps
+        desviacion_ms = (
+            inicio_video - float(segmento["inicio"])
+        ) * 1000.0
+
+        if abs(desviacion_ms) > tolerancia_ms + 0.001:
+            raise ValueError(
+                f"El corte de la Imagen {indice + 1} se desvía más de "
+                "un fotograma respecto a la voz."
+            )
+
+        plan.append(
+            {
+                "numero": indice + 1,
+                "fotograma_inicio": fotograma_inicio,
+                "fotograma_fin": fotograma_fin,
+                "fotogramas": fotograma_fin - fotograma_inicio,
+                "inicio_voz": round(float(segmento["inicio"]), 3),
+                "inicio_video": round(inicio_video, 6),
+                "fin_video": round(fin_video, 6),
+                "duracion_video": round(fin_video - inicio_video, 6),
+                "desviacion_inicio_ms": round(desviacion_ms, 3),
+            }
+        )
+
+    cierre_inicio = fotogramas[-1]
+    cierre_fotogramas = round(CIERRE_SEGUNDOS * fps)
+    cierre_fin = cierre_inicio + cierre_fotogramas
+    inicio_cierre_video = cierre_inicio / fps
+    desviacion_cierre_ms = (
+        inicio_cierre_video - marcas[-1]
+    ) * 1000.0
+
+    if abs(desviacion_cierre_ms) > tolerancia_ms + 0.001:
+        raise ValueError(
+            "El cierre se desvía más de un fotograma respecto al final "
+            "de la narración."
+        )
+
+    plan.append(
+        {
+            "numero": 9,
+            "fotograma_inicio": cierre_inicio,
+            "fotograma_fin": cierre_fin,
+            "fotogramas": cierre_fotogramas,
+            "inicio_voz": round(marcas[-1], 3),
+            "inicio_video": round(inicio_cierre_video, 6),
+            "fin_video": round(cierre_fin / fps, 6),
+            "duracion_video": CIERRE_SEGUNDOS,
+            "desviacion_inicio_ms": round(desviacion_cierre_ms, 3),
+        }
+    )
+    return plan
+
+
+def incorporar_plan_fotogramas(
+    sincronizacion: list[dict],
+    cierre: dict,
+    fps: int = FPS_VIDEO,
+) -> list[dict]:
+    plan = crear_plan_fotogramas(sincronizacion, fps)
+
+    for segmento, corte in zip(
+        sincronizacion,
+        plan[:TOTAL_IMAGENES],
+        strict=True,
+    ):
+        segmento.update(corte)
+
+    cierre.update(plan[-1])
+    return plan
+
+
 def _marca_srt(segundos: float) -> str:
     milisegundos = max(0, round(segundos * 1000))
     horas, resto = divmod(milisegundos, 3_600_000)
@@ -728,6 +844,11 @@ def preparar_sincronizacion(
         plan_visual=plan_visual,
     )
     cierre = crear_segmento_cierre(duracion)
+    plan_fotogramas = incorporar_plan_fotogramas(
+        sincronizacion,
+        cierre,
+        FPS_VIDEO,
+    )
     metodo = str(sincronizacion[0].get("metodo", "estimado"))
     semantica_validada = all(
         segmento.get("semantica_validada") is True
@@ -741,6 +862,11 @@ def preparar_sincronizacion(
             "portada_segundos": PORTADA_SEGUNDOS,
             "metodo": metodo,
             "semantica_validada": semantica_validada,
+            "fps_timeline": FPS_VIDEO,
+            "desviacion_maxima_ms": max(
+                abs(float(corte["desviacion_inicio_ms"]))
+                for corte in plan_fotogramas
+            ),
             "segmentos": sincronizacion,
             "cierre": cierre,
             "duracion_total": cierre["fin"],
@@ -930,7 +1056,6 @@ def aprobar_sincronizacion(directorio_proyecto: str) -> dict:
     datos_sincronizacion = cargar_json(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
     ) or {}
-
     if len(sincronizacion) != TOTAL_IMAGENES:
         raise ValueError("La sincronización de las 8 imágenes no está preparada.")
 
@@ -952,6 +1077,91 @@ def aprobar_sincronizacion(directorio_proyecto: str) -> dict:
     )
 
 
+def contar_fotogramas_video(ruta: str) -> int:
+    resultado = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-count_frames",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=nb_read_frames",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            ruta,
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=120,
+    )
+
+    if resultado.returncode != 0:
+        raise RuntimeError(
+            "FFprobe no pudo contar los fotogramas del vídeo."
+        )
+
+    try:
+        fotogramas = int(resultado.stdout.strip())
+    except ValueError as error:
+        raise RuntimeError(
+            "FFprobe no devolvió un recuento de fotogramas válido."
+        ) from error
+
+    if fotogramas <= 0:
+        raise RuntimeError("El vídeo no contiene fotogramas.")
+
+    return fotogramas
+
+
+def validar_clips_fotograma_a_fotograma(
+    plan_fotogramas: list[dict],
+    clips: list[str],
+) -> list[dict]:
+    if len(plan_fotogramas) != 9 or len(clips) != 9:
+        raise ValueError(
+            "La verificación requiere las ocho imágenes y el cierre."
+        )
+
+    verificados = []
+    fotograma_acumulado = 0
+
+    for corte, clip in zip(plan_fotogramas, clips, strict=True):
+        esperados = int(corte["fotogramas"])
+        reales = contar_fotogramas_video(clip)
+
+        if reales != esperados:
+            raise RuntimeError(
+                f"La Imagen {corte['numero']} contiene {reales} fotogramas; "
+                f"se esperaban {esperados}."
+            )
+
+        if fotograma_acumulado != int(corte["fotograma_inicio"]):
+            raise RuntimeError(
+                f"La Imagen {corte['numero']} no comienza en el fotograma "
+                "planificado."
+            )
+
+        verificados.append(
+            {
+                **corte,
+                "fotogramas_reales": reales,
+                "verificado": True,
+            }
+        )
+        fotograma_acumulado += reales
+
+    if fotograma_acumulado != int(plan_fotogramas[-1]["fotograma_fin"]):
+        raise RuntimeError(
+            "La suma de los clips no coincide con la línea de tiempo final."
+        )
+
+    return verificados
+
+
 def _crear_clip(
     imagen: str,
     duracion: float,
@@ -959,7 +1169,18 @@ def _crear_clip(
     ancho: int,
     alto: int,
     fps: int,
+    fotogramas: int | None = None,
 ) -> None:
+    fotogramas = (
+        int(fotogramas)
+        if fotogramas is not None
+        else round(duracion * fps)
+    )
+
+    if fotogramas <= 0:
+        raise ValueError("Un clip debe contener al menos un fotograma.")
+
+    duracion = fotogramas / fps
     fundido = min(0.25, duracion / 4)
     salida_fundido = max(0.0, duracion - fundido)
     filtro = (
@@ -980,8 +1201,6 @@ def _crear_clip(
             str(fps),
             "-loop",
             "1",
-            "-t",
-            f"{duracion:.3f}",
             "-i",
             imagen,
             "-filter_complex",
@@ -997,6 +1216,8 @@ def _crear_clip(
             "21",
             "-pix_fmt",
             "yuv420p",
+            "-frames:v",
+            str(fotogramas),
             salida,
         ]
     )
@@ -1034,8 +1255,6 @@ def _crear_clip_cierre(
             str(fps),
             "-loop",
             "1",
-            "-t",
-            f"{CIERRE_SEGUNDOS:.3f}",
             "-i",
             imagen,
             "-filter_complex",
@@ -1051,6 +1270,8 @@ def _crear_clip_cierre(
             "21",
             "-pix_fmt",
             "yuv420p",
+            "-frames:v",
+            str(total_fotogramas),
             salida,
         ]
     )
@@ -1070,8 +1291,8 @@ def _mezclar_video_audio(
     voz: str,
     musica: str | None,
     subtitulos: str,
-    duracion_voz: float,
-    duracion_total: float,
+    inicio_cierre_video: float,
+    duracion_video_total: float,
     salida: str,
 ) -> None:
     estilo = (
@@ -1086,19 +1307,20 @@ def _mezclar_video_audio(
     comando = ["ffmpeg", "-y", "-i", video_base, "-i", voz]
 
     if musica:
-        inicio_salida = max(duracion_voz, duracion_total - CIERRE_SEGUNDOS)
+        inicio_salida = inicio_cierre_video
+        duracion_fundido = duracion_video_total - inicio_cierre_video
         comando.extend(["-stream_loop", "-1", "-i", musica])
         comando.extend(
             [
                 "-filter_complex",
                 (
-                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS:.3f},"
-                    f"atrim=0:{duracion_total:.3f},asetpts=N/SR/TB,"
+                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS + 1:.3f},"
+                    f"atrim=0:{duracion_video_total:.6f},asetpts=N/SR/TB,"
                     "volume=1.0[voz];"
-                    f"[2:a]atrim=0:{duracion_total:.3f},asetpts=N/SR/TB,"
+                    f"[2:a]atrim=0:{duracion_video_total:.6f},asetpts=N/SR/TB,"
                     "volume=0.10,afade=t=in:st=0:d=1,"
                     f"afade=t=out:st={inicio_salida:.3f}:"
-                    f"d={CIERRE_SEGUNDOS:.3f}[musica];"
+                    f"d={duracion_fundido:.6f}[musica];"
                     "[voz][musica]amix=inputs=2:duration=longest:"
                     "dropout_transition=0[audio]"
                 ),
@@ -1113,8 +1335,9 @@ def _mezclar_video_audio(
             [
                 "-filter_complex",
                 (
-                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS:.3f},"
-                    f"atrim=0:{duracion_total:.3f},asetpts=N/SR/TB[audio]"
+                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS + 1:.3f},"
+                    f"atrim=0:{duracion_video_total:.6f},"
+                    "asetpts=N/SR/TB[audio]"
                 ),
                 "-map",
                 "0:v:0",
@@ -1128,7 +1351,7 @@ def _mezclar_video_audio(
             "-vf",
             filtro_subtitulos,
             "-t",
-            f"{duracion_total:.3f}",
+            f"{duracion_video_total:.6f}",
             "-c:v",
             "libx264",
             "-preset",
@@ -1149,7 +1372,11 @@ def _mezclar_video_audio(
     ejecutar(comando, tiempo_maximo=1200)
 
 
-def validar_salida_multimedia(ruta: str, duracion_esperada: float) -> dict:
+def validar_salida_multimedia(
+    ruta: str,
+    duracion_esperada: float,
+    fotogramas_esperados: int | None = None,
+) -> dict:
     sondeo = subprocess.run(
         [
             "ffprobe",
@@ -1235,11 +1462,23 @@ def validar_salida_multimedia(ruta: str, duracion_esperada: float) -> dict:
     if valor in {"inf", "-inf"} or float(valor) <= -80.0:
         raise RuntimeError("El borrador contiene audio, pero está en silencio.")
 
+    fotogramas = contar_fotogramas_video(ruta)
+
+    if (
+        fotogramas_esperados is not None
+        and fotogramas != fotogramas_esperados
+    ):
+        raise RuntimeError(
+            f"El borrador contiene {fotogramas} fotogramas; se esperaban "
+            f"{fotogramas_esperados}."
+        )
+
     return {
         "duracion": round(duracion, 3),
         "video_codec": str(video.get("codec_name", "")),
         "audio_codec": str(audio.get("codec_name", "")),
         "audio_max_db": float(valor),
+        "fotogramas": fotogramas,
     }
 
 
@@ -1277,8 +1516,10 @@ def generar_borrador(
     sello = obtener_ruta_sello_cierre(sello_cierre)
     voz = os.path.join(directorio_proyecto, "voz.mp3")
     duracion_voz = obtener_duracion(voz)
-    cierre = crear_segmento_cierre(duracion_voz)
-    duracion_total = float(cierre["fin"])
+    plan_fotogramas = crear_plan_fotogramas(sincronizacion, fps)
+    inicio_cierre_video = float(plan_fotogramas[-1]["inicio_video"])
+    duracion_total = float(plan_fotogramas[-1]["fin_video"])
+    fotogramas_totales = int(plan_fotogramas[-1]["fotograma_fin"])
     musica = obtener_ruta_musica(directorio_proyecto)
     if musica and not estado.get("musica_aprobada"):
         raise ValueError("La música cargada todavía no está aprobada.")
@@ -1296,15 +1537,21 @@ def generar_borrador(
     ) as temporal:
         clips = []
 
-        for imagen, segmento in zip(imagenes, sincronizacion, strict=True):
+        for imagen, segmento, corte in zip(
+            imagenes,
+            sincronizacion,
+            plan_fotogramas[:TOTAL_IMAGENES],
+            strict=True,
+        ):
             clip = os.path.join(temporal, f"clip-{segmento['numero']:02}.mp4")
             _crear_clip(
                 imagen,
-                float(segmento["duracion"]),
+                float(corte["duracion_video"]),
                 clip,
                 ancho,
                 alto,
                 fps,
+                fotogramas=int(corte["fotogramas"]),
             )
             clips.append(clip)
 
@@ -1317,6 +1564,10 @@ def generar_borrador(
             fps,
         )
         clips.append(clip_cierre)
+        clips_verificados = validar_clips_fotograma_a_fotograma(
+            plan_fotogramas,
+            clips,
+        )
 
         lista = os.path.join(temporal, "clips.txt")
         with open(lista, "w", encoding="utf-8") as archivo:
@@ -1340,21 +1591,50 @@ def generar_borrador(
                 video_base,
             ]
         )
+        fotogramas_video_base = contar_fotogramas_video(video_base)
+
+        if fotogramas_video_base != fotogramas_totales:
+            raise RuntimeError(
+                "La concatenación ha alterado el número total de fotogramas."
+            )
+
         temporal_salida = os.path.join(temporal, ARCHIVO_BORRADOR)
         _mezclar_video_audio(
             video_base,
             voz,
             musica,
             subtitulos,
-            duracion_voz,
+            inicio_cierre_video,
             duracion_total,
             temporal_salida,
         )
         verificacion = validar_salida_multimedia(
             temporal_salida,
             duracion_total,
+            fotogramas_esperados=fotogramas_totales,
         )
         os.replace(temporal_salida, salida)
+
+    desviacion_maxima_ms = max(
+        abs(float(corte["desviacion_inicio_ms"]))
+        for corte in clips_verificados
+    )
+    guardar_json_atomico(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_TIMELINE,
+        ),
+        {
+            "verificada": True,
+            "fps": fps,
+            "duracion_fotograma_ms": round(1000.0 / fps, 3),
+            "desviacion_maxima_ms": round(desviacion_maxima_ms, 3),
+            "fotogramas_totales": fotogramas_totales,
+            "duracion_video": round(duracion_total, 6),
+            "cortes": clips_verificados,
+            "actualizado": ahora_iso(),
+        },
+    )
 
     return guardar_estado(
         directorio_proyecto,
@@ -1368,6 +1648,9 @@ def generar_borrador(
         duracion_video=verificacion["duracion"],
         audio_codec=verificacion["audio_codec"],
         audio_max_db=verificacion["audio_max_db"],
+        timeline_verificada=True,
+        desviacion_maxima_ms=round(desviacion_maxima_ms, 3),
+        fotogramas_totales=verificacion["fotogramas"],
         sello_cierre=ARCHIVO_SELLO_CIERRE,
         resolucion=f"{ancho}x{alto}",
         fps=fps,
@@ -1520,6 +1803,12 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
     datos_sincronizacion = cargar_json(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
     ) or {}
+    verificacion_timeline = cargar_json(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_TIMELINE,
+        )
+    ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
@@ -1537,6 +1826,17 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
                 "semantica_validada",
                 estado.get("semantica_validada", False),
             ),
+            "fps_timeline": datos_sincronizacion.get(
+                "fps_timeline",
+                FPS_VIDEO,
+            ),
+            "desviacion_planificada_ms": datos_sincronizacion.get(
+                "desviacion_maxima_ms",
+            ),
+            "timeline_verificada": (
+                verificacion_timeline.get("verificada") is True
+            ),
+            "verificacion_timeline": verificacion_timeline,
             "total_imagenes": total_imagenes,
             "cierre": datos_sincronizacion.get("cierre"),
             "duracion_total": datos_sincronizacion.get(

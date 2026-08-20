@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.8
+MANUAL MAESTRO — VERSIÓN 1.9
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.8:
+Cambios obligatorios de la versión 1.9:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -34,6 +34,11 @@ Cambios obligatorios de la versión 1.8:
   reparto matemático de la narración;
 * bloqueo del montaje cuando no pueda validarse la correspondencia entre voz,
   frase e imagen;
+* conversión obligatoria de cada corte a su fotograma real más próximo a 30
+  fps, sin acumular redondeos entre imágenes;
+* verificación con FFprobe del número exacto de fotogramas de cada clip y del
+  vídeo completo antes de ofrecer el borrador;
+* informe `verificacion_timeline.json` incluido en el proyecto y en el ZIP;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -455,12 +460,35 @@ Cada cambio de imagen quedará documentado con:
 * la frase del guion que marca su entrada;
 * el segundo exacto de inicio;
 * el segundo exacto de final;
+* el fotograma exacto en el que se realizará el corte;
+* la diferencia en milisegundos entre la marca de voz y ese fotograma;
 * coincidencia entre el final de una imagen y el inicio de la siguiente.
+
+Verificación fotograma a fotograma
+
+Una marca de voz puede caer entre dos fotogramas. A 30 fps solo existe un
+fotograma cada 33,33 milisegundos, por lo que el montaje situará cada corte en
+el fotograma real más próximo. El ajuste normal será como máximo de medio
+fotograma, 16,67 milisegundos, y nunca podrá superar un fotograma completo.
+
+Los límites se calcularán como posiciones absolutas dentro del vídeo. No se
+redondeará por separado la duración de cada imagen, porque esa práctica acumula
+desviaciones y termina desplazando los cortes posteriores.
+
+FFmpeg generará cada clip con el número exacto de fotogramas asignado. Antes de
+mezclar el audio, FFprobe contará los fotogramas reales de los nueve clips y
+comprobará que cada final coincide con el inicio del clip siguiente. Después
+volverá a contar el vídeo concatenado y el borrador final. Cualquier diferencia
+entre los fotogramas previstos y los generados bloqueará el montaje.
+
+La aplicación guardará `verificacion_timeline.json` con los nueve tramos, sus
+marcas de voz, fotogramas, ajustes en milisegundos y resultado de verificación.
+La Imagen 9 tendrá siempre 90 fotogramas a 30 fps.
 
 Cierre fijo obligatorio
 
-La Imagen 8 terminará exactamente cuando termine la narración. En ese mismo
-instante entrará la Imagen 9 maestra.
+La Imagen 8 terminará en el fotograma más próximo al final real de la
+narración. En ese mismo fotograma entrará la Imagen 9 maestra.
 
 La Imagen 9:
 
@@ -488,7 +516,8 @@ El montaje incluirá transiciones discretas, subtítulos legibles, voz principal
 
 Antes de ofrecer el borrador para aprobación, la aplicación verificará que el
 MP4 contiene vídeo, una pista de audio audible y una duración igual a la voz
-más los 3 segundos del cierre.
+más los 3 segundos del cierre, ajustada al fotograma real más próximo. También
+verificará que el MP4 contiene exactamente el total de fotogramas planificado.
 
 Aprobación y entrega
 
@@ -500,6 +529,7 @@ Solo una aprobación humana explícita permitirá crear:
 * `publicacion.txt`;
 * `proyecto_completo.zip`.
 
-El paquete conservará vídeo, imágenes, voz, música, subtítulos, sincronización, metadatos y textos de publicación.
+El paquete conservará vídeo, imágenes, voz, música, subtítulos, sincronización,
+el informe de verificación por fotogramas, metadatos y textos de publicación.
 
 La aplicación no publicará en Instagram ni copiará archivos a un servicio externo sin autorización expresa de Pedro Ángel.
