@@ -21,12 +21,20 @@ ANCHO_VIDEO = 1080
 ALTO_VIDEO = 1920
 FPS_VIDEO = 30
 TRANSICION_SEGUNDOS = 0.15
+PICO_OBJETIVO_VOZ_DB = -3.0
+GANANCIA_MAXIMA_VOZ_DB = 18.0
+GANANCIA_MAXIMA_MUSICA_DB = -20.0
+MARGEN_MINIMO_MUSICA_DB = 14.0
+CAIDA_MINIMA_FUNDIDO_DB = 12.0
+LIMITE_AUDIO_LINEAL = 0.891
+PICO_MAXIMO_MEZCLA_DB = -0.1
 MAXIMO_BYTES_MUSICA = 50 * 1024 * 1024
 EXTENSIONES_MUSICA = {".mp3", ".wav", ".m4a", ".aac", ".ogg"}
 ARCHIVO_ESTADO = "produccion.json"
 ARCHIVO_SINCRONIZACION = "sincronizacion.json"
 ARCHIVO_VERIFICACION_TIMELINE = "verificacion_timeline.json"
 ARCHIVO_VERIFICACION_VISUAL = "verificacion_visual.json"
+ARCHIVO_VERIFICACION_AUDIO = "verificacion_audio.json"
 ARCHIVO_BORRADOR = "video_borrador.mp4"
 ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
@@ -109,6 +117,7 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         ARCHIVO_PAQUETE,
         ARCHIVO_VERIFICACION_TIMELINE,
         ARCHIVO_VERIFICACION_VISUAL,
+        ARCHIVO_VERIFICACION_AUDIO,
         "subtitulos.srt",
     ):
         ruta = os.path.join(directorio_proyecto, nombre)
@@ -1345,55 +1354,145 @@ def _crear_clip_cierre(
     )
 
 
+def medir_volumen_maximo(
+    ruta: str,
+    inicio: float | None = None,
+    duracion: float | None = None,
+) -> float:
+    comando = ["ffmpeg", "-v", "info"]
+
+    if inicio is not None:
+        comando.extend(["-ss", f"{max(0.0, float(inicio)):.6f}"])
+
+    if duracion is not None:
+        comando.extend(["-t", f"{max(0.001, float(duracion)):.6f}"])
+
+    comando.extend(
+        [
+            "-i",
+            ruta,
+            "-map",
+            "0:a:0",
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ]
+    )
+    resultado = subprocess.run(
+        comando,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=120,
+    )
+    coincidencia = re.search(
+        r"max_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB",
+        resultado.stderr,
+        flags=re.IGNORECASE,
+    )
+
+    if resultado.returncode != 0 or not coincidencia:
+        raise RuntimeError("No se pudo medir el volumen del audio.")
+
+    valor = coincidencia.group(1).lower()
+    return float("-inf") if valor in {"inf", "-inf"} else float(valor)
+
+
+def calcular_ajuste_audio(voz: str, musica: str) -> dict:
+    pico_voz = medir_volumen_maximo(voz)
+    pico_musica = medir_volumen_maximo(musica)
+
+    if not math.isfinite(pico_voz) or pico_voz <= -80.0:
+        raise RuntimeError("La pista de voz está en silencio.")
+
+    if not math.isfinite(pico_musica) or pico_musica <= -80.0:
+        raise RuntimeError("La pista musical está en silencio.")
+
+    ganancia_voz = max(
+        -GANANCIA_MAXIMA_VOZ_DB,
+        min(
+            GANANCIA_MAXIMA_VOZ_DB,
+            PICO_OBJETIVO_VOZ_DB - pico_voz,
+        ),
+    )
+    pico_voz_ajustado = pico_voz + ganancia_voz
+    ganancia_musica_necesaria = (
+        pico_voz_ajustado
+        - MARGEN_MINIMO_MUSICA_DB
+        - pico_musica
+    )
+    ganancia_musica = min(
+        GANANCIA_MAXIMA_MUSICA_DB,
+        ganancia_musica_necesaria,
+    )
+
+    if ganancia_musica < -60.0:
+        raise RuntimeError(
+            "La diferencia de volumen entre voz y música es excesiva."
+        )
+
+    pico_musica_ajustado = pico_musica + ganancia_musica
+    margen = pico_voz_ajustado - pico_musica_ajustado
+
+    if pico_voz_ajustado <= -24.0:
+        raise RuntimeError(
+            "La voz es demasiado baja incluso después del ajuste seguro."
+        )
+
+    if margen + 0.01 < MARGEN_MINIMO_MUSICA_DB:
+        raise RuntimeError("La música no queda suficientemente debajo de la voz.")
+
+    return {
+        "pico_voz_original_db": round(pico_voz, 2),
+        "ganancia_voz_db": round(ganancia_voz, 2),
+        "pico_voz_ajustado_db": round(pico_voz_ajustado, 2),
+        "pico_musica_original_db": round(pico_musica, 2),
+        "ganancia_musica_db": round(ganancia_musica, 2),
+        "pico_musica_ajustado_db": round(pico_musica_ajustado, 2),
+        "margen_voz_sobre_musica_db": round(margen, 2),
+        "margen_minimo_exigido_db": MARGEN_MINIMO_MUSICA_DB,
+    }
+
+
 def _mezclar_video_audio(
     video_base: str,
     voz: str,
-    musica: str | None,
+    musica: str,
     inicio_cierre_video: float,
     duracion_video_total: float,
     salida: str,
-) -> None:
+) -> dict:
+    ajuste = calcular_ajuste_audio(voz, musica)
     comando = ["ffmpeg", "-y", "-i", video_base, "-i", voz]
-
-    if musica:
-        inicio_salida = inicio_cierre_video
-        duracion_fundido = duracion_video_total - inicio_cierre_video
-        comando.extend(["-stream_loop", "-1", "-i", musica])
-        comando.extend(
-            [
-                "-filter_complex",
-                (
-                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS + 1:.3f},"
-                    f"atrim=0:{duracion_video_total:.6f},asetpts=N/SR/TB,"
-                    "volume=1.0[voz];"
-                    f"[2:a]atrim=0:{duracion_video_total:.6f},asetpts=N/SR/TB,"
-                    "volume=0.10,afade=t=in:st=0:d=1,"
-                    f"afade=t=out:st={inicio_salida:.3f}:"
-                    f"d={duracion_fundido:.6f}[musica];"
-                    "[voz][musica]amix=inputs=2:duration=longest:"
-                    "dropout_transition=0[audio]"
-                ),
-                "-map",
-                "0:v:0",
-                "-map",
-                "[audio]",
-            ]
-        )
-    else:
-        comando.extend(
-            [
-                "-filter_complex",
-                (
-                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS + 1:.3f},"
-                    f"atrim=0:{duracion_video_total:.6f},"
-                    "asetpts=N/SR/TB[audio]"
-                ),
-                "-map",
-                "0:v:0",
-                "-map",
-                "[audio]",
-            ]
-        )
+    inicio_salida = inicio_cierre_video
+    duracion_fundido = duracion_video_total - inicio_cierre_video
+    comando.extend(["-stream_loop", "-1", "-i", musica])
+    comando.extend(
+        [
+            "-filter_complex",
+            (
+                f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS + 1:.3f},"
+                f"atrim=0:{duracion_video_total:.6f},asetpts=N/SR/TB,"
+                f"volume={ajuste['ganancia_voz_db']:.2f}dB[voz];"
+                f"[2:a]atrim=0:{duracion_video_total:.6f},asetpts=N/SR/TB,"
+                f"volume={ajuste['ganancia_musica_db']:.2f}dB,"
+                "afade=t=in:st=0:d=1,"
+                f"afade=t=out:st={inicio_salida:.3f}:"
+                f"d={duracion_fundido:.6f}[musica];"
+                "[voz][musica]amix=inputs=2:duration=longest:"
+                "dropout_transition=0:normalize=0,"
+                f"alimiter=limit={LIMITE_AUDIO_LINEAL:.3f}:"
+                "level=false:latency=true[audio]"
+            ),
+            "-map",
+            "0:v:0",
+            "-map",
+            "[audio]",
+        ]
+    )
 
     comando.extend(
         [
@@ -1417,6 +1516,62 @@ def _mezclar_video_audio(
         ]
     )
     ejecutar(comando, tiempo_maximo=1200)
+    return ajuste
+
+
+def validar_control_audio_final(
+    ruta: str,
+    ajuste: dict,
+    inicio_cierre_video: float,
+    duracion_video_total: float,
+    pico_final_db: float,
+) -> dict:
+    duracion_cierre = duracion_video_total - inicio_cierre_video
+    volumen_inicio_cierre = medir_volumen_maximo(
+        ruta,
+        inicio=inicio_cierre_video,
+        duracion=min(0.75, duracion_cierre / 2.0),
+    )
+    duracion_final = min(0.25, duracion_cierre / 4.0)
+    volumen_final = medir_volumen_maximo(
+        ruta,
+        inicio=max(0.0, duracion_video_total - duracion_final),
+        duracion=duracion_final,
+    )
+
+    if not math.isfinite(volumen_inicio_cierre) or volumen_inicio_cierre <= -70:
+        raise RuntimeError("La música no se oye al comenzar la Imagen 9.")
+
+    volumen_final_calculo = (
+        volumen_final if math.isfinite(volumen_final) else -120.0
+    )
+    caida_fundido = volumen_inicio_cierre - volumen_final_calculo
+
+    if caida_fundido + 0.1 < CAIDA_MINIMA_FUNDIDO_DB:
+        raise RuntimeError(
+            "La música no se desvanece suficientemente durante la Imagen 9."
+        )
+
+    if pico_final_db > PICO_MAXIMO_MEZCLA_DB:
+        raise RuntimeError("La mezcla final presenta saturación digital.")
+
+    return {
+        "verificada": True,
+        "voz_audible": True,
+        "musica_subordinada": True,
+        "sin_saturacion_digital": pico_final_db <= PICO_MAXIMO_MEZCLA_DB,
+        "pico_maximo_permitido_db": PICO_MAXIMO_MEZCLA_DB,
+        "pico_mezcla_final_db": round(pico_final_db, 2),
+        "volumen_inicio_cierre_db": round(volumen_inicio_cierre, 2),
+        "volumen_final_cierre_db": (
+            round(volumen_final, 2)
+            if math.isfinite(volumen_final)
+            else "silencio"
+        ),
+        "caida_fundido_db": round(caida_fundido, 2),
+        "caida_minima_exigida_db": CAIDA_MINIMA_FUNDIDO_DB,
+        **ajuste,
+    }
 
 
 def validar_salida_multimedia(
@@ -1499,39 +1654,9 @@ def validar_salida_multimedia(
             "La duración del borrador no coincide con la voz más el cierre de 3 segundos."
         )
 
-    volumen = subprocess.run(
-        [
-            "ffmpeg",
-            "-v",
-            "info",
-            "-i",
-            ruta,
-            "-map",
-            "0:a:0",
-            "-af",
-            "volumedetect",
-            "-f",
-            "null",
-            "-",
-        ],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        timeout=120,
-    )
-    coincidencia = re.search(
-        r"max_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB",
-        volumen.stderr,
-        flags=re.IGNORECASE,
-    )
+    pico_audio = medir_volumen_maximo(ruta)
 
-    if volumen.returncode != 0 or not coincidencia:
-        raise RuntimeError("No se pudo comprobar el volumen del borrador.")
-
-    valor = coincidencia.group(1).lower()
-
-    if valor in {"inf", "-inf"} or float(valor) <= -80.0:
+    if not math.isfinite(pico_audio) or pico_audio <= -80.0:
         raise RuntimeError("El borrador contiene audio, pero está en silencio.")
 
     fotogramas = contar_fotogramas_video(ruta)
@@ -1549,7 +1674,7 @@ def validar_salida_multimedia(
         "duracion": round(duracion, 3),
         "video_codec": str(video.get("codec_name", "")),
         "audio_codec": str(audio.get("codec_name", "")),
-        "audio_max_db": float(valor),
+        "audio_max_db": pico_audio,
         "fotogramas": fotogramas,
         "ancho": ancho,
         "alto": alto,
@@ -1605,7 +1730,11 @@ def generar_borrador(
     duracion_total = float(plan_fotogramas[-1]["fin_video"])
     fotogramas_totales = int(plan_fotogramas[-1]["fotograma_fin"])
     musica = obtener_ruta_musica(directorio_proyecto)
-    if musica and not estado.get("musica_aprobada"):
+
+    if not musica:
+        raise ValueError("Debe cargarse una pista musical antes del montaje.")
+
+    if not estado.get("musica_aprobada"):
         raise ValueError("La música cargada todavía no está aprobada.")
 
     salida = os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
@@ -1683,7 +1812,7 @@ def generar_borrador(
             )
 
         temporal_salida = os.path.join(temporal, ARCHIVO_BORRADOR)
-        _mezclar_video_audio(
+        ajuste_audio = _mezclar_video_audio(
             video_base,
             voz,
             musica,
@@ -1698,6 +1827,13 @@ def generar_borrador(
             ancho_esperado=ancho,
             alto_esperado=alto,
             fps_esperados=fps,
+        )
+        control_audio = validar_control_audio_final(
+            temporal_salida,
+            ajuste_audio,
+            inicio_cierre_video,
+            duracion_total,
+            verificacion["audio_max_db"],
         )
         os.replace(temporal_salida, salida)
 
@@ -1718,6 +1854,21 @@ def generar_borrador(
             "fotogramas_totales": fotogramas_totales,
             "duracion_video": round(duracion_total, 6),
             "cortes": clips_verificados,
+            "actualizado": ahora_iso(),
+        },
+    )
+    guardar_json_atomico(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_AUDIO,
+        ),
+        {
+            **control_audio,
+            "musica_finaliza_en_imagen_9": True,
+            "duracion_cierre_segundos": round(
+                duracion_total - inicio_cierre_video,
+                6,
+            ),
             "actualizado": ahora_iso(),
         },
     )
@@ -1756,6 +1907,7 @@ def generar_borrador(
         audio_max_db=verificacion["audio_max_db"],
         timeline_verificada=True,
         control_visual_verificado=True,
+        control_audio_verificado=True,
         sin_subtitulos=True,
         desviacion_maxima_ms=round(desviacion_maxima_ms, 3),
         fotogramas_totales=verificacion["fotogramas"],
@@ -1927,6 +2079,12 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
             ARCHIVO_VERIFICACION_VISUAL,
         )
     ) or {}
+    verificacion_audio = cargar_json(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_AUDIO,
+        )
+    ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
@@ -1959,6 +2117,10 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
                 verificacion_visual.get("verificada_automaticamente") is True
             ),
             "verificacion_visual": verificacion_visual,
+            "control_audio_verificado": (
+                verificacion_audio.get("verificada") is True
+            ),
+            "verificacion_audio": verificacion_audio,
             "sin_subtitulos": True,
             "total_imagenes": total_imagenes,
             "cierre": datos_sincronizacion.get("cierre"),
