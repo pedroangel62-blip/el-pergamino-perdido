@@ -11,11 +11,12 @@ Aplicación web para preparar Reels documentales de El Pergamino Perdido con con
 5. El usuario escucha y aprueba la voz; hasta entonces las imágenes permanecen bloqueadas.
 6. Se buscan fotografías reales antes de ofrecer una recreación con IA.
 7. Las ocho imágenes definitivas se confirman antes del montaje.
-8. La aplicación sincroniza frases, subtítulos e imágenes con las marcas reales de la voz, con portada fija de 3 segundos.
+8. La aplicación sincroniza frases, subtítulos y las ocho imágenes del caso con las marcas reales de la voz, con portada fija de 3 segundos.
 9. El usuario carga y aprueba la música antes de mezclarla con la voz.
-10. FFmpeg genera un borrador vertical 1080×1920 a 30 fps con subtítulos y transiciones.
-11. El borrador aprobado se convierte en vídeo final y paquete ZIP descargable.
-12. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
+10. FFmpeg añade la Imagen 9 maestra durante 3 segundos: zoom suave, voz ya terminada y fundido final de la música.
+11. FFmpeg genera un borrador vertical 1080×1920 a 30 fps con subtítulos y transiciones, y verifica que la pista de audio sea audible.
+12. El borrador aprobado se convierte en vídeo final y paquete ZIP descargable.
+13. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
 
 ## Índice maestro
 
@@ -58,6 +59,8 @@ La pantalla `Producción final` se desbloquea cuando la voz y las ocho imágenes
 - autorizar la creación del vídeo final.
 
 Las voces nuevas guardan `voz-alineacion.json` a partir de la misma respuesta de ElevenLabs que contiene el audio; no se realiza una segunda generación. Los cortes posteriores a la portada se ajustan a tiempos reales y priorizan comienzos naturales de frase. Si un proyecto antiguo no contiene esas marcas, la interfaz identifica claramente la sincronización como estimada para que pueda revisarse o regenerarse.
+
+Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.png`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
 
 El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, subtítulos, sincronización, metadatos y textos de publicación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 

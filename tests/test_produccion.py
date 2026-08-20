@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -9,6 +10,7 @@ import unittest
 import zipfile
 
 from backend.produccion import (
+    CIERRE_SEGUNDOS,
     aprobar_borrador,
     aprobar_imagenes,
     aprobar_musica,
@@ -19,6 +21,7 @@ from backend.produccion import (
     crear_texto_publicacion,
     generar_borrador,
     guardar_musica,
+    obtener_duracion,
     preparar_sincronizacion,
 )
 
@@ -45,6 +48,63 @@ def crear_audio(ruta: str, duracion: float, frecuencia: int) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def sondear_archivo(ruta: str) -> dict:
+    resultado = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type,codec_name",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            ruta,
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return json.loads(resultado.stdout)
+
+
+def medir_max_db(ruta: str, inicio: float, duracion: float) -> float:
+    resultado = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-ss",
+            f"{inicio:.3f}",
+            "-t",
+            f"{duracion:.3f}",
+            "-i",
+            ruta,
+            "-map",
+            "0:a:0",
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    coincidencia = re.search(
+        r"max_volume:\s*(-?(?:inf|\d+(?:\.\d+)?)) dB",
+        resultado.stderr,
+        re.IGNORECASE,
+    )
+    if not coincidencia:
+        raise AssertionError("FFmpeg no devolvió max_volume")
+    valor = coincidencia.group(1).lower()
+    return float("-inf") if valor == "-inf" else float(valor)
 
 
 class SincronizacionTests(unittest.TestCase):
@@ -124,6 +184,7 @@ class SincronizacionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directorio:
             voz = os.path.join(directorio, "voz.mp3")
             crear_audio(voz, 8.0, 440)
+            duracion_voz = obtener_duracion(voz)
             guion = " ".join(f"palabra{indice}" for indice in range(1, 81))
             paso = 7.9 / len(guion)
             alineacion = {
@@ -161,6 +222,15 @@ class SincronizacionTests(unittest.TestCase):
 
             self.assertEqual(guardada["metodo"], "elevenlabs_alignment")
             self.assertEqual(len(segmentos), 8)
+            self.assertEqual(guardada["cierre"]["numero"], 9)
+            self.assertEqual(guardada["cierre"]["inicio"], duracion_voz)
+            self.assertEqual(
+                guardada["cierre"]["fin"],
+                round(duracion_voz + CIERRE_SEGUNDOS, 3),
+            )
+            self.assertEqual(guardada["cierre"]["duracion"], CIERRE_SEGUNDOS)
+            self.assertFalse(guardada["cierre"]["voz"])
+            self.assertTrue(guardada["cierre"]["musica"])
 
 
 class PublicacionTests(unittest.TestCase):
@@ -200,7 +270,11 @@ class MontajeTests(unittest.TestCase):
 
             voz = os.path.join(directorio, "voz.mp3")
             musica_origen = os.path.join(directorio, "musica-origen.mp3")
+            sello = os.path.join(directorio, "sello.png")
+            with open(sello, "wb") as archivo:
+                archivo.write(PNG_UN_PIXEL)
             crear_audio(voz, 8.0, 440)
+            duracion_voz = obtener_duracion(voz)
             crear_audio(musica_origen, 8.0, 220)
             guion = " ".join(f"palabra{indice}" for indice in range(1, 81))
             aprobar_imagenes(directorio)
@@ -217,11 +291,35 @@ class MontajeTests(unittest.TestCase):
                 ancho=180,
                 alto=320,
                 fps=10,
+                sello_cierre=sello,
             )
 
             self.assertEqual(len(segmentos), 8)
             self.assertEqual(estado["estado"], "borrador_pendiente_aprobacion")
-            self.assertTrue(os.path.isfile(os.path.join(directorio, "video_borrador.mp4")))
+            borrador = os.path.join(directorio, "video_borrador.mp4")
+            self.assertTrue(os.path.isfile(borrador))
+            sondeo = sondear_archivo(borrador)
+            tipos = {stream["codec_type"] for stream in sondeo["streams"]}
+            self.assertEqual(tipos, {"audio", "video"})
+            self.assertEqual(estado["audio_codec"], "aac")
+            self.assertGreater(estado["audio_max_db"], -80.0)
+            self.assertAlmostEqual(
+                float(sondeo["format"]["duration"]),
+                duracion_voz + CIERRE_SEGUNDOS,
+                delta=0.5,
+            )
+            volumen_inicio_cierre = medir_max_db(
+                borrador,
+                duracion_voz,
+                1.0,
+            )
+            volumen_final_cierre = medir_max_db(
+                borrador,
+                duracion_voz + CIERRE_SEGUNDOS - 0.25,
+                0.25,
+            )
+            self.assertGreater(volumen_inicio_cierre, -80.0)
+            self.assertLess(volumen_final_cierre, volumen_inicio_cierre)
 
             aprobar_borrador(directorio)
             resultado = {

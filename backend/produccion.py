@@ -12,6 +12,9 @@ import zipfile
 
 TOTAL_IMAGENES = 8
 PORTADA_SEGUNDOS = 3.0
+CIERRE_SEGUNDOS = 3.0
+ZOOM_MAXIMO_CIERRE = 1.02
+ESCALA_SEGURA_CIERRE = 0.90
 ANCHO_VIDEO = 1080
 ALTO_VIDEO = 1920
 FPS_VIDEO = 30
@@ -25,6 +28,12 @@ ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
 ARCHIVO_PAQUETE = "proyecto_completo.zip"
 ARCHIVO_ALINEACION_VOZ = "voz-alineacion.json"
+ARCHIVO_SELLO_CIERRE = "sello-el-pergamino-perdido.png"
+RUTA_SELLO_CIERRE = (
+    Path(__file__).resolve().parent
+    / "assets"
+    / ARCHIVO_SELLO_CIERRE
+)
 
 
 def ahora_iso() -> str:
@@ -167,6 +176,38 @@ def obtener_duracion(ruta: str) -> float:
         raise ValueError("El archivo multimedia está vacío.")
 
     return round(duracion, 3)
+
+
+def obtener_ruta_sello_cierre(ruta_personalizada: str | None = None) -> str:
+    ruta = (
+        Path(ruta_personalizada).resolve()
+        if ruta_personalizada
+        else RUTA_SELLO_CIERRE
+    )
+
+    if not ruta.is_file():
+        raise FileNotFoundError(
+            "No se encuentra la Imagen 9 maestra. Guarda el sello fijo en "
+            f"backend/assets/{ARCHIVO_SELLO_CIERRE}."
+        )
+
+    return str(ruta)
+
+
+def crear_segmento_cierre(duracion_voz: float) -> dict:
+    inicio = round(float(duracion_voz), 3)
+    fin = round(inicio + CIERRE_SEGUNDOS, 3)
+    return {
+        "numero": 9,
+        "tipo": "sello_fijo",
+        "frase_entrada": "Fin de la narración · entra el sello fijo",
+        "inicio": inicio,
+        "fin": fin,
+        "duracion": CIERRE_SEGUNDOS,
+        "voz": False,
+        "musica": True,
+        "movimiento": "zoom_suave_seguro",
+    }
 
 
 def _indices_inicio(total_palabras: int, duracion: float) -> list[int]:
@@ -498,6 +539,7 @@ def preparar_sincronizacion(
         duracion,
         alineacion=alineacion,
     )
+    cierre = crear_segmento_cierre(duracion)
     metodo = str(sincronizacion[0].get("metodo", "estimado"))
     invalidar_salidas(directorio_proyecto)
     guardar_json_atomico(
@@ -507,6 +549,8 @@ def preparar_sincronizacion(
             "portada_segundos": PORTADA_SEGUNDOS,
             "metodo": metodo,
             "segmentos": sincronizacion,
+            "cierre": cierre,
+            "duracion_total": cierre["fin"],
             "actualizado": ahora_iso(),
         },
     )
@@ -525,6 +569,8 @@ def preparar_sincronizacion(
         metodo_sincronizacion=metodo,
         error="",
         duracion_voz=duracion,
+        duracion_cierre=CIERRE_SEGUNDOS,
+        duracion_total=cierre["fin"],
     )
     return sincronizacion
 
@@ -751,6 +797,58 @@ def _crear_clip(
     )
 
 
+def _crear_clip_cierre(
+    imagen: str,
+    salida: str,
+    ancho: int,
+    alto: int,
+    fps: int,
+) -> None:
+    ancho_seguro = max(1, round(ancho * ESCALA_SEGURA_CIERRE))
+    alto_seguro = max(1, round(alto * ESCALA_SEGURA_CIERRE))
+    total_fotogramas = max(2, round(CIERRE_SEGUNDOS * fps))
+    incremento_zoom = (ZOOM_MAXIMO_CIERRE - 1.0) / (total_fotogramas - 1)
+    filtro = (
+        "[0:v]split=2[fondo][frente];"
+        f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
+        f"crop={ancho}:{alto},boxblur=20:2[fondo2];"
+        f"[frente]scale={ancho_seguro}:{alto_seguro}:"
+        "force_original_aspect_ratio=decrease[frente2];"
+        "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1[completo];"
+        "[completo]zoompan="
+        f"z='min(zoom+{incremento_zoom:.8f},{ZOOM_MAXIMO_CIERRE:.3f})':"
+        "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
+        f"s={ancho}x{alto}:fps={fps},"
+        "format=yuv420p,fade=t=in:st=0:d=0.250[video]"
+    )
+    ejecutar(
+        [
+            "ffmpeg",
+            "-y",
+            "-loop",
+            "1",
+            "-t",
+            f"{CIERRE_SEGUNDOS:.3f}",
+            "-i",
+            imagen,
+            "-filter_complex",
+            filtro,
+            "-map",
+            "[video]",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "21",
+            "-pix_fmt",
+            "yuv420p",
+            salida,
+        ]
+    )
+
+
 def _escapar_subtitulos(ruta: str) -> str:
     return (
         os.path.abspath(ruta)
@@ -765,7 +863,8 @@ def _mezclar_video_audio(
     voz: str,
     musica: str | None,
     subtitulos: str,
-    duracion: float,
+    duracion_voz: float,
+    duracion_total: float,
     salida: str,
 ) -> None:
     estilo = (
@@ -780,16 +879,21 @@ def _mezclar_video_audio(
     comando = ["ffmpeg", "-y", "-i", video_base, "-i", voz]
 
     if musica:
-        inicio_salida = max(0.0, duracion - 2.0)
+        inicio_salida = max(duracion_voz, duracion_total - CIERRE_SEGUNDOS)
         comando.extend(["-stream_loop", "-1", "-i", musica])
         comando.extend(
             [
                 "-filter_complex",
                 (
-                    "[1:a]volume=1.0[voz];"
-                    "[2:a]volume=0.10,afade=t=in:st=0:d=1,"
-                    f"afade=t=out:st={inicio_salida:.3f}:d=2[musica];"
-                    "[voz][musica]amix=inputs=2:duration=first:dropout_transition=2[audio]"
+                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS:.3f},"
+                    f"atrim=0:{duracion_total:.3f},asetpts=N/SR/TB,"
+                    "volume=1.0[voz];"
+                    f"[2:a]atrim=0:{duracion_total:.3f},asetpts=N/SR/TB,"
+                    "volume=0.10,afade=t=in:st=0:d=1,"
+                    f"afade=t=out:st={inicio_salida:.3f}:"
+                    f"d={CIERRE_SEGUNDOS:.3f}[musica];"
+                    "[voz][musica]amix=inputs=2:duration=longest:"
+                    "dropout_transition=0[audio]"
                 ),
                 "-map",
                 "0:v:0",
@@ -798,14 +902,26 @@ def _mezclar_video_audio(
             ]
         )
     else:
-        comando.extend(["-map", "0:v:0", "-map", "1:a:0"])
+        comando.extend(
+            [
+                "-filter_complex",
+                (
+                    f"[1:a]apad=pad_dur={CIERRE_SEGUNDOS:.3f},"
+                    f"atrim=0:{duracion_total:.3f},asetpts=N/SR/TB[audio]"
+                ),
+                "-map",
+                "0:v:0",
+                "-map",
+                "[audio]",
+            ]
+        )
 
     comando.extend(
         [
             "-vf",
             filtro_subtitulos,
             "-t",
-            f"{duracion:.3f}",
+            f"{duracion_total:.3f}",
             "-c:v",
             "libx264",
             "-preset",
@@ -826,11 +942,106 @@ def _mezclar_video_audio(
     ejecutar(comando, tiempo_maximo=1200)
 
 
+def validar_salida_multimedia(ruta: str, duracion_esperada: float) -> dict:
+    sondeo = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type,codec_name",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            ruta,
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=30,
+    )
+
+    if sondeo.returncode != 0:
+        raise RuntimeError("No se pudo verificar el vídeo borrador.")
+
+    try:
+        datos = json.loads(sondeo.stdout)
+        streams = datos.get("streams", [])
+        duracion = float(datos.get("format", {}).get("duration", 0))
+    except (TypeError, ValueError, json.JSONDecodeError) as error:
+        raise RuntimeError("FFprobe devolvió datos no válidos del borrador.") from error
+
+    video = next(
+        (stream for stream in streams if stream.get("codec_type") == "video"),
+        None,
+    )
+    audio = next(
+        (stream for stream in streams if stream.get("codec_type") == "audio"),
+        None,
+    )
+
+    if not video:
+        raise RuntimeError("El borrador no contiene una pista de vídeo.")
+
+    if not audio:
+        raise RuntimeError("El borrador no contiene la pista de voz.")
+
+    if abs(duracion - duracion_esperada) > 0.5:
+        raise RuntimeError(
+            "La duración del borrador no coincide con la voz más el cierre de 3 segundos."
+        )
+
+    volumen = subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "info",
+            "-i",
+            ruta,
+            "-map",
+            "0:a:0",
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=120,
+    )
+    coincidencia = re.search(
+        r"max_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB",
+        volumen.stderr,
+        flags=re.IGNORECASE,
+    )
+
+    if volumen.returncode != 0 or not coincidencia:
+        raise RuntimeError("No se pudo comprobar el volumen del borrador.")
+
+    valor = coincidencia.group(1).lower()
+
+    if valor in {"inf", "-inf"} or float(valor) <= -80.0:
+        raise RuntimeError("El borrador contiene audio, pero está en silencio.")
+
+    return {
+        "duracion": round(duracion, 3),
+        "video_codec": str(video.get("codec_name", "")),
+        "audio_codec": str(audio.get("codec_name", "")),
+        "audio_max_db": float(valor),
+    }
+
+
 def generar_borrador(
     directorio_proyecto: str,
     ancho: int = ANCHO_VIDEO,
     alto: int = ALTO_VIDEO,
     fps: int = FPS_VIDEO,
+    sello_cierre: str | None = None,
 ) -> dict:
     comprobar_ffmpeg()
     sincronizacion = cargar_sincronizacion(directorio_proyecto)
@@ -847,8 +1058,11 @@ def generar_borrador(
         raise ValueError("La sincronización debe revisarse y aprobarse.")
 
     imagenes = obtener_imagenes(directorio_proyecto)
+    sello = obtener_ruta_sello_cierre(sello_cierre)
     voz = os.path.join(directorio_proyecto, "voz.mp3")
-    duracion = obtener_duracion(voz)
+    duracion_voz = obtener_duracion(voz)
+    cierre = crear_segmento_cierre(duracion_voz)
+    duracion_total = float(cierre["fin"])
     musica = obtener_ruta_musica(directorio_proyecto)
     if musica and not estado.get("musica_aprobada"):
         raise ValueError("La música cargada todavía no está aprobada.")
@@ -878,6 +1092,16 @@ def generar_borrador(
             )
             clips.append(clip)
 
+        clip_cierre = os.path.join(temporal, "clip-09-sello.mp4")
+        _crear_clip_cierre(
+            sello,
+            clip_cierre,
+            ancho,
+            alto,
+            fps,
+        )
+        clips.append(clip_cierre)
+
         lista = os.path.join(temporal, "clips.txt")
         with open(lista, "w", encoding="utf-8") as archivo:
             for clip in clips:
@@ -906,8 +1130,13 @@ def generar_borrador(
             voz,
             musica,
             subtitulos,
-            duracion,
+            duracion_voz,
+            duracion_total,
             temporal_salida,
+        )
+        verificacion = validar_salida_multimedia(
+            temporal_salida,
+            duracion_total,
         )
         os.replace(temporal_salida, salida)
 
@@ -917,7 +1146,13 @@ def generar_borrador(
         video_borrador=ARCHIVO_BORRADOR,
         video_final=None,
         borrador_aprobado=False,
-        duracion_video=obtener_duracion(salida),
+        duracion_voz=duracion_voz,
+        duracion_cierre=CIERRE_SEGUNDOS,
+        duracion_total=duracion_total,
+        duracion_video=verificacion["duracion"],
+        audio_codec=verificacion["audio_codec"],
+        audio_max_db=verificacion["audio_max_db"],
+        sello_cierre=ARCHIVO_SELLO_CIERRE,
         resolucion=f"{ancho}x{alto}",
         fps=fps,
         error="",
@@ -1083,6 +1318,13 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
                 estado.get("metodo_sincronizacion", "estimado"),
             ),
             "total_imagenes": total_imagenes,
+            "cierre": datos_sincronizacion.get("cierre"),
+            "duracion_total": datos_sincronizacion.get(
+                "duracion_total",
+                estado.get("duracion_total"),
+            ),
+            "sello_disponible": RUTA_SELLO_CIERRE.is_file(),
+            "sello_archivo": ARCHIVO_SELLO_CIERRE,
             "imagenes_aprobadas": imagenes_estan_aprobadas(
                 directorio_proyecto
             ),
