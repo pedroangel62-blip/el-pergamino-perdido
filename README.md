@@ -82,6 +82,8 @@ El workflow `Generar voz aprobada` permite comprobar la configuración y, tras u
 
 La acción `comprobar` valida proyecto y secretos sin llamar a ElevenLabs. La acción `generar` requiere la confirmación exacta `AUTORIZO_CONSUMIR_CREDITOS_ELEVENLABS`. Las ramas de producción usan el patrón `produccion/voz-*`; una solicitud que ya tenga artefacto queda bloqueada para evitar regeneraciones accidentales. No se imprimen secretos ni se almacena la clave en el repositorio.
 
+El workflow `Generar musica aprobada` aplica el mismo control para una única pista de Eleven Music. Exige sincronización aprobada, ausencia de subtítulos, duración exacta de 110 segundos, modelo `music_v2`, formato instrumental y un límite invariable de 2.000 créditos. La solicitud de generación requiere la confirmación `AUTORIZO_CONSUMIR_HASTA_2000_CREDITOS_ELEVENLABS_MUSICA`; las ramas usan `produccion/musica-*` y el artefacto privado contiene `musica.mp3` y su manifiesto SHA-256.
+
 `solicitudes/voz/solicitud.ejemplo.json` contiene una comprobación segura. La ejecución real se prepara en una rama de producción con el nombre exacto `solicitudes/voz/solicitud.json`; el archivo de ejemplo nunca activa el workflow.
 
 ## Comprobaciones
