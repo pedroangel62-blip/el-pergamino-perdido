@@ -1,0 +1,9 @@
+{
+  "accion": "generar",
+  "solicitud_id": "pergamino-14-nazca-musica-001",
+  "proyecto_id": "pergamino-14-lineas-nazca",
+  "duracion_ms": 110000,
+  "modelo": "music_v2",
+  "creditos_maximos": 2000,
+  "confirmacion_coste": "AUTORIZO_CONSUMIR_HASTA_2000_CREDITOS_ELEVENLABS_MUSICA"
+}
