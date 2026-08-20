@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.15
+MANUAL MAESTRO — VERSIÓN 1.16
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.15:
+Cambios obligatorios de la versión 1.16:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -65,6 +65,16 @@ Cambios obligatorios de la versión 1.15:
   recuperarlos sin repetir llamadas de generación;
 * reapertura idempotente: recuperar un proyecto existente nunca sobrescribirá
   imágenes, voz, música, sincronización ni aprobaciones posteriores;
+* generación remota opcional de la voz mediante GitHub Actions cuando no sea
+  posible abrir Codespaces;
+* comprobación gratuita de los secretos de ElevenLabs antes de cualquier
+  llamada de generación;
+* autorización literal obligatoria dentro de cada solicitud remota que vaya a
+  consumir créditos de ElevenLabs;
+* bloqueo de solicitudes remotas que ya tengan un artefacto de voz para evitar
+  regeneraciones accidentales;
+* entrega conjunta de `voz.mp3`, `voz.json`, `voz-alineacion.json`,
+  `proyecto.json` y un manifiesto SHA-256 para su revisión;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -231,6 +241,27 @@ El orden obligatorio será:
 12. Antes de publicar, comprobar la duración final y confirmar expresamente cualquier excepción al objetivo de 90 segundos.
 
 No se volverá a pedir al usuario un guion que ya exista en proyecto.json.
+
+Ejecución remota sin Codespaces
+
+Cuando el ordenador utilizado no permita abrir Codespaces, la misma generación
+podrá ejecutarse en GitHub Actions sin modificar el guion ni copiarlo a mano.
+
+El modo remoto tendrá dos acciones separadas:
+
+1. `comprobar`: valida el proyecto editorial y la presencia de los secretos
+   `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID` sin llamar a ElevenLabs.
+2. `generar`: solo se ejecuta para un proyecto editorial con guion aprobado y
+   exige la confirmación literal `AUTORIZO_CONSUMIR_CREDITOS_ELEVENLABS`.
+
+Cada solicitud utilizará un identificador único. Si GitHub ya conserva un
+artefacto con ese identificador, se bloqueará la repetición antes de contactar
+con ElevenLabs. La clave y el identificador de voz serán secretos de GitHub y
+nunca se escribirán en el repositorio, los registros ni los artefactos.
+
+El artefacto remoto incluirá el audio, las marcas temporales reales, el estado
+de duración, el proyecto aprobado y sus huellas SHA-256. La voz seguirá
+requiriendo escucha y aprobación humana antes de desbloquear imágenes.
 
 Regla de decisión
 

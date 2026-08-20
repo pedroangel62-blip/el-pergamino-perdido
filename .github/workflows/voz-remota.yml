@@ -1,0 +1,101 @@
+name: Generar voz aprobada
+
+on:
+  push:
+    branches:
+      - "produccion/voz-*"
+    paths:
+      - "solicitudes/voz/solicitud.json"
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: voz-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  voz:
+    if: github.repository_owner == 'pedroangel62-blip'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validar solicitud y aprobación editorial
+        id: solicitud
+        run: |
+          python scripts/generar_voz_aprobada.py \
+            --solicitud solicitudes/voz/solicitud.json \
+            --solo-validar \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Comprobar secretos sin consumir créditos
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+        run: |
+          test -n "$ELEVENLABS_API_KEY" || {
+            echo "Falta el secreto ELEVENLABS_API_KEY."
+            exit 1
+          }
+          test -n "$ELEVENLABS_VOICE_ID" || {
+            echo "Falta el secreto ELEVENLABS_VOICE_ID."
+            exit 1
+          }
+          echo "Los dos secretos necesarios están configurados."
+
+      - name: Confirmar comprobación sin generación
+        if: steps.solicitud.outputs.accion == 'comprobar'
+        run: echo "Configuración válida; no se ha llamado a ElevenLabs."
+
+      - name: Bloquear solicitudes ya generadas
+        if: steps.solicitud.outputs.accion == 'generar'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOMBRE_ARTEFACTO: voz-${{ steps.solicitud.outputs.solicitud_id }}
+        run: |
+          curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NOMBRE_ARTEFACTO" \
+            --output /tmp/artefactos.json
+          python - <<'PY'
+          import json
+          with open('/tmp/artefactos.json', encoding='utf-8') as archivo:
+              datos = json.load(archivo)
+          if datos.get('total_count', 0):
+              raise SystemExit(
+                  'Esta solicitud ya tiene un artefacto y no se repetirá.'
+              )
+          PY
+
+      - name: Generar voz y marcas temporales
+        id: generar
+        if: steps.solicitud.outputs.accion == 'generar'
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+          ELEVENLABS_MODEL_ID: ${{ vars.ELEVENLABS_MODEL_ID }}
+        run: |
+          python scripts/generar_voz_aprobada.py \
+            --solicitud solicitudes/voz/solicitud.json \
+            --salida salida-voz
+
+      - name: Guardar resultado para revisión
+        if: always() && steps.solicitud.outputs.accion == 'generar'
+        uses: actions/upload-artifact@v4
+        with:
+          name: voz-${{ steps.solicitud.outputs.solicitud_id }}
+          path: salida-voz
+          if-no-files-found: warn
+          retention-days: 30
