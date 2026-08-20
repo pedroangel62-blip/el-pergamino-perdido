@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.11
+MANUAL MAESTRO — VERSIÓN 1.12
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.11:
+Cambios obligatorios de la versión 1.12:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -50,6 +50,10 @@ Cambios obligatorios de la versión 1.11:
 * limitador de seguridad contra saturación digital;
 * comprobación de una caída musical mínima de 12 dB durante la Imagen 9;
 * informe `verificacion_audio.json` incluido en el proyecto y en el ZIP;
+* control previo gratuito y obligatorio antes de iniciar FFmpeg;
+* bloqueo si la voz o cualquiera de las ocho imágenes ha cambiado después de
+  calcular y aprobar la sincronización;
+* informe `verificacion_previa.json` con todos los requisitos y bloqueos;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -544,6 +548,15 @@ la voz o la música están en silencio, si falta la música aprobada, si la mús
 no queda subordinada, si se detecta saturación digital o si el volumen no cae
 al menos 12 dB entre el inicio y el final de la Imagen 9. El resultado se
 guardará en `verificacion_audio.json`.
+
+Antes de iniciar el render, la aplicación ejecutará un control previo completo
+sin llamadas externas ni consumo de créditos. Comprobará FFmpeg, voz audible y
+aprobada, ocho imágenes definitivas, sincronización semántica aprobada, música
+audible y aprobada, Imagen 9 maestra y flujo sin subtítulos. La sincronización
+guardará las huellas SHA-256 de la voz y de las ocho imágenes. Si cualquiera de
+esos archivos cambia posteriormente, el montaje quedará bloqueado hasta
+recalcular y aprobar la sincronización. El resultado se guardará en
+`verificacion_previa.json`.
 
 Antes de ofrecer el borrador, la aplicación comprobará en los clips ya
 renderizados que los ocho fundidos son visibles y que la Imagen 9 presenta su

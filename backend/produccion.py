@@ -35,6 +35,7 @@ ARCHIVO_SINCRONIZACION = "sincronizacion.json"
 ARCHIVO_VERIFICACION_TIMELINE = "verificacion_timeline.json"
 ARCHIVO_VERIFICACION_VISUAL = "verificacion_visual.json"
 ARCHIVO_VERIFICACION_AUDIO = "verificacion_audio.json"
+ARCHIVO_VERIFICACION_PREVIA = "verificacion_previa.json"
 ARCHIVO_BORRADOR = "video_borrador.mp4"
 ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
@@ -118,6 +119,7 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         ARCHIVO_VERIFICACION_TIMELINE,
         ARCHIVO_VERIFICACION_VISUAL,
         ARCHIVO_VERIFICACION_AUDIO,
+        ARCHIVO_VERIFICACION_PREVIA,
         "subtitulos.srt",
     ):
         ruta = os.path.join(directorio_proyecto, nombre)
@@ -805,6 +807,10 @@ def preparar_sincronizacion(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION),
         {
             "duracion_voz": duracion,
+            "voz_sha256": _hash_archivo(voz),
+            "imagenes_sha256": obtener_hashes_imagenes(
+                directorio_proyecto
+            ),
             "portada_segundos": PORTADA_SEGUNDOS,
             "metodo": metodo,
             "semantica_validada": semantica_validada,
@@ -1014,6 +1020,182 @@ def aprobar_sincronizacion(directorio_proyecto: str) -> dict:
         sincronizacion_aprobada_en=ahora_iso(),
         error="",
     )
+
+
+def comprobar_preparacion_montaje(
+    directorio_proyecto: str,
+    voz_aprobada: bool,
+) -> dict:
+    estado = cargar_estado(directorio_proyecto)
+    datos_sincronizacion = cargar_json(
+        os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
+    ) or {}
+    sincronizacion = datos_sincronizacion.get("segmentos") or []
+    comprobaciones = []
+
+    def registrar(clave: str, nombre: str, correcto: bool, detalle: str) -> None:
+        comprobaciones.append(
+            {
+                "clave": clave,
+                "nombre": nombre,
+                "correcto": bool(correcto),
+                "detalle": detalle,
+            }
+        )
+
+    try:
+        comprobar_ffmpeg()
+        registrar("ffmpeg", "Motor de montaje", True, "FFmpeg y FFprobe disponibles.")
+    except RuntimeError as error:
+        registrar("ffmpeg", "Motor de montaje", False, str(error))
+
+    voz = os.path.join(directorio_proyecto, "voz.mp3")
+    try:
+        duracion_voz = obtener_duracion(voz)
+        pico_voz = medir_volumen_maximo(voz)
+        voz_valida = math.isfinite(pico_voz) and pico_voz > -80.0
+        registrar(
+            "voz",
+            "Voz",
+            voz_aprobada and voz_valida,
+            (
+                f"Aprobada, audible y con {duracion_voz:.3f} s."
+                if voz_aprobada and voz_valida
+                else "La voz debe existir, ser audible y estar aprobada."
+            ),
+        )
+    except (FileNotFoundError, ValueError, RuntimeError) as error:
+        registrar("voz", "Voz", False, str(error))
+
+    try:
+        obtener_imagenes(directorio_proyecto)
+        aprobadas = imagenes_estan_aprobadas(directorio_proyecto)
+        registrar(
+            "imagenes",
+            "Imágenes 1–8",
+            aprobadas,
+            (
+                "Las 8 imágenes coinciden con las versiones aprobadas."
+                if aprobadas
+                else "Las 8 imágenes deben existir y coincidir con las aprobadas."
+            ),
+        )
+    except ValueError as error:
+        registrar("imagenes", "Imágenes 1–8", False, str(error))
+
+    try:
+        voz_sin_cambios = (
+            datos_sincronizacion.get("voz_sha256")
+            == _hash_archivo(voz)
+        )
+        imagenes_sin_cambios = (
+            datos_sincronizacion.get("imagenes_sha256")
+            == obtener_hashes_imagenes(directorio_proyecto)
+        )
+    except (FileNotFoundError, ValueError):
+        voz_sin_cambios = False
+        imagenes_sin_cambios = False
+
+    semantica = (
+        len(sincronizacion) == TOTAL_IMAGENES
+        and datos_sincronizacion.get("semantica_validada") is True
+        and datos_sincronizacion.get("metodo")
+        == "elevenlabs_semantic_alignment"
+        and voz_sin_cambios
+        and imagenes_sin_cambios
+    )
+    sincronizacion_aprobada = estado.get("sincronizacion_aprobada") is True
+    timeline_valida = False
+    try:
+        plan = crear_plan_fotogramas(sincronizacion, FPS_VIDEO)
+        timeline_valida = (
+            len(plan) == TOTAL_IMAGENES + 1
+            and int(plan[-1]["fotogramas"])
+            == round(CIERRE_SEGUNDOS * FPS_VIDEO)
+        )
+    except (KeyError, TypeError, ValueError):
+        timeline_valida = False
+    registrar(
+        "sincronizacion",
+        "Sincronización voz–imágenes",
+        semantica and sincronizacion_aprobada and timeline_valida,
+        (
+            "8 entradas semánticas aprobadas, sin archivos cambiados y cuantizadas a 30 fps."
+            if semantica and sincronizacion_aprobada and timeline_valida
+            else "Debe recalcularse con la voz y las 8 imágenes definitivas y aprobarse."
+        ),
+    )
+
+    sello_disponible = RUTA_SELLO_CIERRE.is_file()
+    registrar(
+        "imagen_9",
+        "Imagen 9 maestra",
+        sello_disponible,
+        (
+            "Sello fijo disponible para el cierre exacto de 3 segundos."
+            if sello_disponible
+            else "Falta la Imagen 9 maestra."
+        ),
+    )
+
+    musica = obtener_ruta_musica(directorio_proyecto)
+    try:
+        if not musica:
+            raise ValueError("Falta la pista musical.")
+        ajuste = calcular_ajuste_audio(voz, musica)
+        musica_correcta = estado.get("musica_aprobada") is True
+        registrar(
+            "musica",
+            "Música",
+            musica_correcta,
+            (
+                "Aprobada, audible y compatible con el margen de voz de "
+                f"{ajuste['margen_voz_sobre_musica_db']:.2f} dB."
+                if musica_correcta
+                else "La música debe escucharse y aprobarse."
+            ),
+        )
+    except (FileNotFoundError, ValueError, RuntimeError) as error:
+        registrar("musica", "Música", False, str(error))
+
+    registrar(
+        "subtitulos",
+        "Sin subtítulos",
+        True,
+        "El montaje no genera ni incrusta subtítulos; cualquier SRT heredado se elimina.",
+    )
+
+    bloqueos = [
+        comprobacion["detalle"]
+        for comprobacion in comprobaciones
+        if not comprobacion["correcto"]
+    ]
+    return {
+        "preparado": not bloqueos,
+        "comprobaciones": comprobaciones,
+        "bloqueos": bloqueos,
+        "sin_subtitulos": True,
+        "imagen_9_segundos": CIERRE_SEGUNDOS,
+        "actualizado": ahora_iso(),
+    }
+
+
+def verificar_preparacion_montaje(
+    directorio_proyecto: str,
+    voz_aprobada: bool,
+) -> dict:
+    resultado = comprobar_preparacion_montaje(
+        directorio_proyecto,
+        voz_aprobada,
+    )
+    guardar_json_atomico(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_PREVIA,
+        ),
+        resultado,
+    )
+    return resultado
 
 
 def contar_fotogramas_video(ruta: str) -> int:
@@ -1690,7 +1872,15 @@ def generar_borrador(
     fps: int = FPS_VIDEO,
     sello_cierre: str | None = None,
 ) -> dict:
-    comprobar_ffmpeg()
+    verificacion_previa = verificar_preparacion_montaje(
+        directorio_proyecto,
+        voz_aprobada=True,
+    )
+    if not verificacion_previa["preparado"]:
+        raise ValueError(
+            "El control previo ha bloqueado el montaje: "
+            + " ".join(verificacion_previa["bloqueos"])
+        )
     sincronizacion = cargar_sincronizacion(directorio_proyecto)
     datos_sincronizacion = cargar_json(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
@@ -1713,9 +1903,19 @@ def generar_borrador(
     if not estado.get("sincronizacion_aprobada"):
         raise ValueError("La sincronización debe revisarse y aprobarse.")
 
+    voz = os.path.join(directorio_proyecto, "voz.mp3")
+    if (
+        datos_sincronizacion.get("voz_sha256") != _hash_archivo(voz)
+        or datos_sincronizacion.get("imagenes_sha256")
+        != obtener_hashes_imagenes(directorio_proyecto)
+    ):
+        raise ValueError(
+            "La voz o las imágenes han cambiado después de sincronizar. "
+            "Debe recalcularse y aprobarse la sincronización."
+        )
+
     imagenes = obtener_imagenes(directorio_proyecto)
     sello = obtener_ruta_sello_cierre(sello_cierre)
-    voz = os.path.join(directorio_proyecto, "voz.mp3")
     duracion_voz = obtener_duracion(voz)
     subtitulos_heredados = os.path.join(
         directorio_proyecto,
@@ -2085,6 +2285,12 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
             ARCHIVO_VERIFICACION_AUDIO,
         )
     ) or {}
+    verificacion_previa = cargar_json(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_PREVIA,
+        )
+    ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
@@ -2121,6 +2327,10 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
                 verificacion_audio.get("verificada") is True
             ),
             "verificacion_audio": verificacion_audio,
+            "preparacion_verificada": (
+                verificacion_previa.get("preparado") is True
+            ),
+            "verificacion_previa": verificacion_previa,
             "sin_subtitulos": True,
             "total_imagenes": total_imagenes,
             "cierre": datos_sincronizacion.get("cierre"),

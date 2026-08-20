@@ -11,6 +11,7 @@ import zipfile
 
 from backend.produccion import (
     ARCHIVO_VERIFICACION_AUDIO,
+    ARCHIVO_VERIFICACION_PREVIA,
     ARCHIVO_VERIFICACION_TIMELINE,
     ARCHIVO_VERIFICACION_VISUAL,
     CIERRE_SEGUNDOS,
@@ -23,11 +24,13 @@ from backend.produccion import (
     crear_plan_fotogramas,
     crear_sincronizacion,
     crear_texto_publicacion,
+    comprobar_preparacion_montaje,
     generar_borrador,
     guardar_musica,
     obtener_duracion,
     preparar_sincronizacion,
     validar_anclas_plan_visual,
+    verificar_preparacion_montaje,
 )
 
 
@@ -366,6 +369,13 @@ class SincronizacionTests(unittest.TestCase):
     )
     def test_preparacion_identifica_alineacion_real(self):
         with tempfile.TemporaryDirectory() as directorio:
+            imagenes = os.path.join(directorio, "imagenes")
+            os.makedirs(imagenes)
+            for numero in range(1, 9):
+                crear_imagen_sintetica(
+                    os.path.join(imagenes, f"imagen{numero}.png"),
+                    numero * 30,
+                )
             voz = os.path.join(directorio, "voz.mp3")
             crear_audio(voz, 8.0, 440)
             duracion_voz = obtener_duracion(voz)
@@ -648,6 +658,7 @@ class MontajeTests(unittest.TestCase):
             self.assertIn(ARCHIVO_VERIFICACION_TIMELINE, nombres)
             self.assertIn(ARCHIVO_VERIFICACION_VISUAL, nombres)
             self.assertIn(ARCHIVO_VERIFICACION_AUDIO, nombres)
+            self.assertIn(ARCHIVO_VERIFICACION_PREVIA, nombres)
             self.assertNotIn("subtitulos.srt", nombres)
 
     def test_reel_sintetico_completo_a_30_fps(self):
@@ -686,6 +697,20 @@ class MontajeTests(unittest.TestCase):
             preparar_sincronizacion(directorio, guion, plan_visual)
             aprobar_sincronizacion(directorio)
 
+            control_bloqueado = comprobar_preparacion_montaje(
+                directorio,
+                voz_aprobada=True,
+            )
+            self.assertFalse(control_bloqueado["preparado"])
+            self.assertIn(
+                "musica",
+                {
+                    comprobacion["clave"]
+                    for comprobacion in control_bloqueado["comprobaciones"]
+                    if not comprobacion["correcto"]
+                },
+            )
+
             with self.assertRaisesRegex(ValueError, "pista musical"):
                 generar_borrador(
                     directorio,
@@ -697,6 +722,42 @@ class MontajeTests(unittest.TestCase):
             with open(musica_origen, "rb") as archivo:
                 guardar_musica(directorio, "fondo.mp3", archivo.read())
             aprobar_musica(directorio)
+
+            control_previo = verificar_preparacion_montaje(
+                directorio,
+                voz_aprobada=True,
+            )
+            self.assertTrue(control_previo["preparado"])
+            self.assertTrue(control_previo["sin_subtitulos"])
+            self.assertEqual(len(control_previo["comprobaciones"]), 7)
+            self.assertTrue(
+                os.path.isfile(
+                    os.path.join(
+                        directorio,
+                        ARCHIVO_VERIFICACION_PREVIA,
+                    )
+                )
+            )
+            imagen_1 = os.path.join(imagenes, "imagen1.png")
+            with open(imagen_1, "rb") as archivo:
+                imagen_1_aprobada = archivo.read()
+            crear_imagen_sintetica(imagen_1, 177)
+            control_archivo_cambiado = comprobar_preparacion_montaje(
+                directorio,
+                voz_aprobada=True,
+            )
+            self.assertFalse(control_archivo_cambiado["preparado"])
+            self.assertFalse(
+                next(
+                    comprobacion["correcto"]
+                    for comprobacion in control_archivo_cambiado[
+                        "comprobaciones"
+                    ]
+                    if comprobacion["clave"] == "sincronizacion"
+                )
+            )
+            with open(imagen_1, "wb") as archivo:
+                archivo.write(imagen_1_aprobada)
 
             estado = generar_borrador(
                 directorio,

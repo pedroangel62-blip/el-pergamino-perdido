@@ -288,6 +288,16 @@
     <section>
         <h2>3. Vídeo borrador</h2>
 
+        {% if produccion.verificacion_previa.comprobaciones %}
+            <h3>Control previo al montaje</h3>
+            {% for comprobacion in produccion.verificacion_previa.comprobaciones %}
+                <div class="estado{% if comprobacion.correcto %} correcto{% else %} error{% endif %}">
+                    {{ '✓' if comprobacion.correcto else '✗' }}
+                    {{ comprobacion.nombre }} — {{ comprobacion.detalle }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
         {% if produccion.estado == 'generando_borrador' %}
             <div class="estado">
                 FFmpeg está montando el vídeo 1080×1920 a 30 fps. Esta página se actualizará automáticamente.
@@ -295,12 +305,19 @@
             <script>
                 window.setTimeout(function () { window.location.reload(); }, 10000);
             </script>
-        {% elif produccion.sincronizacion_aprobada and produccion.musica_aprobada and produccion.sello_disponible %}
+        {% elif produccion.preparacion_verificada %}
             <form method="post" action="/produccion/{{ proyecto_id }}/generar-borrador">
                 <button type="submit">
                     {% if borrador_url %}Regenerar vídeo borrador{% else %}Generar vídeo borrador{% endif %}
                 </button>
             </form>
+        {% elif produccion.sincronizacion_aprobada and produccion.musica_aprobada and produccion.sello_disponible %}
+            <form method="post" action="/produccion/{{ proyecto_id }}/verificar-preparacion">
+                <button type="submit">Ejecutar control previo gratuito</button>
+            </form>
+            <div class="estado">
+                El vídeo no se renderizará hasta superar todas las comprobaciones.
+            </div>
         {% else %}
             <div class="estado">
                 Antes de montar el vídeo deben aprobarse las imágenes, la sincronización

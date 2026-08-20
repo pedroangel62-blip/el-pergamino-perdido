@@ -66,9 +66,11 @@ El flujo automático no genera ni incrusta subtítulos. Si un proyecto anterior 
 
 La música es obligatoria y debe aprobarse antes del montaje. La aplicación mide los picos de la voz y de la música, ajusta automáticamente la mezcla para conservar un margen mínimo de 14 dB a favor de la voz y aplica un limitador de seguridad. También comprueba que la música siga oyéndose al entrar la Imagen 9 y descienda al menos 12 dB hasta el final. El resultado queda guardado en `verificacion_audio.json`.
 
+Antes de renderizar se ejecuta un control previo gratuito. Comprueba motor de montaje, voz, ocho imágenes, sincronización semántica, música, Imagen 9 y ausencia de subtítulos. Las huellas SHA-256 impiden reutilizar una sincronización después de cambiar la voz o alguna imagen. Los bloqueos y resultados quedan en `verificacion_previa.json`.
+
 Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.jpeg`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
 
-El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, sincronización, `verificacion_timeline.json`, `verificacion_visual.json`, `verificacion_audio.json`, metadatos y textos de publicación. No incluye subtítulos. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
+El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, sincronización, `verificacion_previa.json`, `verificacion_timeline.json`, `verificacion_visual.json`, `verificacion_audio.json`, metadatos y textos de publicación. No incluye subtítulos. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 
 ## Comprobaciones
 
