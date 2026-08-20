@@ -10,6 +10,7 @@ import unittest
 import zipfile
 
 from backend.produccion import (
+    ARCHIVO_VERIFICACION_AUDIO,
     ARCHIVO_VERIFICACION_TIMELINE,
     ARCHIVO_VERIFICACION_VISUAL,
     CIERRE_SEGUNDOS,
@@ -35,7 +36,12 @@ PNG_UN_PIXEL = base64.b64decode(
 )
 
 
-def crear_audio(ruta: str, duracion: float, frecuencia: int) -> None:
+def crear_audio(
+    ruta: str,
+    duracion: float,
+    frecuencia: int,
+    ganancia_db: float = 0.0,
+) -> None:
     subprocess.run(
         [
             "ffmpeg",
@@ -44,6 +50,8 @@ def crear_audio(ruta: str, duracion: float, frecuencia: int) -> None:
             "lavfi",
             "-i",
             f"sine=frequency={frecuencia}:duration={duracion}",
+            "-af",
+            f"volume={ganancia_db:.2f}dB",
             "-q:a",
             "7",
             ruta,
@@ -575,6 +583,30 @@ class MontajeTests(unittest.TestCase):
                 ],
                 4.0,
             )
+            ruta_audio = os.path.join(
+                directorio,
+                ARCHIVO_VERIFICACION_AUDIO,
+            )
+            self.assertTrue(os.path.isfile(ruta_audio))
+            with open(ruta_audio, "r", encoding="utf-8") as archivo:
+                control_audio = json.load(archivo)
+            self.assertTrue(control_audio["verificada"])
+            self.assertTrue(control_audio["voz_audible"])
+            self.assertTrue(control_audio["musica_subordinada"])
+            self.assertTrue(control_audio["sin_saturacion_digital"])
+            self.assertLessEqual(
+                control_audio["pico_mezcla_final_db"],
+                control_audio["pico_maximo_permitido_db"],
+            )
+            self.assertLessEqual(control_audio["ganancia_musica_db"], -20.0)
+            self.assertGreaterEqual(
+                control_audio["margen_voz_sobre_musica_db"],
+                control_audio["margen_minimo_exigido_db"],
+            )
+            self.assertGreaterEqual(
+                control_audio["caida_fundido_db"],
+                control_audio["caida_minima_exigida_db"],
+            )
             self.assertAlmostEqual(
                 float(sondeo["format"]["duration"]),
                 duracion_voz + CIERRE_SEGUNDOS,
@@ -615,6 +647,7 @@ class MontajeTests(unittest.TestCase):
             self.assertIn("sincronizacion.json", nombres)
             self.assertIn(ARCHIVO_VERIFICACION_TIMELINE, nombres)
             self.assertIn(ARCHIVO_VERIFICACION_VISUAL, nombres)
+            self.assertIn(ARCHIVO_VERIFICACION_AUDIO, nombres)
             self.assertNotIn("subtitulos.srt", nombres)
 
     def test_reel_sintetico_completo_a_30_fps(self):
@@ -629,7 +662,9 @@ class MontajeTests(unittest.TestCase):
                 )
 
             voz = os.path.join(directorio, "voz.mp3")
-            crear_audio(voz, 75.0, 440)
+            musica_origen = os.path.join(directorio, "musica-origen.mp3")
+            crear_audio(voz, 75.0, 440, ganancia_db=-12.0)
+            crear_audio(musica_origen, 75.0, 220, ganancia_db=8.0)
             duracion_voz = obtener_duracion(voz)
             guion = " ".join(
                 f"palabra{indice}" for indice in range(1, 161)
@@ -651,6 +686,18 @@ class MontajeTests(unittest.TestCase):
             preparar_sincronizacion(directorio, guion, plan_visual)
             aprobar_sincronizacion(directorio)
 
+            with self.assertRaisesRegex(ValueError, "pista musical"):
+                generar_borrador(
+                    directorio,
+                    ancho=180,
+                    alto=320,
+                    fps=30,
+                )
+
+            with open(musica_origen, "rb") as archivo:
+                guardar_musica(directorio, "fondo.mp3", archivo.read())
+            aprobar_musica(directorio)
+
             estado = generar_borrador(
                 directorio,
                 ancho=180,
@@ -660,6 +707,7 @@ class MontajeTests(unittest.TestCase):
 
             self.assertEqual(estado["fps"], 30)
             self.assertTrue(estado["control_visual_verificado"])
+            self.assertTrue(estado["control_audio_verificado"])
             self.assertTrue(estado["sin_subtitulos"])
             with open(
                 os.path.join(directorio, ARCHIVO_VERIFICACION_VISUAL),
@@ -673,6 +721,19 @@ class MontajeTests(unittest.TestCase):
                 8,
             )
             self.assertEqual(control_visual["resolucion"]["fps"], 30.0)
+            with open(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_AUDIO),
+                "r",
+                encoding="utf-8",
+            ) as archivo:
+                control_audio = json.load(archivo)
+            self.assertTrue(control_audio["musica_finaliza_en_imagen_9"])
+            self.assertTrue(control_audio["sin_saturacion_digital"])
+            self.assertGreaterEqual(
+                control_audio["margen_voz_sobre_musica_db"],
+                14.0,
+            )
+            self.assertGreaterEqual(control_audio["caida_fundido_db"], 12.0)
 
 
 if __name__ == "__main__":

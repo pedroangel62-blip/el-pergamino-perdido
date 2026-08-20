@@ -320,6 +320,16 @@
                 </div>
             {% endif %}
 
+            {% if produccion.control_audio_verificado %}
+                <div class="estado correcto">
+                    Audio verificado: voz audible y música
+                    {{ produccion.verificacion_audio.margen_voz_sobre_musica_db }} dB
+                    por debajo del pico de voz. El fundido final desciende
+                    {{ produccion.verificacion_audio.caida_fundido_db }} dB
+                    durante la Imagen 9 y no se detecta saturación digital.
+                </div>
+            {% endif %}
+
             {% if produccion.estado == 'borrador_pendiente_aprobacion' %}
                 <div class="estado">
                     Revisa imágenes, voz, música y transiciones antes de aprobar.

@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.10
+MANUAL MAESTRO — VERSIÓN 1.11
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.10:
+Cambios obligatorios de la versión 1.11:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -44,6 +44,12 @@ Cambios obligatorios de la versión 1.10:
 * comprobación automática de los fundidos, el zoom visible, la proporción 9:16
   y el margen seguro de la Imagen 9;
 * informe `verificacion_visual.json` incluido en el proyecto y en el ZIP;
+* música obligatoria, escuchada y aprobada antes de montar el borrador;
+* medición previa de los picos de voz y música y ajuste automático de la mezcla;
+* margen mínimo de 14 dB entre el pico ajustado de la voz y el de la música;
+* limitador de seguridad contra saturación digital;
+* comprobación de una caída musical mínima de 12 dB durante la Imagen 9;
+* informe `verificacion_audio.json` incluido en el proyecto y en el ZIP;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -526,6 +532,19 @@ volumen subordinado. No incluirá subtítulos, texto de narración ni archivos S
 La música nunca terminará sobre la Imagen 8: continuará y finalizará sobre la
 Imagen 9.
 
+Antes de mezclar, FFmpeg medirá por separado el pico máximo de la voz y el de
+la música. La voz se ajustará hacia un pico objetivo de -3 dB, sin aplicar más
+de 18 dB de corrección. La música no podrá recibir una ganancia superior a
+-20 dB y se reducirá más cuando sea necesario para conservar al menos 14 dB de
+margen respecto al pico ajustado de la voz. Estos valores constituyen la regla
+interna de mezcla de El Pergamino Perdido.
+
+La salida aplicará un limitador de seguridad. El montaje quedará bloqueado si
+la voz o la música están en silencio, si falta la música aprobada, si la música
+no queda subordinada, si se detecta saturación digital o si el volumen no cae
+al menos 12 dB entre el inicio y el final de la Imagen 9. El resultado se
+guardará en `verificacion_audio.json`.
+
 Antes de ofrecer el borrador, la aplicación comprobará en los clips ya
 renderizados que los ocho fundidos son visibles y que la Imagen 9 presenta su
 fundido de entrada y un zoom real. También verificará la resolución vertical
@@ -550,7 +569,7 @@ Solo una aprobación humana explícita permitirá crear:
 * `proyecto_completo.zip`.
 
 El paquete conservará vídeo, imágenes, voz, música, sincronización, los
-informes de verificación por fotogramas y control visual, metadatos y textos de
-publicación. No incluirá archivos de subtítulos.
+informes de verificación por fotogramas, control visual y control de audio,
+metadatos y textos de publicación. No incluirá archivos de subtítulos.
 
 La aplicación no publicará en Instagram ni copiará archivos a un servicio externo sin autorización expresa de Pedro Ángel.
