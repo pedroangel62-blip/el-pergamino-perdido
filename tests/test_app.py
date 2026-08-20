@@ -121,6 +121,20 @@ class AplicacionTests(unittest.TestCase):
             109.606,
         )
         self.assertIn("110 segundos", proyecto["resultado"]["musica"])
+        musica = proyecto["resultado"]["musica_aprobada"]
+        self.assertTrue(musica["aprobada"])
+        self.assertTrue(musica["instrumental"])
+        self.assertFalse(musica["regeneracion_automatica"])
+        self.assertEqual(musica["duracion_real_segundos"], 110.04)
+        self.assertEqual(musica["creditos_estimados"], 1650)
+        self.assertEqual(musica["creditos_maximos_autorizados"], 2000)
+        self.assertEqual(
+            musica["sha256"],
+            "48cb06a455c57f7670f65f03190d81a1559f42dc5bbd63c157df9374782e2c62",
+        )
+        self.assertTrue(
+            proyecto["resultado"]["_aprobaciones"]["musica"]
+        )
         imagen_5 = os.path.join(
             self.directorio_temporal.name,
             "pergamino-14-lineas-nazca",
