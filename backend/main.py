@@ -55,6 +55,7 @@ from backend.produccion import (
     obtener_resumen as obtener_resumen_produccion,
     preparar_sincronizacion,
     validar_anclas_plan_visual,
+    verificar_preparacion_montaje,
 )
 from backend.voz import (
     aprobar_voz,
@@ -2189,6 +2190,38 @@ async def aprobar_musica_proyecto(proyecto_id: str):
     return redirigir_produccion(proyecto_id)
 
 
+@app.post("/produccion/{proyecto_id}/verificar-preparacion")
+async def verificar_preparacion_proyecto(proyecto_id: str):
+    try:
+        _, resultado = cargar_proyecto(proyecto_id)
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        exigir_voz_aprobada(proyecto_id, resultado)
+        verificacion = verificar_preparacion_montaje(
+            directorio,
+            voz_aprobada=True,
+        )
+
+        if not verificacion["preparado"]:
+            guardar_estado_produccion(
+                directorio,
+                "preparacion_bloqueada",
+                error="Control previo incompleto: "
+                + " ".join(verificacion["bloqueos"]),
+            )
+        else:
+            guardar_estado_produccion(
+                directorio,
+                "preparado_para_montaje",
+                error="",
+            )
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
 @app.post("/produccion/{proyecto_id}/generar-borrador")
 async def iniciar_borrador_proyecto(
     proyecto_id: str,
@@ -2214,6 +2247,17 @@ async def iniciar_borrador_proyecto(
 
         if not estado.get("musica_aprobada"):
             raise ValueError("La música debe cargarse, escucharse y aprobarse.")
+
+        verificacion = verificar_preparacion_montaje(
+            directorio,
+            voz_aprobada=True,
+        )
+
+        if not verificacion["preparado"]:
+            raise ValueError(
+                "El control previo ha bloqueado el montaje: "
+                + " ".join(verificacion["bloqueos"])
+            )
 
         if estado.get("estado") == "generando_borrador":
             raise ValueError("El vídeo borrador ya se está generando.")
