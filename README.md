@@ -76,10 +76,18 @@ Si la aplicación o FFmpeg se interrumpen durante el render, al reabrir el proye
 
 La pantalla inicial también muestra los proyectos editoriales aprobados guardados en `backend/data/proyectos_aprobados`. El botón **Recuperar** crea su carpeta de trabajo sin llamar a OpenAI; después cambia a **Abrir** y nunca sobrescribe el proyecto. El Pergamino XIV sobre las Líneas de Nazca queda incluido con guion, dossier factual, plan visual de ocho imágenes, publicación y reglas de cierre ya aprobados.
 
+## Voz remota sin Codespaces
+
+El workflow `Generar voz aprobada` permite comprobar la configuración y, tras una autorización de coste literal guardada en una solicitud, generar la voz desde GitHub Actions. Solo acepta proyectos editoriales ya aprobados, exige los secretos `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID`, y devuelve `voz.mp3`, las marcas temporales y un manifiesto SHA-256 como artefacto privado de GitHub durante 30 días.
+
+La acción `comprobar` valida proyecto y secretos sin llamar a ElevenLabs. La acción `generar` requiere la confirmación exacta `AUTORIZO_CONSUMIR_CREDITOS_ELEVENLABS`. Las ramas de producción usan el patrón `produccion/voz-*`; una solicitud que ya tenga artefacto queda bloqueada para evitar regeneraciones accidentales. No se imprimen secretos ni se almacena la clave en el repositorio.
+
+`solicitudes/voz/solicitud.ejemplo.json` contiene una comprobación segura. La ejecución real se prepara en una rama de producción con el nombre exacto `solicitudes/voz/solicitud.json`; el archivo de ejemplo nunca activa el workflow.
+
 ## Comprobaciones
 
 ```bash
-python -m py_compile backend/main.py backend/imagenes.py backend/busqueda_imagenes.py backend/voz.py backend/indice_temas.py backend/produccion.py
+python -m py_compile backend/main.py backend/imagenes.py backend/busqueda_imagenes.py backend/voz.py backend/produccion_remota.py backend/indice_temas.py backend/produccion.py
 python -m unittest discover -s tests -v
 ```
 

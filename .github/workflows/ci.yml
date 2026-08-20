@@ -46,6 +46,7 @@ jobs:
             backend/imagenes.py \
             backend/busqueda_imagenes.py \
             backend/voz.py \
+            backend/produccion_remota.py \
             backend/indice_temas.py \
             backend/produccion.py
 
