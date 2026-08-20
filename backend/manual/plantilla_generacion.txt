@@ -66,6 +66,9 @@ GUION
 PLAN VISUAL
 
 - "plan_visual" contendrá exactamente 8 elementos.
+- Esos 8 elementos corresponden únicamente a las imágenes variables del caso.
+- No incluyas la Imagen 9: es el sello maestro fijo de cierre y la aplicación
+  lo añadirá automáticamente durante 3 segundos después de terminar la voz.
 
 Cada elemento tendrá:
 

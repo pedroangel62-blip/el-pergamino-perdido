@@ -136,6 +136,10 @@
             Imágenes: {{ produccion.total_imagenes }} de 8 ·
             {{ 'aprobadas' if produccion.imagenes_aprobadas else 'pendientes de aprobación' }}
         </div>
+        <div class="estado{% if produccion.sello_disponible %} correcto{% else %} error{% endif %}">
+            Imagen 9 · sello fijo:
+            {{ 'disponible' if produccion.sello_disponible else 'falta el recurso maestro' }}
+        </div>
 
         {% if produccion.total_imagenes == 8 and not produccion.imagenes_aprobadas %}
             <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-imagenes">
@@ -187,8 +191,23 @@
                             <td>{{ '%.3f'|format(segmento.fin) }} s</td>
                         </tr>
                     {% endfor %}
+                    {% if produccion.cierre %}
+                        <tr>
+                            <td>9 · sello fijo</td>
+                            <td>{{ produccion.cierre.frase_entrada }}</td>
+                            <td>{{ '%.3f'|format(produccion.cierre.inicio) }} s</td>
+                            <td>{{ '%.3f'|format(produccion.cierre.fin) }} s</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
+
+            {% if produccion.cierre %}
+                <div class="estado correcto">
+                    La voz termina con la Imagen 8. El sello ocupa los 3 segundos
+                    finales con zoom suave y la música se desvanece hasta silencio.
+                </div>
+            {% endif %}
 
             {% if not produccion.sincronizacion_aprobada %}
                 <div class="estado">
@@ -248,7 +267,7 @@
             <script>
                 window.setTimeout(function () { window.location.reload(); }, 10000);
             </script>
-        {% elif produccion.sincronizacion_aprobada and produccion.musica_aprobada %}
+        {% elif produccion.sincronizacion_aprobada and produccion.musica_aprobada and produccion.sello_disponible %}
             <form method="post" action="/produccion/{{ proyecto_id }}/generar-borrador">
                 <button type="submit">
                     {% if borrador_url %}Regenerar vídeo borrador{% else %}Generar vídeo borrador{% endif %}
@@ -256,7 +275,8 @@
             </form>
         {% else %}
             <div class="estado">
-                Antes de montar el vídeo deben aprobarse las imágenes, la sincronización y la música.
+                Antes de montar el vídeo deben aprobarse las imágenes, la sincronización
+                y la música, y debe estar disponible la Imagen 9 maestra.
             </div>
         {% endif %}
 

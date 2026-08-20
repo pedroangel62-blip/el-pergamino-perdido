@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.6
+MANUAL MAESTRO — VERSIÓN 1.7
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.6:
+Cambios obligatorios de la versión 1.7:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -25,6 +25,10 @@ Cambios obligatorios de la versión 1.6:
   obligatorios;
 * portada fija de 3 segundos en el montaje final;
 * confirmación de las ocho imágenes antes de sincronizar;
+* cierre obligatorio con una Imagen 9 maestra, fija y reutilizable;
+* Imagen 9 durante exactamente 3 segundos, con zoom muy suave y sin recortar
+  ni perder las letras «EL PERGAMINO PERDIDO»;
+* final de la narración sobre la Imagen 8 y final de la música sobre la Imagen 9;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -158,6 +162,11 @@ Margen de seguridad
 
 * La duración preferente del Reel terminado será de 75 a 90 segundos.
 * La narración deberá quedar preferentemente entre 74 y 80 segundos.
+* El Reel terminado durará exactamente la narración real más los 3 segundos
+  de la Imagen 9.
+* Para mantener el Reel completo dentro de 90 segundos, la narración deberá
+  durar como máximo 87 segundos. Una narración más larga requerirá la misma
+  aprobación manual de excepción ya prevista.
 * Una narración de hasta 92 segundos superará automáticamente el control de duración, pero no el control humano de calidad.
 * Una narración superior a 92 segundos requerirá una decisión manual explícita antes de desbloquear las imágenes.
 
@@ -182,7 +191,8 @@ El orden obligatorio será:
 8. Si supera los 92 segundos, mantener las imágenes bloqueadas y mostrar dos botones: aprobar la voz igualmente o ajustar el guion y preparar una nueva voz.
 9. Si se ajusta el guion, mostrarlo para una nueva aprobación humana antes de generar otra narración.
 10. Solo después de escuchar y aprobar manualmente la voz, preparar el índice visual definitivo y las ocho imágenes.
-11. Antes de publicar, comprobar la duración final y confirmar expresamente cualquier excepción al objetivo de 90 segundos.
+11. Añadir los 3 segundos obligatorios de la Imagen 9 al calcular la duración final.
+12. Antes de publicar, comprobar la duración final y confirmar expresamente cualquier excepción al objetivo de 90 segundos.
 
 No se volverá a pedir al usuario un guion que ya exista en proyecto.json.
 
@@ -202,16 +212,25 @@ No bastará con que sea bonita, misteriosa o representativa del tema. Deberá co
 
 Estructura visual
 
-Cada Reel utilizará siempre ocho imágenes:
+Cada Reel utilizará siempre nueve posiciones visuales:
 
-* una portada independiente, colocada al principio durante exactamente 3 segundos;
-* siete imágenes para desarrollar el cuerpo del vídeo.
+* ocho imágenes variables del caso, incluidas en `plan_visual`;
+* una portada independiente como Imagen 1, colocada al principio durante
+  exactamente 3 segundos;
+* siete imágenes para desarrollar el cuerpo narrado del vídeo;
+* una Imagen 9 fija de cierre, reutilizada en todos los Pergaminos y no incluida
+  en `plan_visual`.
 
 La portada será también el primer impacto visual del Reel. No se considerará un elemento decorativo separado de la narración.
 
 La duración de 3 segundos es una regla fija y no una estimación. Sustituye cualquier referencia anterior a una portada aproximada de un segundo.
 
 La narración podrá comenzar desde el primer segundo mientras la portada permanece visible durante los 3 segundos completos.
+
+La Imagen 9 será el sello maestro de «EL PERGAMINO PERDIDO». No se generará ni
+se modificará para cada proyecto. Se conservará una sola copia aprobada en
+`backend/assets/sello-el-pergamino-perdido.png` y el montaje la añadirá
+automáticamente después de la Imagen 8.
 
 Criterios de la primera imagen
 
@@ -394,8 +413,9 @@ Requisitos previos
 El montaje solo podrá comenzar cuando:
 
 * la voz esté aprobada y corresponda al guion vigente;
-* existan exactamente ocho imágenes;
-* las ocho imágenes se hayan confirmado como definitivas;
+* existan exactamente ocho imágenes variables del caso;
+* las ocho imágenes variables se hayan confirmado como definitivas;
+* la Imagen 9 maestra esté disponible en su ubicación fija y aprobada;
 * la sincronización se haya revisado y aprobado;
 * la música se haya escuchado y aprobado.
 
@@ -414,13 +434,38 @@ Cada cambio de imagen quedará documentado con:
 * el segundo exacto de final;
 * coincidencia entre el final de una imagen y el inicio de la siguiente.
 
+Cierre fijo obligatorio
+
+La Imagen 8 terminará exactamente cuando termine la narración. En ese mismo
+instante entrará la Imagen 9 maestra.
+
+La Imagen 9:
+
+* durará exactamente 3 segundos;
+* no contendrá narración;
+* mantendrá la música de fondo durante los 3 segundos completos;
+* aplicará un fundido de salida musical que llegará a silencio exactamente al
+  terminar la imagen;
+* tendrá únicamente un zoom de acercamiento muy suave;
+* conservará un margen de seguridad suficiente para que todas las letras de
+  «EL PERGAMINO PERDIDO» permanezcan completas, centradas y legibles;
+* no podrá recortarse con un llenado automático ni sustituirse por una imagen
+  específica del caso.
+
+La tabla de sincronización incluirá también la Imagen 9, cuyo inicio coincidirá
+con el final de la Imagen 8 y cuyo final será tres segundos después.
+
 Montaje
 
 El vídeo se generará en formato vertical 9:16, resolución 1080 por 1920, 30 fotogramas por segundo y codificación H.264 con audio AAC.
 
 Las fotografías horizontales conservarán su orientación y se adaptarán mediante un fondo derivado y difuminado de la propia imagen. No se girarán ni recortarán de forma que se pierda el sujeto principal.
 
-El montaje incluirá transiciones discretas, subtítulos legibles, voz principal y música de fondo a volumen subordinado.
+El montaje incluirá transiciones discretas, subtítulos legibles, voz principal y música de fondo a volumen subordinado. La música nunca terminará sobre la Imagen 8: continuará y finalizará sobre la Imagen 9.
+
+Antes de ofrecer el borrador para aprobación, la aplicación verificará que el
+MP4 contiene vídeo, una pista de audio audible y una duración igual a la voz
+más los 3 segundos del cierre.
 
 Aprobación y entrega
 
