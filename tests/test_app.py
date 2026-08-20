@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -72,6 +73,138 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn("PRODUCCIÓN FINAL", respuesta.text)
         self.assertIn("Tema de prueba", respuesta.text)
+
+    def test_pagina_recupera_un_montaje_interrumpido(self):
+        self.crear_proyecto()
+        directorio = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-prueba",
+        )
+        temporal_montaje = os.path.join(directorio, "montaje-abandonado")
+        os.makedirs(temporal_montaje)
+        with open(
+            os.path.join(directorio, "produccion.json"),
+            "w",
+            encoding="utf-8",
+        ) as archivo:
+            json.dump({"estado": "generando_borrador"}, archivo)
+
+        respuesta = self.cliente.get("/produccion/pergamino-prueba")
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn("El montaje anterior se interrumpió", respuesta.text)
+        self.assertIn("puede volver a generar el borrador", respuesta.text)
+        self.assertFalse(os.path.exists(temporal_montaje))
+
+    def test_control_previo_bloquea_el_render_desde_la_interfaz(self):
+        self.crear_proyecto()
+        resumen = {
+            "imagenes_aprobadas": True,
+            "sincronizacion": [{} for _ in range(8)],
+        }
+        estado = {
+            "sincronizacion_aprobada": True,
+            "musica_aprobada": True,
+        }
+        verificacion = {
+            "preparado": False,
+            "bloqueos": ["Falta validar la Imagen 9."],
+        }
+
+        with (
+            patch.object(main, "exigir_voz_aprobada"),
+            patch.object(main, "obtener_imagenes_produccion"),
+            patch.object(
+                main,
+                "obtener_resumen_produccion",
+                return_value=resumen,
+            ),
+            patch.object(
+                main,
+                "cargar_estado_produccion",
+                return_value=estado,
+            ),
+            patch.object(
+                main,
+                "verificar_preparacion_montaje",
+                return_value=verificacion,
+            ),
+            patch.object(main, "iniciar_generacion_borrador") as iniciar,
+            patch.object(main, "generar_borrador_seguro") as generar,
+        ):
+            respuesta = self.cliente.post(
+                "/produccion/pergamino-prueba/generar-borrador",
+                follow_redirects=False,
+            )
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("control previo", respuesta.json()["detail"].lower())
+        iniciar.assert_not_called()
+        generar.assert_not_called()
+
+    def test_render_solo_se_encola_despues_de_todas_las_aprobaciones(self):
+        self.crear_proyecto()
+        resumen = {
+            "imagenes_aprobadas": True,
+            "sincronizacion": [{} for _ in range(8)],
+        }
+        estado = {
+            "sincronizacion_aprobada": True,
+            "musica_aprobada": True,
+        }
+
+        with (
+            patch.object(main, "exigir_voz_aprobada"),
+            patch.object(main, "obtener_imagenes_produccion"),
+            patch.object(
+                main,
+                "obtener_resumen_produccion",
+                return_value=resumen,
+            ),
+            patch.object(
+                main,
+                "cargar_estado_produccion",
+                return_value=estado,
+            ),
+            patch.object(
+                main,
+                "verificar_preparacion_montaje",
+                return_value={"preparado": True, "bloqueos": []},
+            ),
+            patch.object(main, "iniciar_generacion_borrador") as iniciar,
+            patch.object(main, "generar_borrador_seguro") as generar,
+        ):
+            respuesta = self.cliente.post(
+                "/produccion/pergamino-prueba/generar-borrador",
+                follow_redirects=False,
+            )
+
+        self.assertEqual(respuesta.status_code, 303)
+        iniciar.assert_called_once()
+        generar.assert_called_once()
+        self.assertEqual(iniciar.call_args.args, generar.call_args.args)
+
+    def test_aprobacion_final_y_paquete_requieren_acciones_separadas(self):
+        self.crear_proyecto()
+        with (
+            patch.object(main, "aprobar_borrador") as aprobar,
+            patch.object(main, "crear_paquete") as empaquetar,
+        ):
+            respuesta_aprobacion = self.cliente.post(
+                "/produccion/pergamino-prueba/aprobar-borrador",
+                follow_redirects=False,
+            )
+            aprobar.assert_called_once()
+            empaquetar.assert_not_called()
+
+            respuesta_paquete = self.cliente.post(
+                "/produccion/pergamino-prueba/crear-paquete",
+                follow_redirects=False,
+            )
+
+        self.assertEqual(respuesta_aprobacion.status_code, 303)
+        self.assertEqual(respuesta_paquete.status_code, 303)
+        empaquetar.assert_called_once()
 
 
 if __name__ == "__main__":
