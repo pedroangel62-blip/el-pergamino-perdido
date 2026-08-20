@@ -3,6 +3,7 @@ import ipaddress
 import json
 import os
 import re
+import shutil
 import socket
 import tempfile
 import time
@@ -253,6 +254,27 @@ def obtener_ruta_imagen(
     )
 
 
+def copiar_imagenes_aprobadas(proyecto_id: str) -> None:
+    proyecto_id = validar_proyecto_id(proyecto_id)
+    directorio_origen = os.path.join(
+        DIRECTORIO_PROYECTOS_APROBADOS,
+        proyecto_id,
+        "imagenes",
+    )
+    if not os.path.isdir(directorio_origen):
+        return
+
+    directorio_destino = obtener_directorio_imagenes(proyecto_id)
+    os.makedirs(directorio_destino, exist_ok=True)
+
+    for numero in range(1, TOTAL_IMAGENES + 1):
+        nombre = f"imagen{numero}.png"
+        ruta_origen = os.path.join(directorio_origen, nombre)
+        ruta_destino = os.path.join(directorio_destino, nombre)
+        if os.path.isfile(ruta_origen) and not os.path.exists(ruta_destino):
+            shutil.copy2(ruta_origen, ruta_destino)
+
+
 def obtener_ruta_candidatas(
     proyecto_id: str,
     numero: int
@@ -442,6 +464,7 @@ def recuperar_proyecto_aprobado(proyecto_id: str) -> str:
     ruta_proyecto = os.path.join(directorio, "proyecto.json")
     if os.path.isfile(ruta_proyecto):
         cargar_proyecto(proyecto_id)
+        copiar_imagenes_aprobadas(proyecto_id)
         return proyecto_id
     if os.path.exists(directorio):
         raise ValueError(
@@ -485,6 +508,7 @@ def recuperar_proyecto_aprobado(proyecto_id: str) -> str:
         )
 
     os.makedirs(os.path.join(directorio, "imagenes"))
+    copiar_imagenes_aprobadas(proyecto_id)
     resultado = dict(resultado)
     resultado["_proyecto_id"] = proyecto_id
     guardar_proyecto(

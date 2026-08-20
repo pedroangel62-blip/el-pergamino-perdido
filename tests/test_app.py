@@ -107,6 +107,13 @@ class AplicacionTests(unittest.TestCase):
         self.assertTrue(
             proyecto["resultado"]["_aprobaciones"]["plan_visual"]
         )
+        imagen_5 = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-14-lineas-nazca",
+            "imagenes",
+            "imagen5.png",
+        )
+        self.assertTrue(os.path.isfile(imagen_5))
         proyecto["marca_no_sobrescribir"] = True
         with open(archivo_proyecto, "w", encoding="utf-8") as archivo:
             json.dump(proyecto, archivo)

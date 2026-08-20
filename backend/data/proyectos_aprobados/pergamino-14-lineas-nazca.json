@@ -18,7 +18,17 @@
         ],
         "motivo": "Portada real, inmediatamente reconocible y con un único punto focal.",
         "edicion": "Adaptar a 9:16 sin añadir texto ni recortar el geoglifo; mejorar contraste y nitidez sin alterar el terreno.",
-        "prompt": ""
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "fuente": "Pexels",
+          "autor": "Janeth Charris",
+          "pagina": "https://www.pexels.com/photo/nazca-lines-on-sunlit-rock-17428773/",
+          "archivo": "https://images.pexels.com/photos/17428773/pexels-photo-17428773/free-photo-of-nazca-lines-on-sunlit-rock.jpeg?auto=compress&dpr=1&h=750&w=1260",
+          "licencia": "Pexels License",
+          "licencia_url": "https://www.pexels.com/license/",
+          "uso": "Imagen 1, portada fija de 3 segundos"
+        }
       },
       {
         "numero": 2,
@@ -32,7 +42,17 @@
         ],
         "motivo": "Mostrar la escala real del paisaje justo después de los tres segundos de portada.",
         "edicion": "Encuadre vertical amplio, líneas visibles de primer plano a horizonte y sin elementos inventados.",
-        "prompt": ""
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "fuente": "Pexels",
+          "autor": "Janeth Charris",
+          "pagina": "https://www.pexels.com/photo/sunlit-nazca-lines-17428662/",
+          "archivo": "https://images.pexels.com/photos/17428662/pexels-photo-17428662/free-photo-of-sunlit-nazca-lines.jpeg?auto=compress&dpr=1&h=750&w=1260",
+          "licencia": "Pexels License",
+          "licencia_url": "https://www.pexels.com/license/",
+          "uso": "Imagen 2, tramo de 00:03.000 a 00:16.544"
+        }
       },
       {
         "numero": 3,
@@ -46,7 +66,30 @@
         ],
         "motivo": "Enseñar la variedad de figuras auténticas mencionadas por la narración.",
         "edicion": "Collage documental limpio de tres fotografías reales, sin rótulos, marcos llamativos ni repetir la portada.",
-        "prompt": ""
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "composicion": "Collage documental vertical 9:16 sin textos ni subtítulos",
+          "fuente": "Wikimedia Commons",
+          "autor": "Diego Delso",
+          "licencia": "CC BY-SA 4.0",
+          "licencia_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+          "materiales": [
+            {
+              "figura": "Mono",
+              "pagina": "https://commons.wikimedia.org/wiki/File:Líneas_de_Nazca,_Nazca,_Perú,_2015-07-29,_DD_49.JPG"
+            },
+            {
+              "figura": "Colibrí",
+              "pagina": "https://commons.wikimedia.org/wiki/File:Líneas_de_Nazca,_Nazca,_Perú,_2015-07-29,_DD_52.JPG"
+            },
+            {
+              "figura": "Araña",
+              "pagina": "https://commons.wikimedia.org/wiki/File:Líneas_de_Nazca,_Nazca,_Perú,_2015-07-29,_DD_54.JPG"
+            }
+          ],
+          "uso": "Imagen 3, tramo de 00:16.544 a 00:26.900"
+        }
       },
       {
         "numero": 4,
@@ -60,7 +103,17 @@
         ],
         "motivo": "Explicar visualmente la técnica real de retirada de piedras superficiales.",
         "edicion": "Primer plano del terreno y del contraste cromático natural; no simular excavaciones profundas.",
-        "prompt": ""
+        "prompt": "",
+        "seleccion_aprobada": {
+          "aprobada": true,
+          "fuente": "Wikimedia Commons",
+          "autor": "Y. Shishido (Pipimaru)",
+          "pagina": "https://commons.wikimedia.org/wiki/File:Nazca_Lines_from_1_5m_in_height.JPG",
+          "archivo": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Nazca_Lines_from_1_5m_in_height.JPG",
+          "licencia": "CC BY 2.5",
+          "licencia_url": "https://creativecommons.org/licenses/by/2.5/",
+          "uso": "Imagen 4, tramo de 00:26.900 a 00:45.011"
+        }
       },
       {
         "numero": 5,
@@ -70,7 +123,16 @@
         "buscar": [],
         "motivo": "No existe una fotografía histórica de los constructores; se necesita explicar el trazado desde tierra.",
         "edicion": "Recreación claramente documental, sin ovnis, maquinaria moderna ni aspecto fantástico.",
-        "prompt": "Recreación arqueológica hiperrealista y rigurosa, vertical 9:16, desierto de Nazca hace aproximadamente dos mil años. Pequeño grupo de constructores andinos trazando una gran línea geométrica mediante cuerdas tensadas y estacas de madera, retirando manualmente piedras oscuras para revelar el suelo claro. Ropa y materiales plausibles para sociedades precolombinas de la costa sur del Perú. Cámara elevada pero todavía terrestre, luz natural seca, estética documental premium, máxima nitidez, sin texto, sin símbolos modernos, sin aviones, sin ovnis, sin elementos sobrenaturales. No presentar la escena como fotografía histórica auténtica."
+        "prompt": "Recreación arqueológica hiperrealista y rigurosa, vertical 9:16, desierto de Nazca hace aproximadamente dos mil años. Pequeño grupo de constructores andinos trazando una gran línea geométrica mediante cuerdas tensadas y estacas de madera, retirando manualmente piedras oscuras para revelar el suelo claro. Ropa y materiales plausibles para sociedades precolombinas de la costa sur del Perú. Cámara elevada pero todavía terrestre, luz natural seca, estética documental premium, máxima nitidez, sin texto, sin símbolos modernos, sin aviones, sin ovnis, sin elementos sobrenaturales. No presentar la escena como fotografía histórica auténtica.",
+        "aprobacion_produccion": {
+          "prompt_aprobado": true,
+          "imagen_generada": true,
+          "imagen_aprobada": true,
+          "coste_autorizado": false,
+          "origen": "aportada_por_el_usuario",
+          "archivo_aprobado": "pergamino-14-lineas-nazca/imagenes/imagen5.png",
+          "uso": "Imagen 5, tramo de 00:45.011 a 00:57.654"
+        }
       },
       {
         "numero": 6,
