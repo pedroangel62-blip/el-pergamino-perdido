@@ -70,7 +70,7 @@ Antes de renderizar se ejecuta un control previo gratuito. Comprueba motor de mo
 
 Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.jpeg`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
 
-El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, sincronización, `verificacion_previa.json`, `verificacion_timeline.json`, `verificacion_visual.json`, `verificacion_audio.json`, metadatos y textos de publicación. No incluye subtítulos. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
+El paquete `proyecto_completo.zip` incluye el vídeo final aprobado, imágenes 1–8, Imagen 9 maestra, voz, música, sincronización, `verificacion_previa.json`, `verificacion_timeline.json`, `verificacion_visual.json`, `verificacion_audio.json`, metadatos y textos de publicación. `manifiesto_integridad.json` registra tamaño y SHA-256 de cada archivo; el ZIP se comprueba mediante CRC y lectura de todas las huellas antes de ofrecerse. No incluye subtítulos ni permite empaquetar un vídeo modificado después de su aprobación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 
 ## Comprobaciones
 

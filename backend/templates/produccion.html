@@ -380,6 +380,13 @@
                 Paquete preparado. Incluye vídeo sin subtítulos, imágenes, audio,
                 sincronización, controles automáticos y textos de publicación.
             </div>
+            {% if produccion.paquete_integridad_verificada %}
+                <div class="estado correcto">
+                    Integridad verificada: {{ produccion.paquete_total_archivos }}
+                    archivos controlados mediante SHA-256, incluida la Imagen 9.
+                    No contiene subtítulos.
+                </div>
+            {% endif %}
             <a class="descarga" href="{{ paquete_url }}" download>Descargar proyecto completo</a>
         {% endif %}
     </section>

@@ -40,6 +40,7 @@ ARCHIVO_BORRADOR = "video_borrador.mp4"
 ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
 ARCHIVO_PAQUETE = "proyecto_completo.zip"
+ARCHIVO_MANIFIESTO = "manifiesto_integridad.json"
 ARCHIVO_ALINEACION_VOZ = "voz-alineacion.json"
 ARCHIVO_SELLO_CIERRE = "sello-el-pergamino-perdido.jpeg"
 RUTA_SELLO_CIERRE = (
@@ -65,6 +66,24 @@ def guardar_json_atomico(ruta: str, datos: dict) -> None:
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
             json.dump(datos, archivo, ensure_ascii=False, indent=2)
+        os.replace(temporal, ruta)
+    except Exception:
+        if os.path.exists(temporal):
+            os.remove(temporal)
+        raise
+
+
+def guardar_texto_atomico(ruta: str, contenido: str) -> None:
+    directorio = os.path.dirname(os.path.abspath(ruta))
+    os.makedirs(directorio, exist_ok=True)
+    descriptor, temporal = tempfile.mkstemp(
+        prefix=".texto-",
+        suffix=".tmp",
+        dir=directorio,
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as archivo:
+            archivo.write(contenido)
         os.replace(temporal, ruta)
     except Exception:
         if os.path.exists(temporal):
@@ -120,6 +139,7 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         ARCHIVO_VERIFICACION_VISUAL,
         ARCHIVO_VERIFICACION_AUDIO,
         ARCHIVO_VERIFICACION_PREVIA,
+        ARCHIVO_MANIFIESTO,
         "subtitulos.srt",
     ):
         ruta = os.path.join(directorio_proyecto, nombre)
@@ -2161,6 +2181,8 @@ def aprobar_borrador(directorio_proyecto: str) -> dict:
         directorio_proyecto,
         "video_final_aprobado",
         video_final=ARCHIVO_FINAL,
+        video_final_sha256=_hash_archivo(destino),
+        video_borrador_sha256=_hash_archivo(origen),
         borrador_aprobado=True,
         borrador_aprobado_en=ahora_iso(),
         error="",
@@ -2206,9 +2228,37 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     if not os.path.isfile(video_final):
         raise FileNotFoundError("No se encuentra el vídeo final.")
 
+    hash_final = _hash_archivo(video_final)
+    if estado.get("video_final_sha256") != hash_final:
+        raise ValueError(
+            "El vídeo final ha cambiado después de aprobarse. "
+            "Debe volver a aprobarse antes de empaquetar."
+        )
+
+    informes_obligatorios = {
+        ARCHIVO_VERIFICACION_PREVIA: ("preparado", True),
+        ARCHIVO_VERIFICACION_TIMELINE: ("verificada", True),
+        ARCHIVO_VERIFICACION_VISUAL: ("verificada_automaticamente", True),
+        ARCHIVO_VERIFICACION_AUDIO: ("verificada", True),
+    }
+    for nombre, (campo, esperado) in informes_obligatorios.items():
+        datos = cargar_json(os.path.join(directorio_proyecto, nombre)) or {}
+        if datos.get(campo) is not esperado:
+            raise ValueError(
+                f"El informe obligatorio {nombre} no está validado."
+            )
+
+    control_visual = cargar_json(
+        os.path.join(directorio_proyecto, ARCHIVO_VERIFICACION_VISUAL)
+    ) or {}
+    if control_visual.get("sin_subtitulos") is not True:
+        raise ValueError("El control visual no confirma la ausencia de subtítulos.")
+
     publicacion = os.path.join(directorio_proyecto, ARCHIVO_PUBLICACION)
-    with open(publicacion, "w", encoding="utf-8") as archivo:
-        archivo.write(crear_texto_publicacion(resultado))
+    guardar_texto_atomico(
+        publicacion,
+        crear_texto_publicacion(resultado),
+    )
 
     paquete = os.path.join(directorio_proyecto, ARCHIVO_PAQUETE)
     descriptor, temporal = tempfile.mkstemp(
@@ -2219,33 +2269,132 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     os.close(descriptor)
 
     try:
+        archivos_paquete = []
+        for raiz, directorios, archivos in os.walk(directorio_proyecto):
+            directorios[:] = [
+                nombre
+                for nombre in directorios
+                if not nombre.startswith("montaje-")
+            ]
+            for nombre in sorted(archivos):
+                ruta = os.path.join(raiz, nombre)
+                if (
+                    ruta in {paquete, temporal}
+                    or nombre.startswith(".")
+                    or nombre.lower().endswith(".srt")
+                    or nombre == ARCHIVO_MANIFIESTO
+                ):
+                    continue
+                archivos_paquete.append(
+                    (
+                        ruta,
+                        os.path.relpath(
+                            ruta,
+                            directorio_proyecto,
+                        ).replace(os.sep, "/"),
+                    )
+                )
+
+        nombre_sello_paquete = f"imagen9-{ARCHIVO_SELLO_CIERRE}"
+        archivos_requeridos = {
+            ARCHIVO_FINAL,
+            "voz.mp3",
+            "imagenes/imagen1.png",
+            "imagenes/imagen2.png",
+            "imagenes/imagen3.png",
+            "imagenes/imagen4.png",
+            "imagenes/imagen5.png",
+            "imagenes/imagen6.png",
+            "imagenes/imagen7.png",
+            "imagenes/imagen8.png",
+            ARCHIVO_SINCRONIZACION,
+            ARCHIVO_VERIFICACION_PREVIA,
+            ARCHIVO_VERIFICACION_TIMELINE,
+            ARCHIVO_VERIFICACION_VISUAL,
+            ARCHIVO_VERIFICACION_AUDIO,
+            ARCHIVO_PUBLICACION,
+            nombre_sello_paquete,
+        }
+        musica = obtener_ruta_musica(directorio_proyecto)
+        if not musica:
+            raise FileNotFoundError("No se encuentra la música aprobada.")
+        archivos_requeridos.add(os.path.basename(musica))
+
+        nombres_incluidos = {relativo for _, relativo in archivos_paquete}
+        nombres_incluidos.add(nombre_sello_paquete)
+        faltantes = sorted(archivos_requeridos - nombres_incluidos)
+        if faltantes:
+            raise FileNotFoundError(
+                "Faltan archivos obligatorios para el ZIP: "
+                + ", ".join(faltantes)
+            )
+
+        entradas_manifiesto = [
+            {
+                "ruta": relativo,
+                "bytes": os.path.getsize(ruta),
+                "sha256": _hash_archivo(ruta),
+            }
+            for ruta, relativo in sorted(
+                archivos_paquete,
+                key=lambda elemento: elemento[1],
+            )
+        ]
+        entradas_manifiesto.append(
+            {
+                "ruta": nombre_sello_paquete,
+                "bytes": RUTA_SELLO_CIERRE.stat().st_size,
+                "sha256": _hash_archivo(str(RUTA_SELLO_CIERRE)),
+            }
+        )
+        entradas_manifiesto.sort(key=lambda entrada: entrada["ruta"])
+        manifiesto = {
+            "verificado": True,
+            "sin_subtitulos": True,
+            "video_final_sha256": hash_final,
+            "total_archivos": len(entradas_manifiesto),
+            "total_bytes": sum(
+                int(entrada["bytes"])
+                for entrada in entradas_manifiesto
+            ),
+            "archivos": entradas_manifiesto,
+            "creado": ahora_iso(),
+        }
+
         with zipfile.ZipFile(
             temporal,
             "w",
             compression=zipfile.ZIP_DEFLATED,
             compresslevel=6,
         ) as archivo_zip:
-            for raiz, directorios, archivos in os.walk(directorio_proyecto):
-                directorios[:] = [
-                    nombre
-                    for nombre in directorios
-                    if not nombre.startswith("montaje-")
-                ]
+            for ruta, relativo in archivos_paquete:
+                archivo_zip.write(ruta, relativo)
+            archivo_zip.write(RUTA_SELLO_CIERRE, nombre_sello_paquete)
+            archivo_zip.writestr(
+                ARCHIVO_MANIFIESTO,
+                json.dumps(manifiesto, ensure_ascii=False, indent=2),
+            )
 
-                for nombre in sorted(archivos):
-                    ruta = os.path.join(raiz, nombre)
-
-                    if (
-                        ruta in {paquete, temporal}
-                        or nombre.startswith(".")
-                        or nombre == "subtitulos.srt"
-                    ):
-                        continue
-
-                    relativo = os.path.relpath(ruta, directorio_proyecto)
-                    archivo_zip.write(ruta, relativo)
+        with zipfile.ZipFile(temporal, "r") as archivo_zip:
+            if archivo_zip.testzip() is not None:
+                raise RuntimeError("El ZIP final contiene datos dañados.")
+            nombres_zip = set(archivo_zip.namelist())
+            if archivos_requeridos - nombres_zip:
+                raise RuntimeError("El ZIP final está incompleto.")
+            if any(nombre.lower().endswith(".srt") for nombre in nombres_zip):
+                raise RuntimeError("El ZIP final contiene subtítulos prohibidos.")
+            for entrada in entradas_manifiesto:
+                contenido = archivo_zip.read(entrada["ruta"])
+                if hashlib.sha256(contenido).hexdigest() != entrada["sha256"]:
+                    raise RuntimeError(
+                        f"Falló la integridad de {entrada['ruta']}."
+                    )
 
         os.replace(temporal, paquete)
+        guardar_json_atomico(
+            os.path.join(directorio_proyecto, ARCHIVO_MANIFIESTO),
+            manifiesto,
+        )
     except Exception:
         if os.path.exists(temporal):
             os.remove(temporal)
@@ -2256,6 +2405,10 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
         "paquete_preparado",
         paquete=ARCHIVO_PAQUETE,
         publicacion=ARCHIVO_PUBLICACION,
+        manifiesto=ARCHIVO_MANIFIESTO,
+        paquete_sha256=_hash_archivo(paquete),
+        paquete_integridad_verificada=True,
+        paquete_total_archivos=manifiesto["total_archivos"],
         paquete_creado_en=ahora_iso(),
         error="",
     )
