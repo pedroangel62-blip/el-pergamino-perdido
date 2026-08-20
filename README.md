@@ -11,10 +11,10 @@ Aplicación web para preparar Reels documentales de El Pergamino Perdido con con
 5. El usuario escucha y aprueba la voz; hasta entonces las imágenes permanecen bloqueadas.
 6. Se buscan fotografías reales antes de ofrecer una recreación con IA.
 7. Las ocho imágenes definitivas se confirman antes del montaje.
-8. La aplicación sincroniza frases, subtítulos y las ocho imágenes del caso con las marcas reales de la voz, con portada fija de 3 segundos.
+8. La aplicación sincroniza las ocho imágenes del caso con las frases y marcas reales de la voz, con portada fija de 3 segundos y sin subtítulos.
 9. El usuario carga y aprueba la música antes de mezclarla con la voz.
 10. FFmpeg añade la Imagen 9 maestra durante 3 segundos: zoom suave, voz ya terminada y fundido final de la música.
-11. FFmpeg genera un borrador vertical 1080×1920 a 30 fps con subtítulos y transiciones, y verifica fotogramas, duración y pista de audio.
+11. FFmpeg genera un borrador vertical 1080×1920 a 30 fps sin subtítulos y verifica fotogramas, transiciones, zoom, márgenes, duración y pista de audio.
 12. El borrador aprobado se convierte en vídeo final y paquete ZIP descargable.
 13. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
 
@@ -62,9 +62,11 @@ Las voces nuevas guardan `voz-alineacion.json` a partir de la misma respuesta de
 
 Antes del render, cada marca temporal se convierte en su fotograma real más próximo a 30 fps. Los cortes se calculan desde posiciones absolutas para que el redondeo no acumule deriva. FFprobe comprueba el número exacto de fotogramas de cada uno de los nueve clips, del vídeo concatenado y del borrador final; cualquier discrepancia bloquea el montaje. El resultado queda guardado en `verificacion_timeline.json`.
 
+El flujo automático no genera ni incrusta subtítulos. Si un proyecto anterior contiene `subtitulos.srt`, se elimina antes del montaje y nunca se incorpora al ZIP. Los fundidos y el zoom se comprueban sobre los fotogramas renderizados; la proporción 9:16 y el margen seguro del sello también se validan. El resultado queda guardado en `verificacion_visual.json`, sin sustituir la aprobación humana del borrador.
+
 Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.jpeg`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
 
-El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, subtítulos, sincronización, `verificacion_timeline.json`, metadatos y textos de publicación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
+El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, sincronización, `verificacion_timeline.json`, `verificacion_visual.json`, metadatos y textos de publicación. No incluye subtítulos. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 
 ## Comprobaciones
 

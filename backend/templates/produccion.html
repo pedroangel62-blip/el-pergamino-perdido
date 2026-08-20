@@ -140,6 +140,9 @@
             Imagen 9 · sello fijo:
             {{ 'disponible' if produccion.sello_disponible else 'falta el recurso maestro' }}
         </div>
+        <div class="estado correcto">
+            Subtítulos: desactivados por norma del flujo automático.
+        </div>
 
         {% if produccion.total_imagenes == 8 and not produccion.imagenes_aprobadas %}
             <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-imagenes">
@@ -308,9 +311,19 @@
         {% if borrador_url %}
             <video controls preload="metadata" src="{{ borrador_url }}"></video>
 
+            {% if produccion.control_visual_verificado %}
+                <div class="estado correcto">
+                    Control automático superado: vídeo 9:16 sin subtítulos,
+                    8 transiciones verificadas y zoom del cierre detectado.
+                    Margen mínimo de la Imagen 9:
+                    {{ produccion.verificacion_visual.cierre.margen_seguro_por_lado_porcentaje }} % por lado.
+                </div>
+            {% endif %}
+
             {% if produccion.estado == 'borrador_pendiente_aprobacion' %}
                 <div class="estado">
-                    Revisa imágenes, subtítulos, voz, música y transiciones antes de aprobar.
+                    Revisa imágenes, voz, música y transiciones antes de aprobar.
+                    El control automático no sustituye esta aprobación humana.
                 </div>
                 <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-borrador">
                     <button type="submit">Aprobar borrador y crear vídeo final</button>
@@ -337,7 +350,8 @@
 
         {% if paquete_url %}
             <div class="estado correcto">
-                Paquete preparado. Incluye vídeo, imágenes, audio, subtítulos, sincronización y textos de publicación.
+                Paquete preparado. Incluye vídeo sin subtítulos, imágenes, audio,
+                sincronización, controles automáticos y textos de publicación.
             </div>
             <a class="descarga" href="{{ paquete_url }}" download>Descargar proyecto completo</a>
         {% endif %}

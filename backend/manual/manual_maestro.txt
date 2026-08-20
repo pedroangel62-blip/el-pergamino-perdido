@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.9
+MANUAL MAESTRO — VERSIÓN 1.10
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.9:
+Cambios obligatorios de la versión 1.10:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -39,6 +39,11 @@ Cambios obligatorios de la versión 1.9:
 * verificación con FFprobe del número exacto de fotogramas de cada clip y del
   vídeo completo antes de ofrecer el borrador;
 * informe `verificacion_timeline.json` incluido en el proyecto y en el ZIP;
+* vídeos automáticos sin subtítulos y eliminación de cualquier archivo SRT
+  heredado antes del montaje;
+* comprobación automática de los fundidos, el zoom visible, la proporción 9:16
+  y el margen seguro de la Imagen 9;
+* informe `verificacion_visual.json` incluido en el proyecto y en el ZIP;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -433,7 +438,11 @@ Sincronización
 
 La Imagen 1 será siempre la portada y ocupará exactamente los primeros 3 segundos.
 
-Cada voz nueva se generará mediante la respuesta con marcas temporales de ElevenLabs. La aplicación guardará `voz-alineacion.json` junto a `voz.mp3` y utilizará sus tiempos reales para situar los cambios de imagen y los subtítulos. Esta operación forma parte de la misma generación de voz y no realizará una segunda llamada de texto a voz.
+Cada voz nueva se generará mediante la respuesta con marcas temporales de
+ElevenLabs. La aplicación guardará `voz-alineacion.json` junto a `voz.mp3` y
+utilizará sus tiempos reales exclusivamente para situar los cambios de imagen.
+Esta operación forma parte de la misma generación de voz y no realizará una
+segunda llamada de texto a voz.
 
 Cada elemento de `plan_visual` contendrá una `frase_entrada` literal, única y
 ordenada del guion. Esa frase definirá el comienzo semántico de la imagen y el
@@ -512,7 +521,18 @@ El vídeo se generará en formato vertical 9:16, resolución 1080 por 1920, 30 f
 
 Las fotografías horizontales conservarán su orientación y se adaptarán mediante un fondo derivado y difuminado de la propia imagen. No se girarán ni recortarán de forma que se pierda el sujeto principal.
 
-El montaje incluirá transiciones discretas, subtítulos legibles, voz principal y música de fondo a volumen subordinado. La música nunca terminará sobre la Imagen 8: continuará y finalizará sobre la Imagen 9.
+El montaje incluirá transiciones discretas, voz principal y música de fondo a
+volumen subordinado. No incluirá subtítulos, texto de narración ni archivos SRT.
+La música nunca terminará sobre la Imagen 8: continuará y finalizará sobre la
+Imagen 9.
+
+Antes de ofrecer el borrador, la aplicación comprobará en los clips ya
+renderizados que los ocho fundidos son visibles y que la Imagen 9 presenta su
+fundido de entrada y un zoom real. También verificará la resolución vertical
+9:16, los fotogramas por segundo y un margen geométrico mínimo del 4 % por cada
+lado del sello durante el zoom. El resultado quedará guardado en
+`verificacion_visual.json`. Esta comprobación automática no sustituirá la
+revisión humana del vídeo borrador.
 
 Antes de ofrecer el borrador para aprobación, la aplicación verificará que el
 MP4 contiene vídeo, una pista de audio audible y una duración igual a la voz
@@ -529,7 +549,8 @@ Solo una aprobación humana explícita permitirá crear:
 * `publicacion.txt`;
 * `proyecto_completo.zip`.
 
-El paquete conservará vídeo, imágenes, voz, música, subtítulos, sincronización,
-el informe de verificación por fotogramas, metadatos y textos de publicación.
+El paquete conservará vídeo, imágenes, voz, música, sincronización, los
+informes de verificación por fotogramas y control visual, metadatos y textos de
+publicación. No incluirá archivos de subtítulos.
 
 La aplicación no publicará en Instagram ni copiará archivos a un servicio externo sin autorización expresa de Pedro Ángel.
