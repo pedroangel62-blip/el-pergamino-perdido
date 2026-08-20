@@ -42,6 +42,7 @@ ARCHIVO_PUBLICACION = "publicacion.txt"
 ARCHIVO_PAQUETE = "proyecto_completo.zip"
 ARCHIVO_MANIFIESTO = "manifiesto_integridad.json"
 ARCHIVO_ALINEACION_VOZ = "voz-alineacion.json"
+ARCHIVO_MONTAJE_EN_CURSO = "montaje_en_curso.json"
 ARCHIVO_SELLO_CIERRE = "sello-el-pergamino-perdido.jpeg"
 RUTA_SELLO_CIERRE = (
     Path(__file__).resolve().parent
@@ -127,6 +128,125 @@ def cargar_estado(directorio_proyecto: str) -> dict:
         "actualizado": ahora_iso(),
         "error": "",
     }
+
+
+def obtener_ruta_montaje_en_curso(directorio_proyecto: str) -> str:
+    return os.path.join(directorio_proyecto, ARCHIVO_MONTAJE_EN_CURSO)
+
+
+def _inicio_proceso(pid: int) -> str | None:
+    """Devuelve el instante de arranque del proceso cuando /proc está disponible."""
+    try:
+        with open(f"/proc/{pid}/stat", "r", encoding="utf-8") as archivo:
+            campos = archivo.read().split()
+    except (OSError, ValueError):
+        return None
+
+    return campos[21] if len(campos) > 21 else None
+
+
+def _proceso_montaje_activo(marcador: dict) -> bool:
+    try:
+        pid = int(marcador.get("pid", 0))
+    except (TypeError, ValueError):
+        return False
+
+    if pid <= 0:
+        return False
+
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+    inicio_guardado = marcador.get("inicio_proceso")
+    inicio_actual = _inicio_proceso(pid)
+    if inicio_guardado and inicio_actual:
+        return inicio_guardado == inicio_actual
+    return True
+
+
+def limpiar_temporales_montaje(directorio_proyecto: str) -> list[str]:
+    """Elimina únicamente directorios temporales de montaje del proyecto."""
+    raiz = Path(directorio_proyecto)
+    if not raiz.is_dir():
+        return []
+
+    eliminados = []
+    for entrada in raiz.iterdir():
+        if (
+            entrada.name.startswith("montaje-")
+            and entrada.is_dir()
+            and not entrada.is_symlink()
+        ):
+            shutil.rmtree(entrada)
+            eliminados.append(entrada.name)
+    return sorted(eliminados)
+
+
+def recuperar_montaje_interrumpido(directorio_proyecto: str) -> bool:
+    """Desbloquea un montaje abandonado sin regenerar recursos aprobados."""
+    estado = cargar_estado(directorio_proyecto)
+    if estado.get("estado") != "generando_borrador":
+        return False
+
+    ruta_marcador = obtener_ruta_montaje_en_curso(directorio_proyecto)
+    marcador = cargar_json(ruta_marcador) or {}
+    if marcador and _proceso_montaje_activo(marcador):
+        return False
+
+    temporales_eliminados = limpiar_temporales_montaje(directorio_proyecto)
+    if os.path.isfile(ruta_marcador):
+        os.remove(ruta_marcador)
+
+    guardar_estado(
+        directorio_proyecto,
+        "error",
+        error=(
+            "El montaje anterior se interrumpió. La voz, las imágenes y sus "
+            "aprobaciones se conservan; puede volver a generar el borrador."
+        ),
+        borrador_aprobado=False,
+        montaje_interrumpido=True,
+        temporales_montaje_eliminados=temporales_eliminados,
+    )
+    return True
+
+
+def iniciar_generacion_borrador(directorio_proyecto: str) -> dict:
+    """Registra el montaje antes de entregarlo a la tarea en segundo plano."""
+    recuperar_montaje_interrumpido(directorio_proyecto)
+    estado = cargar_estado(directorio_proyecto)
+    if estado.get("estado") == "generando_borrador":
+        raise ValueError("El vídeo borrador ya se está generando.")
+
+    limpiar_temporales_montaje(directorio_proyecto)
+    ruta_marcador = obtener_ruta_montaje_en_curso(directorio_proyecto)
+    guardar_json_atomico(
+        ruta_marcador,
+        {
+            "pid": os.getpid(),
+            "inicio_proceso": _inicio_proceso(os.getpid()),
+            "iniciado": ahora_iso(),
+        },
+    )
+    try:
+        return guardar_estado(
+            directorio_proyecto,
+            "generando_borrador",
+            error="",
+            borrador_aprobado=False,
+            montaje_interrumpido=False,
+            temporales_montaje_eliminados=[],
+        )
+    except Exception:
+        if os.path.isfile(ruta_marcador):
+            os.remove(ruta_marcador)
+        raise
 
 
 def invalidar_salidas(directorio_proyecto: str) -> None:
@@ -2139,6 +2259,10 @@ def generar_borrador(
 
 
 def generar_borrador_seguro(directorio_proyecto: str) -> None:
+    ruta_marcador = obtener_ruta_montaje_en_curso(directorio_proyecto)
+    if not os.path.isfile(ruta_marcador):
+        iniciar_generacion_borrador(directorio_proyecto)
+
     try:
         generar_borrador(directorio_proyecto)
     except Exception as error:
@@ -2148,6 +2272,9 @@ def generar_borrador_seguro(directorio_proyecto: str) -> None:
             error=str(error),
             borrador_aprobado=False,
         )
+    finally:
+        if os.path.isfile(ruta_marcador):
+            os.remove(ruta_marcador)
 
 
 def aprobar_borrador(directorio_proyecto: str) -> dict:

@@ -11,6 +11,7 @@ import zipfile
 
 from backend.produccion import (
     ARCHIVO_MANIFIESTO,
+    ARCHIVO_MONTAJE_EN_CURSO,
     ARCHIVO_VERIFICACION_AUDIO,
     ARCHIVO_VERIFICACION_PREVIA,
     ARCHIVO_VERIFICACION_TIMELINE,
@@ -26,10 +27,15 @@ from backend.produccion import (
     crear_sincronizacion,
     crear_texto_publicacion,
     comprobar_preparacion_montaje,
+    cargar_estado,
     generar_borrador,
+    guardar_estado,
+    guardar_json_atomico,
     guardar_musica,
+    iniciar_generacion_borrador,
     obtener_duracion,
     preparar_sincronizacion,
+    recuperar_montaje_interrumpido,
     validar_anclas_plan_visual,
     verificar_preparacion_montaje,
 )
@@ -471,6 +477,65 @@ class PublicacionTests(unittest.TestCase):
     "FFmpeg no está instalado",
 )
 class MontajeTests(unittest.TestCase):
+    def test_montaje_activo_no_se_recupera_como_interrumpido(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            temporal_activo = os.path.join(directorio, "montaje-activo")
+            iniciar_generacion_borrador(directorio)
+            os.makedirs(temporal_activo)
+
+            self.assertFalse(recuperar_montaje_interrumpido(directorio))
+            self.assertEqual(
+                cargar_estado(directorio)["estado"],
+                "generando_borrador",
+            )
+            self.assertTrue(os.path.isdir(temporal_activo))
+            self.assertTrue(
+                os.path.isfile(
+                    os.path.join(directorio, ARCHIVO_MONTAJE_EN_CURSO)
+                )
+            )
+
+    def test_montaje_interrumpido_se_limpia_y_conserva_recursos(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            temporal_abandonado = os.path.join(
+                directorio,
+                "montaje-abandonado",
+            )
+            os.makedirs(temporal_abandonado)
+            with open(
+                os.path.join(temporal_abandonado, "clip.mp4"),
+                "wb",
+            ) as archivo:
+                archivo.write(b"temporal")
+            voz = os.path.join(directorio, "voz.mp3")
+            with open(voz, "wb") as archivo:
+                archivo.write(b"voz-aprobada")
+
+            guardar_estado(directorio, "generando_borrador")
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_MONTAJE_EN_CURSO),
+                {
+                    "pid": 999999999,
+                    "inicio_proceso": "inexistente",
+                },
+            )
+
+            self.assertTrue(recuperar_montaje_interrumpido(directorio))
+            estado = cargar_estado(directorio)
+            self.assertEqual(estado["estado"], "error")
+            self.assertTrue(estado["montaje_interrumpido"])
+            self.assertIn(
+                "montaje-abandonado",
+                estado["temporales_montaje_eliminados"],
+            )
+            self.assertFalse(os.path.exists(temporal_abandonado))
+            self.assertFalse(
+                os.path.exists(
+                    os.path.join(directorio, ARCHIVO_MONTAJE_EN_CURSO)
+                )
+            )
+            self.assertTrue(os.path.isfile(voz))
+
     def test_clip_cierre_dura_exactamente_tres_segundos(self):
         with tempfile.TemporaryDirectory() as directorio:
             sello = os.path.join(directorio, "sello.png")

@@ -72,6 +72,8 @@ Las ocho imágenes del caso terminan con la narración. Después entra durante e
 
 El paquete `proyecto_completo.zip` incluye el vídeo final aprobado, imágenes 1–8, Imagen 9 maestra, voz, música, sincronización, `verificacion_previa.json`, `verificacion_timeline.json`, `verificacion_visual.json`, `verificacion_audio.json`, metadatos y textos de publicación. `manifiesto_integridad.json` registra tamaño y SHA-256 de cada archivo; el ZIP se comprueba mediante CRC y lectura de todas las huellas antes de ofrecerse. No incluye subtítulos ni permite empaquetar un vídeo modificado después de su aprobación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 
+Si la aplicación o FFmpeg se interrumpen durante el render, al reabrir el proyecto se detecta el montaje abandonado, se eliminan solo sus directorios temporales `montaje-*` y se permite reintentarlo. La voz, las imágenes, la música y las aprobaciones se conservan, por lo que esta recuperación no consume créditos ni repite recursos ya aceptados.
+
 ## Comprobaciones
 
 ```bash
