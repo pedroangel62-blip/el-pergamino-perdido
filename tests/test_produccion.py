@@ -10,6 +10,7 @@ import unittest
 import zipfile
 
 from backend.produccion import (
+    ARCHIVO_VERIFICACION_TIMELINE,
     CIERRE_SEGUNDOS,
     _crear_clip_cierre,
     aprobar_borrador,
@@ -17,6 +18,7 @@ from backend.produccion import (
     aprobar_musica,
     aprobar_sincronizacion,
     crear_paquete,
+    crear_plan_fotogramas,
     crear_sincronizacion,
     crear_subtitulos,
     crear_texto_publicacion,
@@ -153,6 +155,47 @@ def guardar_alineacion_uniforme(
 
 
 class SincronizacionTests(unittest.TestCase):
+    def test_cuantiza_los_cortes_sin_deriva_acumulada(self):
+        marcas = [
+            0.0,
+            3.0,
+            11.017,
+            21.049,
+            31.083,
+            41.118,
+            51.151,
+            61.184,
+            71.219,
+        ]
+        sincronizacion = [
+            {
+                "numero": indice + 1,
+                "inicio": marcas[indice],
+                "fin": marcas[indice + 1],
+            }
+            for indice in range(8)
+        ]
+
+        plan = crear_plan_fotogramas(sincronizacion, fps=30)
+
+        self.assertEqual(len(plan), 9)
+        self.assertEqual(plan[1]["fotograma_inicio"], 90)
+        self.assertEqual(plan[-1]["fotogramas"], 90)
+        self.assertTrue(
+            all(
+                actual["fotograma_fin"]
+                == siguiente["fotograma_inicio"]
+                for actual, siguiente in zip(plan, plan[1:])
+            )
+        )
+        self.assertLessEqual(
+            max(
+                abs(float(corte["desviacion_inicio_ms"]))
+                for corte in plan
+            ),
+            1000 / 30,
+        )
+
     def test_ocho_segmentos_contiguos_con_portada_de_tres_segundos(self):
         guion = " ".join(f"palabra{indice}" for indice in range(1, 161))
         segmentos = crear_sincronizacion(guion, 80.0)
@@ -478,6 +521,24 @@ class MontajeTests(unittest.TestCase):
             self.assertEqual(tipos, {"audio", "video"})
             self.assertEqual(estado["audio_codec"], "aac")
             self.assertGreater(estado["audio_max_db"], -80.0)
+            self.assertTrue(estado["timeline_verificada"])
+            self.assertGreater(estado["fotogramas_totales"], 0)
+            ruta_timeline = os.path.join(
+                directorio,
+                ARCHIVO_VERIFICACION_TIMELINE,
+            )
+            self.assertTrue(os.path.isfile(ruta_timeline))
+            with open(ruta_timeline, "r", encoding="utf-8") as archivo:
+                timeline = json.load(archivo)
+            self.assertTrue(timeline["verificada"])
+            self.assertEqual(len(timeline["cortes"]), 9)
+            self.assertTrue(
+                all(corte["verificado"] for corte in timeline["cortes"])
+            )
+            self.assertEqual(
+                timeline["fotogramas_totales"],
+                estado["fotogramas_totales"],
+            )
             self.assertAlmostEqual(
                 float(sondeo["format"]["duration"]),
                 duracion_voz + CIERRE_SEGUNDOS,
@@ -516,6 +577,7 @@ class MontajeTests(unittest.TestCase):
             self.assertIn("video_final.mp4", nombres)
             self.assertIn("publicacion.txt", nombres)
             self.assertIn("sincronizacion.json", nombres)
+            self.assertIn(ARCHIVO_VERIFICACION_TIMELINE, nombres)
 
 
 if __name__ == "__main__":

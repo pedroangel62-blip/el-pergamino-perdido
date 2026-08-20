@@ -181,8 +181,10 @@
                         <th>Imagen</th>
                         <th>Contenido visual</th>
                         <th>Frase de entrada</th>
-                        <th>Inicio</th>
-                        <th>Final</th>
+                        <th>Inicio real</th>
+                        <th>Final real</th>
+                        <th>Fotograma</th>
+                        <th>Ajuste</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -191,8 +193,10 @@
                             <td>{{ segmento.numero }}</td>
                             <td>{{ segmento.contenido_visual }}</td>
                             <td>{{ segmento.frase_entrada }}</td>
-                            <td>{{ '%.3f'|format(segmento.inicio) }} s</td>
-                            <td>{{ '%.3f'|format(segmento.fin) }} s</td>
+                            <td>{{ '%.3f'|format(segmento.inicio_video|default(segmento.inicio)) }} s</td>
+                            <td>{{ '%.3f'|format(segmento.fin_video|default(segmento.fin)) }} s</td>
+                            <td>{{ segmento.fotograma_inicio|default('—') }}</td>
+                            <td>{{ '%.1f'|format(segmento.desviacion_inicio_ms|default(0)) }} ms</td>
                         </tr>
                     {% endfor %}
                     {% if produccion.cierre %}
@@ -200,8 +204,10 @@
                             <td>9 · sello fijo</td>
                             <td>Cierre fijo de El Pergamino Perdido</td>
                             <td>{{ produccion.cierre.frase_entrada }}</td>
-                            <td>{{ '%.3f'|format(produccion.cierre.inicio) }} s</td>
-                            <td>{{ '%.3f'|format(produccion.cierre.fin) }} s</td>
+                            <td>{{ '%.3f'|format(produccion.cierre.inicio_video|default(produccion.cierre.inicio)) }} s</td>
+                            <td>{{ '%.3f'|format(produccion.cierre.fin_video|default(produccion.cierre.fin)) }} s</td>
+                            <td>{{ produccion.cierre.fotograma_inicio|default('—') }}</td>
+                            <td>{{ '%.1f'|format(produccion.cierre.desviacion_inicio_ms|default(0)) }} ms</td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -211,6 +217,20 @@
                 <div class="estado correcto">
                     La voz termina con la Imagen 8. El sello ocupa los 3 segundos
                     finales con zoom suave y la música se desvanece hasta silencio.
+                </div>
+            {% endif %}
+
+            {% if produccion.timeline_verificada %}
+                <div class="estado correcto">
+                    Línea de tiempo verificada fotograma a fotograma a
+                    {{ produccion.verificacion_timeline.fps }} fps · desviación
+                    máxima {{ '%.1f'|format(produccion.verificacion_timeline.desviacion_maxima_ms) }} ms.
+                </div>
+            {% elif produccion.desviacion_planificada_ms is not none %}
+                <div class="estado correcto">
+                    Cortes preparados a {{ produccion.fps_timeline }} fps · ajuste
+                    máximo previsto {{ '%.1f'|format(produccion.desviacion_planificada_ms) }} ms.
+                    La comprobación real se ejecutará al generar el borrador.
                 </div>
             {% endif %}
 
