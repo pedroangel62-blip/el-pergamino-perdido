@@ -1,0 +1,9 @@
+{
+  "accion": "comprobar",
+  "solicitud_id": "pergamino-14-musica-comprobacion-001",
+  "proyecto_id": "pergamino-14-lineas-nazca",
+  "duracion_ms": 110000,
+  "modelo": "music_v2",
+  "creditos_maximos": 2000,
+  "confirmacion_coste": ""
+}
