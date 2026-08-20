@@ -11,6 +11,7 @@ import zipfile
 
 from backend.produccion import (
     CIERRE_SEGUNDOS,
+    _crear_clip_cierre,
     aprobar_borrador,
     aprobar_imagenes,
     aprobar_musica,
@@ -256,6 +257,27 @@ class PublicacionTests(unittest.TestCase):
     "FFmpeg no está instalado",
 )
 class MontajeTests(unittest.TestCase):
+    def test_clip_cierre_dura_exactamente_tres_segundos(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            sello = os.path.join(directorio, "sello.png")
+            cierre = os.path.join(directorio, "cierre.mp4")
+            with open(sello, "wb") as archivo:
+                archivo.write(PNG_UN_PIXEL)
+
+            _crear_clip_cierre(
+                sello,
+                cierre,
+                ancho=180,
+                alto=320,
+                fps=30,
+            )
+
+            self.assertAlmostEqual(
+                obtener_duracion(cierre),
+                CIERRE_SEGUNDOS,
+                delta=0.05,
+            )
+
     def test_genera_aprueba_y_empaqueta_un_reel(self):
         with tempfile.TemporaryDirectory() as directorio:
             imagenes = os.path.join(directorio, "imagenes")

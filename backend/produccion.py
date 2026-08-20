@@ -28,7 +28,7 @@ ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
 ARCHIVO_PAQUETE = "proyecto_completo.zip"
 ARCHIVO_ALINEACION_VOZ = "voz-alineacion.json"
-ARCHIVO_SELLO_CIERRE = "sello-el-pergamino-perdido.png"
+ARCHIVO_SELLO_CIERRE = "sello-el-pergamino-perdido.jpeg"
 RUTA_SELLO_CIERRE = (
     Path(__file__).resolve().parent
     / "assets"
@@ -773,6 +773,8 @@ def _crear_clip(
         [
             "ffmpeg",
             "-y",
+            "-framerate",
+            str(fps),
             "-loop",
             "1",
             "-t",
@@ -825,6 +827,8 @@ def _crear_clip_cierre(
         [
             "ffmpeg",
             "-y",
+            "-framerate",
+            str(fps),
             "-loop",
             "1",
             "-t",

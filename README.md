@@ -60,7 +60,7 @@ La pantalla `Producción final` se desbloquea cuando la voz y las ocho imágenes
 
 Las voces nuevas guardan `voz-alineacion.json` a partir de la misma respuesta de ElevenLabs que contiene el audio; no se realiza una segunda generación. Los cortes posteriores a la portada se ajustan a tiempos reales y priorizan comienzos naturales de frase. Si un proyecto antiguo no contiene esas marcas, la interfaz identifica claramente la sincronización como estimada para que pueda revisarse o regenerarse.
 
-Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.png`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
+Las ocho imágenes del caso terminan con la narración. Después entra durante exactamente 3 segundos el recurso fijo `backend/assets/sello-el-pergamino-perdido.jpeg`. El cierre mantiene todo el texto dentro de una zona segura, aplica un zoom máximo del 2 % y prolonga la música hasta un fundido completo al final de la Imagen 9.
 
 El paquete `proyecto_completo.zip` incluye el vídeo final, imágenes, voz, música, subtítulos, sincronización, metadatos y textos de publicación. La publicación y la copia a servicios externos no se ejecutan sin autorización expresa.
 

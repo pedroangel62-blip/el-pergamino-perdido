@@ -229,7 +229,7 @@ La narración podrá comenzar desde el primer segundo mientras la portada perman
 
 La Imagen 9 será el sello maestro de «EL PERGAMINO PERDIDO». No se generará ni
 se modificará para cada proyecto. Se conservará una sola copia aprobada en
-`backend/assets/sello-el-pergamino-perdido.png` y el montaje la añadirá
+`backend/assets/sello-el-pergamino-perdido.jpeg` y el montaje la añadirá
 automáticamente después de la Imagen 8.
 
 Criterios de la primera imagen
