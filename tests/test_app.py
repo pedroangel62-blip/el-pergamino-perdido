@@ -107,6 +107,20 @@ class AplicacionTests(unittest.TestCase):
         self.assertTrue(
             proyecto["resultado"]["_aprobaciones"]["plan_visual"]
         )
+        sincronizacion = proyecto["resultado"]["sincronizacion_aprobada"]
+        self.assertTrue(sincronizacion["aprobada"])
+        self.assertTrue(sincronizacion["sin_subtitulos"])
+        self.assertEqual(len(sincronizacion["segmentos"]), 9)
+        self.assertEqual(sincronizacion["segmentos"][0]["fin"], 3.0)
+        self.assertEqual(
+            sincronizacion["segmentos"][-1]["inicio"],
+            106.606,
+        )
+        self.assertEqual(
+            sincronizacion["segmentos"][-1]["fin"],
+            109.606,
+        )
+        self.assertIn("110 segundos", proyecto["resultado"]["musica"])
         imagen_5 = os.path.join(
             self.directorio_temporal.name,
             "pergamino-14-lineas-nazca",
