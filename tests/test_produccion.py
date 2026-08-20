@@ -24,6 +24,7 @@ from backend.produccion import (
     guardar_musica,
     obtener_duracion,
     preparar_sincronizacion,
+    validar_anclas_plan_visual,
 )
 
 
@@ -108,6 +109,49 @@ def medir_max_db(ruta: str, inicio: float, duracion: float) -> float:
     return float("-inf") if valor == "-inf" else float(valor)
 
 
+def crear_plan_visual(anclas: list[str]) -> list[dict]:
+    return [
+        {
+            "numero": numero,
+            "frase_entrada": frase,
+            "motivo": f"Contenido de la Imagen {numero}",
+        }
+        for numero, frase in enumerate(anclas, start=1)
+    ]
+
+
+def guardar_alineacion_uniforme(
+    directorio: str,
+    guion: str,
+    duracion: float,
+) -> dict:
+    paso = max(0.001, (duracion - 0.05) / len(guion))
+    alineacion = {
+        "characters": list(guion),
+        "character_start_times_seconds": [
+            indice * paso for indice in range(len(guion))
+        ],
+        "character_end_times_seconds": [
+            (indice + 1) * paso for indice in range(len(guion))
+        ],
+    }
+    with open(
+        os.path.join(directorio, "voz-alineacion.json"),
+        "w",
+        encoding="utf-8",
+    ) as archivo:
+        json.dump(
+            {
+                "guion_sha256": hashlib.sha256(
+                    guion.encode("utf-8")
+                ).hexdigest(),
+                "alignment": alineacion,
+            },
+            archivo,
+        )
+    return alineacion
+
+
 class SincronizacionTests(unittest.TestCase):
     def test_ocho_segmentos_contiguos_con_portada_de_tres_segundos(self):
         guion = " ".join(f"palabra{indice}" for indice in range(1, 161))
@@ -148,17 +192,30 @@ class SincronizacionTests(unittest.TestCase):
             ],
         }
         duracion = len(guion) * paso
+        plan_visual = crear_plan_visual(
+            [
+                "Primera frase del misterio.",
+                "Segunda pista bajo la lluvia,",
+                "Tercera señal en la pared antigua.",
+                "Cuarta huella detrás del reloj.",
+                "Quinta clave dentro del sobre.",
+                "Sexta sombra junto a la ventana.",
+                "Séptima respuesta al amanecer.",
+                "Octava verdad que cierra definitivamente el caso.",
+            ]
+        )
         segmentos = crear_sincronizacion(
             guion,
             duracion,
             alineacion=alineacion,
+            plan_visual=plan_visual,
         )
         tiempos_reales = set(alineacion["character_start_times_seconds"])
 
         self.assertEqual(segmentos[0]["fin"], 3.0)
         self.assertTrue(
             all(
-                segmento["metodo"] == "elevenlabs_alignment"
+                segmento["metodo"] == "elevenlabs_semantic_alignment"
                 for segmento in segmentos
             )
         )
@@ -176,6 +233,65 @@ class SincronizacionTests(unittest.TestCase):
         primera_palabra = segmentos[0]["palabras_alineadas"][0]
         self.assertIn("00:00:00,000", subtitulos)
         self.assertEqual(primera_palabra["texto"], "Primera")
+        self.assertEqual(
+            segmentos[2]["frase_entrada"],
+            "Tercera señal en la pared antigua.",
+        )
+        self.assertTrue(
+            all(
+                segmento["semantica_validada"]
+                for segmento in segmentos
+            )
+        )
+
+    def test_rechaza_una_frase_visual_que_no_existe_en_el_guion(self):
+        guion = "Uno abre el relato. Dos sigue la pista. Tres cierra el caso."
+        plan_visual = crear_plan_visual(
+            [
+                "Uno abre el relato.",
+                "Dos sigue la pista.",
+                "frase inexistente",
+                "Tres cierra el caso.",
+                "otra frase",
+                "otra frase distinta",
+                "penúltima frase",
+                "última frase",
+            ]
+        )
+
+        with self.assertRaisesRegex(ValueError, "Imagen 3"):
+            validar_anclas_plan_visual(guion, plan_visual)
+
+    def test_no_permite_aprobar_una_sincronizacion_no_semantica(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            imagenes = os.path.join(directorio, "imagenes")
+            os.makedirs(imagenes)
+            for numero in range(1, 9):
+                with open(
+                    os.path.join(imagenes, f"imagen{numero}.png"),
+                    "wb",
+                ) as archivo:
+                    archivo.write(PNG_UN_PIXEL)
+
+            aprobar_imagenes(directorio)
+            with open(
+                os.path.join(directorio, "sincronizacion.json"),
+                "w",
+                encoding="utf-8",
+            ) as archivo:
+                json.dump(
+                    {
+                        "semantica_validada": False,
+                        "segmentos": [
+                            {"numero": numero}
+                            for numero in range(1, 9)
+                        ],
+                    },
+                    archivo,
+                )
+
+            with self.assertRaisesRegex(ValueError, "frases exactas"):
+                aprobar_sincronizacion(directorio)
 
     @unittest.skipUnless(
         shutil.which("ffmpeg") and shutil.which("ffprobe"),
@@ -212,7 +328,23 @@ class SincronizacionTests(unittest.TestCase):
                     archivo,
                 )
 
-            segmentos = preparar_sincronizacion(directorio, guion)
+            plan_visual = crear_plan_visual(
+                [
+                    "palabra1 palabra2",
+                    "palabra10 palabra11",
+                    "palabra35 palabra36",
+                    "palabra43 palabra44",
+                    "palabra51 palabra52",
+                    "palabra59 palabra60",
+                    "palabra67 palabra68",
+                    "palabra75 palabra76",
+                ]
+            )
+            segmentos = preparar_sincronizacion(
+                directorio,
+                guion,
+                plan_visual,
+            )
 
             with open(
                 os.path.join(directorio, "sincronizacion.json"),
@@ -221,7 +353,11 @@ class SincronizacionTests(unittest.TestCase):
             ) as archivo:
                 guardada = json.load(archivo)
 
-            self.assertEqual(guardada["metodo"], "elevenlabs_alignment")
+            self.assertEqual(
+                guardada["metodo"],
+                "elevenlabs_semantic_alignment",
+            )
+            self.assertTrue(guardada["semantica_validada"])
             self.assertEqual(len(segmentos), 8)
             self.assertEqual(guardada["cierre"]["numero"], 9)
             self.assertEqual(guardada["cierre"]["inicio"], duracion_voz)
@@ -299,8 +435,25 @@ class MontajeTests(unittest.TestCase):
             duracion_voz = obtener_duracion(voz)
             crear_audio(musica_origen, 8.0, 220)
             guion = " ".join(f"palabra{indice}" for indice in range(1, 81))
+            guardar_alineacion_uniforme(directorio, guion, duracion_voz)
+            plan_visual = crear_plan_visual(
+                [
+                    "palabra1 palabra2",
+                    "palabra10 palabra11",
+                    "palabra35 palabra36",
+                    "palabra43 palabra44",
+                    "palabra51 palabra52",
+                    "palabra59 palabra60",
+                    "palabra67 palabra68",
+                    "palabra75 palabra76",
+                ]
+            )
             aprobar_imagenes(directorio)
-            segmentos = preparar_sincronizacion(directorio, guion)
+            segmentos = preparar_sincronizacion(
+                directorio,
+                guion,
+                plan_visual,
+            )
             aprobar_sincronizacion(directorio)
 
             with open(musica_origen, "rb") as archivo:

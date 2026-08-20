@@ -54,6 +54,7 @@ from backend.produccion import (
     obtener_imagenes as obtener_imagenes_produccion,
     obtener_resumen as obtener_resumen_produccion,
     preparar_sincronizacion,
+    validar_anclas_plan_visual,
 )
 from backend.voz import (
     aprobar_voz,
@@ -1230,6 +1231,11 @@ TEMA
             "en plan_visual."
         )
 
+    validar_anclas_plan_visual(
+        str(resultado.get("guion", "")),
+        plan_visual,
+    )
+
     proyecto_id = crear_directorio_proyecto(tema)
     resultado["_proyecto_id"] = proyecto_id
 
@@ -2109,6 +2115,7 @@ async def preparar_sincronizacion_proyecto(
         preparar_sincronizacion(
             directorio,
             str(resultado.get("guion", "")),
+            resultado.get("plan_visual", []),
         )
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

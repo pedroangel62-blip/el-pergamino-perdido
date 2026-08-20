@@ -33,6 +33,7 @@ La estructura será EXACTAMENTE esta:
   "plan_visual": [
     {
       "numero": 1,
+      "frase_entrada": "",
       "tipo": "",
       "generar_ia": false,
       "buscar": [],
@@ -73,12 +74,32 @@ PLAN VISUAL
 Cada elemento tendrá:
 
 - numero
+- frase_entrada
 - tipo
 - generar_ia
 - buscar
 - motivo
 - edicion
 - prompt
+
+La "frase_entrada":
+
+- será una cita literal, continua y sin puntos suspensivos tomada del guion;
+- aparecerá una sola vez en el guion;
+- comenzará al principio de una palabra;
+- tendrá entre 6 y 14 palabras siempre que sea posible;
+- respetará el orden narrativo de las imágenes 1 a 8;
+- marcará el comienzo del contenido que representa esa imagen;
+- en la Imagen 1 comenzará exactamente con la primera palabra del guion;
+- la Imagen 1 representará el gancho o el tema general y seguirá siendo
+  pertinente durante los 3 segundos completos de portada;
+- en la Imagen 2 comenzará muy pronto, para que su contenido ya esté activo
+  cuando termine la portada en el segundo 3;
+- en las Imágenes 3 a 8 marcará el punto exacto en el que debe entrar la imagen.
+
+Cada imagen representará únicamente el fragmento comprendido desde su
+"frase_entrada" hasta la "frase_entrada" de la imagen siguiente. No asignes a
+una imagen un hecho narrado antes o después de su tramo.
 
 TIPO solo puede ser:
 

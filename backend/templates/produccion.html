@@ -164,19 +164,22 @@
         {% endif %}
 
         {% if produccion.sincronizacion %}
-            {% if produccion.metodo_sincronizacion == 'elevenlabs_alignment' %}
+            {% if produccion.semantica_validada and produccion.metodo_sincronizacion == 'elevenlabs_semantic_alignment' %}
                 <div class="estado correcto">
-                    Tiempos calculados con las marcas reales de la narración de ElevenLabs.
+                    Sincronización semántica validada: cada imagen está vinculada
+                    a su frase y a las marcas reales de ElevenLabs.
                 </div>
             {% else %}
                 <div class="estado error">
-                    Sincronización estimada: esta voz se creó sin marcas temporales. Revísala con especial atención o regenera la voz.
+                    Sincronización bloqueada: no está demostrada la coincidencia
+                    exacta entre voz, frase e imagen. No puede aprobarse ni renderizarse.
                 </div>
             {% endif %}
             <table>
                 <thead>
                     <tr>
                         <th>Imagen</th>
+                        <th>Contenido visual</th>
                         <th>Frase de entrada</th>
                         <th>Inicio</th>
                         <th>Final</th>
@@ -186,6 +189,7 @@
                     {% for segmento in produccion.sincronizacion %}
                         <tr>
                             <td>{{ segmento.numero }}</td>
+                            <td>{{ segmento.contenido_visual }}</td>
                             <td>{{ segmento.frase_entrada }}</td>
                             <td>{{ '%.3f'|format(segmento.inicio) }} s</td>
                             <td>{{ '%.3f'|format(segmento.fin) }} s</td>
@@ -194,6 +198,7 @@
                     {% if produccion.cierre %}
                         <tr>
                             <td>9 · sello fijo</td>
+                            <td>Cierre fijo de El Pergamino Perdido</td>
                             <td>{{ produccion.cierre.frase_entrada }}</td>
                             <td>{{ '%.3f'|format(produccion.cierre.inicio) }} s</td>
                             <td>{{ '%.3f'|format(produccion.cierre.fin) }} s</td>
@@ -209,14 +214,14 @@
                 </div>
             {% endif %}
 
-            {% if not produccion.sincronizacion_aprobada %}
+            {% if not produccion.sincronizacion_aprobada and produccion.semantica_validada %}
                 <div class="estado">
                     Comprueba las frases y los tiempos antes de aprobar la sincronización.
                 </div>
                 <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-sincronizacion">
                     <button type="submit">Aprobar sincronización</button>
                 </form>
-            {% else %}
+            {% elif produccion.sincronizacion_aprobada %}
                 <div class="estado correcto">Sincronización aprobada.</div>
             {% endif %}
         {% endif %}

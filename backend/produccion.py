@@ -295,6 +295,87 @@ def _palabras_alineadas(guion: str, alineacion: object) -> list[dict]:
     return palabras
 
 
+def validar_anclas_plan_visual(
+    guion: str,
+    plan_visual: object,
+) -> list[dict]:
+    guion_limpio = str(guion).strip()
+
+    if not guion_limpio:
+        raise ValueError("El guion está vacío.")
+
+    if not isinstance(plan_visual, list) or len(plan_visual) != TOTAL_IMAGENES:
+        raise ValueError(
+            "El plan visual debe contener exactamente 8 imágenes."
+        )
+
+    anclas = []
+    final_anterior = -1
+
+    for posicion, escena in enumerate(plan_visual, start=1):
+        if not isinstance(escena, dict) or escena.get("numero") != posicion:
+            raise ValueError(
+                f"La Imagen {posicion} no está numerada correctamente."
+            )
+
+        frase = str(escena.get("frase_entrada", "")).strip()
+        contenido_visual = str(escena.get("motivo", "")).strip()
+
+        if not frase:
+            raise ValueError(
+                f"La Imagen {posicion} no tiene una frase de entrada."
+            )
+
+        if not contenido_visual:
+            raise ValueError(
+                f"La Imagen {posicion} no describe su contenido visual."
+            )
+
+        coincidencias = list(
+            re.finditer(re.escape(frase), guion_limpio)
+        )
+
+        if len(coincidencias) != 1:
+            raise ValueError(
+                f"La frase de entrada de la Imagen {posicion} debe aparecer "
+                "una sola vez y de forma literal en el guion."
+            )
+
+        coincidencia = coincidencias[0]
+        inicio = coincidencia.start()
+        fin = coincidencia.end()
+
+        if inicio > 0 and not guion_limpio[inicio - 1].isspace():
+            raise ValueError(
+                f"La frase de entrada de la Imagen {posicion} debe comenzar "
+                "al principio de una palabra."
+            )
+
+        if posicion == 1 and inicio != 0:
+            raise ValueError(
+                "La frase de entrada de la Imagen 1 debe comenzar el guion."
+            )
+
+        if inicio <= final_anterior:
+            raise ValueError(
+                "Las frases de entrada de las imágenes deben ser únicas, "
+                "estar ordenadas y no solaparse."
+            )
+
+        anclas.append(
+            {
+                "numero": posicion,
+                "frase_entrada": frase,
+                "caracter_inicio": inicio,
+                "caracter_fin": fin,
+                "contenido_visual": contenido_visual,
+            }
+        )
+        final_anterior = fin - 1
+
+    return anclas
+
+
 def _tipo_limite_natural(guion: str, caracter_inicio: int) -> int:
     anterior = guion[:caracter_inicio].rstrip()
 
@@ -370,10 +451,83 @@ def _indices_alineados(
     return indices, inicios
 
 
+def _indice_palabra_en_caracter(
+    palabras: list[dict],
+    caracter_inicio: int,
+) -> int:
+    for indice, palabra in enumerate(palabras):
+        if int(palabra["caracter_inicio"]) == caracter_inicio:
+            return indice
+
+    raise ValueError(
+        "Una frase de entrada no comienza en una palabra alineada por ElevenLabs."
+    )
+
+
+def _indices_semanticos(
+    guion: str,
+    palabras: list[dict],
+    duracion: float,
+    plan_visual: object,
+) -> tuple[list[int], list[float], list[dict]]:
+    anclas = validar_anclas_plan_visual(guion, plan_visual)
+    indices_ancla = [
+        _indice_palabra_en_caracter(
+            palabras,
+            int(ancla["caracter_inicio"]),
+        )
+        for ancla in anclas
+    ]
+    tiempos_ancla = [
+        float(palabras[indice]["inicio"])
+        for indice in indices_ancla
+    ]
+
+    if tiempos_ancla[1] > PORTADA_SEGUNDOS:
+        raise ValueError(
+            "La idea visual de la Imagen 2 comienza después del segundo 3. "
+            "Debe estar activa cuando termine la portada."
+        )
+
+    if tiempos_ancla[2] <= PORTADA_SEGUNDOS:
+        raise ValueError(
+            "La frase de entrada de la Imagen 3 debe comenzar después de "
+            "los 3 segundos de portada."
+        )
+
+    indice_segundo_tres = _indice_activo_en_instante(
+        palabras,
+        PORTADA_SEGUNDOS,
+    )
+    indices = [0, indice_segundo_tres, *indices_ancla[2:]]
+    inicios = [0.0, PORTADA_SEGUNDOS, *tiempos_ancla[2:]]
+
+    if any(
+        actual >= siguiente
+        for actual, siguiente in zip(indices, indices[1:])
+    ):
+        raise ValueError(
+            "Las frases de entrada no producen ocho tramos narrativos "
+            "ordenados y distintos."
+        )
+
+    if any(
+        actual >= siguiente
+        for actual, siguiente in zip(inicios, inicios[1:])
+    ) or inicios[-1] >= duracion:
+        raise ValueError(
+            "Los tiempos de las frases de entrada no permiten una "
+            "sincronización válida."
+        )
+
+    return indices, inicios, anclas
+
+
 def crear_sincronizacion(
     guion: str,
     duracion: float,
     alineacion: dict | None = None,
+    plan_visual: list[dict] | None = None,
 ) -> list[dict]:
     guion = str(guion).strip()
 
@@ -390,7 +544,23 @@ def crear_sincronizacion(
 
     palabras = _palabras_alineadas(guion, alineacion)
 
-    if len(palabras) == len(coincidencias):
+    anclas = None
+
+    if plan_visual is not None:
+        if len(palabras) != len(coincidencias):
+            raise ValueError(
+                "La sincronización semántica requiere las marcas temporales "
+                "reales de ElevenLabs."
+            )
+
+        indices, inicios, anclas = _indices_semanticos(
+            guion,
+            palabras,
+            duracion,
+            plan_visual,
+        )
+        metodo = "elevenlabs_semantic_alignment"
+    elif len(palabras) == len(coincidencias):
         indices, inicios = _indices_alineados(guion, palabras, duracion)
         metodo = "elevenlabs_alignment"
     else:
@@ -424,15 +594,31 @@ def crear_sincronizacion(
         fin = round(finales[indice], 3)
         segmento = {
             "numero": indice + 1,
-            "frase_entrada": _frase_entrada(texto),
+            "frase_entrada": (
+                str(anclas[indice]["frase_entrada"])
+                if anclas is not None and indice not in (0, 1)
+                else _frase_entrada(texto)
+            ),
             "texto": texto,
             "inicio": inicio,
             "fin": fin,
             "duracion": round(fin - inicio, 3),
             "metodo": metodo,
+            "semantica_validada": anclas is not None,
         }
 
-        if metodo == "elevenlabs_alignment":
+        if anclas is not None:
+            segmento["frase_planificada"] = str(
+                anclas[indice]["frase_entrada"]
+            )
+            segmento["contenido_visual"] = str(
+                anclas[indice]["contenido_visual"]
+            )
+
+        if metodo in {
+            "elevenlabs_alignment",
+            "elevenlabs_semantic_alignment",
+        }:
             segmento["palabras_alineadas"] = [
                 {
                     "texto": palabra["texto"],
@@ -518,6 +704,7 @@ def crear_subtitulos(sincronizacion: list[dict]) -> str:
 def preparar_sincronizacion(
     directorio_proyecto: str,
     guion: str,
+    plan_visual: list[dict],
 ) -> list[dict]:
     voz = os.path.join(directorio_proyecto, "voz.mp3")
     duracion = obtener_duracion(voz)
@@ -538,9 +725,14 @@ def preparar_sincronizacion(
         guion_limpio,
         duracion,
         alineacion=alineacion,
+        plan_visual=plan_visual,
     )
     cierre = crear_segmento_cierre(duracion)
     metodo = str(sincronizacion[0].get("metodo", "estimado"))
+    semantica_validada = all(
+        segmento.get("semantica_validada") is True
+        for segmento in sincronizacion
+    )
     invalidar_salidas(directorio_proyecto)
     guardar_json_atomico(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION),
@@ -548,6 +740,7 @@ def preparar_sincronizacion(
             "duracion_voz": duracion,
             "portada_segundos": PORTADA_SEGUNDOS,
             "metodo": metodo,
+            "semantica_validada": semantica_validada,
             "segmentos": sincronizacion,
             "cierre": cierre,
             "duracion_total": cierre["fin"],
@@ -567,6 +760,7 @@ def preparar_sincronizacion(
         "sincronizacion_preparada",
         sincronizacion_aprobada=False,
         metodo_sincronizacion=metodo,
+        semantica_validada=semantica_validada,
         error="",
         duracion_voz=duracion,
         duracion_cierre=CIERRE_SEGUNDOS,
@@ -733,12 +927,21 @@ def aprobar_imagenes(directorio_proyecto: str) -> dict:
 
 def aprobar_sincronizacion(directorio_proyecto: str) -> dict:
     sincronizacion = cargar_sincronizacion(directorio_proyecto)
+    datos_sincronizacion = cargar_json(
+        os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
+    ) or {}
 
     if len(sincronizacion) != TOTAL_IMAGENES:
         raise ValueError("La sincronización de las 8 imágenes no está preparada.")
 
     if not imagenes_estan_aprobadas(directorio_proyecto):
         raise ValueError("Las ocho imágenes deben estar aprobadas.")
+
+    if datos_sincronizacion.get("semantica_validada") is not True:
+        raise ValueError(
+            "La sincronización no puede aprobarse porque las imágenes no "
+            "están vinculadas a frases exactas del guion."
+        )
 
     return guardar_estado(
         directorio_proyecto,
@@ -1049,9 +1252,18 @@ def generar_borrador(
 ) -> dict:
     comprobar_ffmpeg()
     sincronizacion = cargar_sincronizacion(directorio_proyecto)
+    datos_sincronizacion = cargar_json(
+        os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
+    ) or {}
 
     if len(sincronizacion) != TOTAL_IMAGENES:
         raise ValueError("Primero debe prepararse la sincronización de las 8 imágenes.")
+
+    if datos_sincronizacion.get("semantica_validada") is not True:
+        raise ValueError(
+            "El montaje está bloqueado hasta validar que cada imagen "
+            "coincide con su frase exacta del guion."
+        )
 
     estado = cargar_estado(directorio_proyecto)
 
@@ -1320,6 +1532,10 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
             "metodo_sincronizacion": datos_sincronizacion.get(
                 "metodo",
                 estado.get("metodo_sincronizacion", "estimado"),
+            ),
+            "semantica_validada": datos_sincronizacion.get(
+                "semantica_validada",
+                estado.get("semantica_validada", False),
             ),
             "total_imagenes": total_imagenes,
             "cierre": datos_sincronizacion.get("cierre"),

@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.7
+MANUAL MAESTRO — VERSIÓN 1.8
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.7:
+Cambios obligatorios de la versión 1.8:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -29,6 +29,11 @@ Cambios obligatorios de la versión 1.7:
 * Imagen 9 durante exactamente 3 segundos, con zoom muy suave y sin recortar
   ni perder las letras «EL PERGAMINO PERDIDO»;
 * final de la narración sobre la Imagen 8 y final de la música sobre la Imagen 9;
+* ancla literal y única del guion para cada una de las ocho imágenes variables;
+* cortes de las Imágenes 3 a 8 basados en el tiempo real de su frase, no en un
+  reparto matemático de la narración;
+* bloqueo del montaje cuando no pueda validarse la correspondencia entre voz,
+  frase e imagen;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -425,7 +430,25 @@ La Imagen 1 será siempre la portada y ocupará exactamente los primeros 3 segun
 
 Cada voz nueva se generará mediante la respuesta con marcas temporales de ElevenLabs. La aplicación guardará `voz-alineacion.json` junto a `voz.mp3` y utilizará sus tiempos reales para situar los cambios de imagen y los subtítulos. Esta operación forma parte de la misma generación de voz y no realizará una segunda llamada de texto a voz.
 
-Después de la portada, los cambios se acercarán a una distribución equilibrada y priorizarán comienzos naturales de frase o cláusula. Los proyectos anteriores que no dispongan de marcas podrán usar una estimación, pero la interfaz deberá identificarla expresamente y exigirá la misma revisión humana antes de aprobarla.
+Cada elemento de `plan_visual` contendrá una `frase_entrada` literal, única y
+ordenada del guion. Esa frase definirá el comienzo semántico de la imagen y el
+contenido visual solo podrá representar el fragmento narrado hasta la frase de
+entrada de la imagen siguiente.
+
+La Imagen 1 ocupará exactamente de 0 a 3 segundos. La Imagen 2 entrará
+exactamente en el segundo 3 y su ancla deberá haber comenzado antes de ese
+instante, de modo que su contenido ya corresponda con la narración activa. Las
+Imágenes 3 a 8 entrarán en el tiempo real de la primera palabra de su ancla,
+según las marcas de ElevenLabs.
+
+No se utilizará un reparto matemático equilibrado como sincronización final.
+Si una frase no aparece literalmente una sola vez, está desordenada, no
+coincide con las marcas reales o deja una imagen fuera de su tramo, la
+sincronización no podrá aprobarse y el montaje permanecerá bloqueado.
+
+Los proyectos anteriores que no dispongan de marcas temporales o anclas
+semánticas no podrán reutilizar una sincronización estimada para generar un
+vídeo final. Deberán preparar y validar sus anclas antes del montaje.
 
 Cada cambio de imagen quedará documentado con:
 
