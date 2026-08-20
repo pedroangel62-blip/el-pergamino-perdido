@@ -278,6 +278,22 @@
       ]
     },
     "musica": "Banda sonora instrumental documental de misterio arqueológico, sin voces ni coros, percusión andina muy sutil, texturas de viento desértico y cuerdas graves contenidas. Evolución lenta, sin golpes de tráiler, dejando espacio completo a la narración. Duración exacta de 110 segundos para cubrir los 109,606 segundos del vídeo; mantener la música durante la Imagen 9 y aplicar un fundido suave en sus últimos 3 segundos sobre el sello de El Pergamino Perdido.",
+    "musica_aprobada": {
+      "aprobada": true,
+      "proveedor": "ElevenLabs",
+      "modelo": "music_v2",
+      "instrumental": true,
+      "duracion_solicitada_segundos": 110.0,
+      "duracion_real_segundos": 110.04,
+      "creditos_estimados": 1650,
+      "creditos_maximos_autorizados": 2000,
+      "song_id": "Ym4g5cUuvdae7NAdLJlX",
+      "sha256": "48cb06a455c57f7670f65f03190d81a1559f42dc5bbd63c157df9374782e2c62",
+      "bytes": 2641005,
+      "solicitud_id": "pergamino-14-nazca-musica-001",
+      "github_run_id": 32414465396,
+      "regeneracion_automatica": false
+    },
     "minimax": "Vídeo documental vertical 9:16 sobre las Líneas de Nazca. Movimientos de cámara lentos y realistas sobre fotografías y recreaciones aprobadas, sin deformar los geoglifos, sin texto, sin subtítulos, sin ovnis ni elementos fantásticos. Mantener continuidad del desierto y terminar la narración en la Imagen 8; después mostrar durante 3 segundos el sello maestro con zoom máximo del 2 % mientras se desvanece la música.",
     "publicacion": {
       "titulo": "📜 EL PERGAMINO XIV — LAS LÍNEAS DE NAZCA",
@@ -294,7 +310,8 @@
     "_aprobaciones": {
       "guion": true,
       "plan_visual": true,
-      "sincronizacion": true
+      "sincronizacion": true,
+      "musica": true
     },
     "_dossier": {
       "hechos_confirmados": [
