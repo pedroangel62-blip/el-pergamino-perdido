@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.13
+MANUAL MAESTRO — VERSIÓN 1.14
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.13:
+Cambios obligatorios de la versión 1.14:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -58,6 +58,9 @@ Cambios obligatorios de la versión 1.13:
 * inclusión de la Imagen 9 maestra dentro del paquete final;
 * manifiesto SHA-256 y comprobación CRC de todos los archivos del ZIP;
 * exclusión de cualquier archivo SRT, sin distinguir mayúsculas o minúsculas;
+* recuperación automática de montajes interrumpidos sin regenerar voz ni
+  imágenes y sin perder sus aprobaciones;
+* limpieza limitada a temporales `montaje-*` del proyecto afectado;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -574,6 +577,15 @@ Antes de ofrecer el borrador para aprobación, la aplicación verificará que el
 MP4 contiene vídeo, una pista de audio audible y una duración igual a la voz
 más los 3 segundos del cierre, ajustada al fotograma real más próximo. También
 verificará que el MP4 contiene exactamente el total de fotogramas planificado.
+
+Al iniciar FFmpeg, la aplicación guardará `montaje_en_curso.json` con la
+identidad del proceso responsable. Si la aplicación se cierra o el proceso
+desaparece durante el render, al volver a abrir el proyecto se detectará el
+montaje abandonado. La recuperación eliminará únicamente los directorios
+temporales `montaje-*` situados dentro de ese proyecto y habilitará un nuevo
+intento. Nunca regenerará ni borrará la voz, las ocho imágenes, la Imagen 9,
+la música o las aprobaciones editoriales existentes. Un montaje cuyo proceso
+siga activo no podrá recuperarse ni arrancarse una segunda vez.
 
 Aprobación y entrega
 

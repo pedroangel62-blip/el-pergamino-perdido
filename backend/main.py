@@ -51,9 +51,11 @@ from backend.produccion import (
     generar_borrador_seguro,
     guardar_estado as guardar_estado_produccion,
     guardar_musica,
+    iniciar_generacion_borrador,
     obtener_imagenes as obtener_imagenes_produccion,
     obtener_resumen as obtener_resumen_produccion,
     preparar_sincronizacion,
+    recuperar_montaje_interrumpido,
     validar_anclas_plan_visual,
     verificar_preparacion_montaje,
 )
@@ -2045,6 +2047,7 @@ def redirigir_produccion(proyecto_id: str) -> RedirectResponse:
 def cargar_contexto_produccion(proyecto_id: str) -> dict:
     tema, resultado = cargar_proyecto(proyecto_id)
     directorio = obtener_directorio_proyecto(proyecto_id)
+    recuperar_montaje_interrumpido(directorio)
     resumen = obtener_resumen_produccion(directorio)
     marca_tiempo = int(time.time())
 
@@ -2259,15 +2262,7 @@ async def iniciar_borrador_proyecto(
                 + " ".join(verificacion["bloqueos"])
             )
 
-        if estado.get("estado") == "generando_borrador":
-            raise ValueError("El vídeo borrador ya se está generando.")
-
-        guardar_estado_produccion(
-            directorio,
-            "generando_borrador",
-            error="",
-            borrador_aprobado=False,
-        )
+        iniciar_generacion_borrador(directorio)
         background_tasks.add_task(
             generar_borrador_seguro,
             directorio,
