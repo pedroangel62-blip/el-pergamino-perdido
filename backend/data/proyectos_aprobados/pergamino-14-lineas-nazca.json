@@ -1,0 +1,156 @@
+{
+  "proyecto_id": "pergamino-14-lineas-nazca",
+  "numero": "XIV",
+  "tema": "Las Líneas de Nazca",
+  "tema_indice_id": "banco-006",
+  "resultado": {
+    "guion": "El desierto de Nazca esconde un secreto gigantesco.\n\nHace más de dos mil años, alguien comenzó a dibujar sobre el desierto peruano figuras tan enormes que todavía hoy solo pueden comprenderse desde las alturas.\n\nMonos, colibríes, arañas y líneas kilométricas cubren una extensión de unos cuatrocientos cincuenta kilómetros cuadrados.\n\nNo fueron talladas profundamente. Sus creadores retiraron las piedras oscuras de la superficie, dejando al descubierto el terreno más claro. La extrema sequedad del desierto permitió que los dibujos sobrevivieran durante siglos.\n\nDurante años se dijo que solo podían haberse creado desde el aire. Pero las figuras podían diseñarse utilizando cuerdas, estacas y cálculos geométricos desde el suelo.\n\nLo que todavía no conocemos con certeza es su finalidad.\n\nAlgunas líneas pudieron ser caminos ceremoniales. Otras quizá estuvieron relacionadas con el agua, la fertilidad o las creencias religiosas de las culturas Paracas y Nazca. Las teorías extraterrestres nunca han aportado pruebas arqueológicas.\n\nY el misterio continúa creciendo.\n\nEn 2024, arqueólogos apoyados por inteligencia artificial localizaron trescientos tres nuevos geoglifos, posteriormente confirmados sobre el terreno.\n\nDespués de dos mil años, el desierto de Nazca todavía conserva figuras ocultas.\n\nY quizá aún no hayamos descubierto la última.",
+    "plan_visual": [
+      {
+        "numero": 1,
+        "frase_entrada": "El desierto de Nazca esconde un secreto gigantesco.",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Nazca hummingbird geoglyph aerial official Peru",
+          "colibrí líneas de Nazca vista aérea Ministerio Cultura",
+          "Nazca hummingbird aerial Wikimedia Commons"
+        ],
+        "motivo": "Portada real, inmediatamente reconocible y con un único punto focal.",
+        "edicion": "Adaptar a 9:16 sin añadir texto ni recortar el geoglifo; mejorar contraste y nitidez sin alterar el terreno.",
+        "prompt": ""
+      },
+      {
+        "numero": 2,
+        "frase_entrada": "Hace más de dos mil años, alguien comenzó a dibujar",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Nazca desert geometric lines aerial Peru official",
+          "líneas geométricas Nazca vista aérea archivo",
+          "Nasca Pampa aerial geoglyphs research"
+        ],
+        "motivo": "Mostrar la escala real del paisaje justo después de los tres segundos de portada.",
+        "edicion": "Encuadre vertical amplio, líneas visibles de primer plano a horizonte y sin elementos inventados.",
+        "prompt": ""
+      },
+      {
+        "numero": 3,
+        "frase_entrada": "Monos, colibríes, arañas y líneas kilométricas cubren una extensión",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Nazca monkey spider hummingbird geoglyph aerial photographs",
+          "mono araña colibrí líneas de Nazca fotos reales",
+          "Nazca figurative geoglyphs official photographs"
+        ],
+        "motivo": "Enseñar la variedad de figuras auténticas mencionadas por la narración.",
+        "edicion": "Collage documental limpio de tres fotografías reales, sin rótulos, marcos llamativos ni repetir la portada.",
+        "prompt": ""
+      },
+      {
+        "numero": 4,
+        "frase_entrada": "No fueron talladas profundamente. Sus creadores retiraron las piedras oscuras",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Nazca line ground surface stones close up archaeology",
+          "suelo líneas de Nazca piedras oscuras terreno claro",
+          "Nasca geoglyph construction technique ground photograph"
+        ],
+        "motivo": "Explicar visualmente la técnica real de retirada de piedras superficiales.",
+        "edicion": "Primer plano del terreno y del contraste cromático natural; no simular excavaciones profundas.",
+        "prompt": ""
+      },
+      {
+        "numero": 5,
+        "frase_entrada": "Durante años se dijo que solo podían haberse creado desde el aire.",
+        "tipo": "RECREACION_IA",
+        "generar_ia": true,
+        "buscar": [],
+        "motivo": "No existe una fotografía histórica de los constructores; se necesita explicar el trazado desde tierra.",
+        "edicion": "Recreación claramente documental, sin ovnis, maquinaria moderna ni aspecto fantástico.",
+        "prompt": "Recreación arqueológica hiperrealista y rigurosa, vertical 9:16, desierto de Nazca hace aproximadamente dos mil años. Pequeño grupo de constructores andinos trazando una gran línea geométrica mediante cuerdas tensadas y estacas de madera, retirando manualmente piedras oscuras para revelar el suelo claro. Ropa y materiales plausibles para sociedades precolombinas de la costa sur del Perú. Cámara elevada pero todavía terrestre, luz natural seca, estética documental premium, máxima nitidez, sin texto, sin símbolos modernos, sin aviones, sin ovnis, sin elementos sobrenaturales. No presentar la escena como fotografía histórica auténtica."
+      },
+      {
+        "numero": 6,
+        "frase_entrada": "Lo que todavía no conocemos con certeza es su finalidad.",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Cahuachi Nazca ceremonial center aerial photograph",
+          "líneas de Nazca caminos ceremoniales Cahuachi",
+          "Nasca lines converging horizon ritual landscape"
+        ],
+        "motivo": "Relacionar el debate sobre su función con el paisaje ceremonial real.",
+        "edicion": "Fotografía real de líneas convergentes o de Cahuachi; tono misterioso sin añadir iconografía extraterrestre.",
+        "prompt": ""
+      },
+      {
+        "numero": 7,
+        "frase_entrada": "En 2024, arqueólogos apoyados por inteligencia artificial localizaron trescientos tres",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Yamagata University 303 new Nazca geoglyphs 2024 press release images",
+          "PNAS 2024 Nazca AI survey new geoglyph photograph",
+          "Nazca Institute drone field survey geoglyphs 2024"
+        ],
+        "motivo": "Documentar el descubrimiento científico contemporáneo citado en el guion.",
+        "edicion": "Usar únicamente material identificable del estudio o de sus autores, comprobando fuente y permiso antes de descargar.",
+        "prompt": ""
+      },
+      {
+        "numero": 8,
+        "frase_entrada": "Después de dos mil años, el desierto de Nazca todavía conserva",
+        "tipo": "FOTOGRAFIA_REAL",
+        "generar_ia": false,
+        "buscar": [
+          "Nazca desert geoglyphs panoramic aerial sunset",
+          "pampa de Nazca aerial panorama geoglyphs",
+          "Nazca lines wide landscape official Peru"
+        ],
+        "motivo": "Cerrar la narración sobre la amplitud del desierto y la posibilidad de figuras aún ocultas.",
+        "edicion": "Panorámica real adaptada a 9:16, atmósfera de cierre, sin texto y sin alterar ni añadir geoglifos.",
+        "prompt": ""
+      }
+    ],
+    "musica": "Banda sonora instrumental documental de misterio arqueológico, sin voces ni coros, percusión andina muy sutil, texturas de viento desértico y cuerdas graves contenidas. Evolución lenta, sin golpes de tráiler, dejando espacio completo a la narración. Duración aproximada de 90 segundos, con final preparado para un fundido suave durante los últimos 3 segundos sobre el sello de El Pergamino Perdido.",
+    "minimax": "Vídeo documental vertical 9:16 sobre las Líneas de Nazca. Movimientos de cámara lentos y realistas sobre fotografías y recreaciones aprobadas, sin deformar los geoglifos, sin texto, sin subtítulos, sin ovnis ni elementos fantásticos. Mantener continuidad del desierto y terminar la narración en la Imagen 8; después mostrar durante 3 segundos el sello maestro con zoom máximo del 2 % mientras se desvanece la música.",
+    "publicacion": {
+      "titulo": "📜 EL PERGAMINO XIV — LAS LÍNEAS DE NAZCA",
+      "descripcion": "Hace más de dos mil años, las culturas del sur del Perú trazaron sobre el desierto figuras gigantescas cuya finalidad todavía se investiga. En 2024, una prospección apoyada por inteligencia artificial confirmó 303 nuevos geoglifos. Nazca aún guarda secretos bajo nuestros ojos.",
+      "hashtags": [
+        "#LineasDeNazca",
+        "#HistoriaAntigua",
+        "#Arqueologia",
+        "#MisteriosDeLaHistoria",
+        "#ElPergaminoPerdido"
+      ],
+      "comentario_fijado": "📜 ¿Qué otro misterio histórico te gustaría que investigáramos en un próximo Pergamino? Te leo."
+    },
+    "_aprobaciones": {
+      "guion": true,
+      "plan_visual": true
+    },
+    "_dossier": {
+      "hechos_confirmados": [
+        "Los geoglifos de Nazca y Palpa ocupan aproximadamente 450 kilómetros cuadrados.",
+        "Se realizaron retirando piedras superficiales oscuras y dejando visible el terreno más claro.",
+        "En 2024 un estudio confirmó sobre el terreno 303 nuevos geoglifos figurativos localizados con apoyo de inteligencia artificial."
+      ],
+      "hipotesis_no_confirmadas": [
+        "Su finalidad pudo incluir caminos ceremoniales, rituales relacionados con el agua, fertilidad o creencias religiosas.",
+        "No existe consenso sobre una función única para todos los geoglifos."
+      ],
+      "afirmaciones_excluidas": [
+        "Las teorías extraterrestres no se presentarán como explicación histórica ni arqueológica."
+      ],
+      "fuentes": [
+        "https://whc.unesco.org/en/list/700/",
+        "https://www.pnas.org/doi/10.1073/pnas.2407652121",
+        "https://www.yamagata-u.ac.jp/en/information/info/20240924/"
+      ]
+    }
+  }
+}

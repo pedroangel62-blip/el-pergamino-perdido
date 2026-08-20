@@ -74,6 +74,8 @@ El paquete `proyecto_completo.zip` incluye el vídeo final aprobado, imágenes 1
 
 Si la aplicación o FFmpeg se interrumpen durante el render, al reabrir el proyecto se detecta el montaje abandonado, se eliminan solo sus directorios temporales `montaje-*` y se permite reintentarlo. La voz, las imágenes, la música y las aprobaciones se conservan, por lo que esta recuperación no consume créditos ni repite recursos ya aceptados.
 
+La pantalla inicial también muestra los proyectos editoriales aprobados guardados en `backend/data/proyectos_aprobados`. El botón **Recuperar** crea su carpeta de trabajo sin llamar a OpenAI; después cambia a **Abrir** y nunca sobrescribe el proyecto. El Pergamino XIV sobre las Líneas de Nazca queda incluido con guion, dossier factual, plan visual de ocho imágenes, publicación y reglas de cierre ya aprobados.
+
 ## Comprobaciones
 
 ```bash

@@ -66,6 +66,60 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn("EL PERGAMINO PERDIDO", respuesta.text)
 
+    def test_inicio_ofrece_recuperar_nazca_sin_generar_con_ia(self):
+        respuesta = self.cliente.get("/")
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn("PROYECTOS EDITORIALES APROBADOS", respuesta.text)
+        self.assertIn("Las Líneas de Nazca", respuesta.text)
+        self.assertIn("Pergamino XIV", respuesta.text)
+
+    def test_recupera_nazca_una_sola_vez_sin_llamar_openai(self):
+        ruta = (
+            "/recuperar-proyecto-aprobado/"
+            "pergamino-14-lineas-nazca"
+        )
+        with patch.object(
+            main,
+            "obtener_cliente_openai",
+            side_effect=AssertionError("No debe llamarse a OpenAI"),
+        ):
+            respuesta = self.cliente.post(ruta, follow_redirects=False)
+
+        self.assertEqual(respuesta.status_code, 303)
+        self.assertEqual(
+            respuesta.headers["location"],
+            "/proyecto/pergamino-14-lineas-nazca",
+        )
+        archivo_proyecto = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-14-lineas-nazca",
+            "proyecto.json",
+        )
+        with open(archivo_proyecto, "r", encoding="utf-8") as archivo:
+            proyecto = json.load(archivo)
+
+        self.assertEqual(proyecto["tema_indice"]["id"], "banco-006")
+        self.assertEqual(len(proyecto["resultado"]["plan_visual"]), 8)
+        self.assertTrue(
+            proyecto["resultado"]["_aprobaciones"]["guion"]
+        )
+        self.assertTrue(
+            proyecto["resultado"]["_aprobaciones"]["plan_visual"]
+        )
+        proyecto["marca_no_sobrescribir"] = True
+        with open(archivo_proyecto, "w", encoding="utf-8") as archivo:
+            json.dump(proyecto, archivo)
+
+        segunda_respuesta = self.cliente.post(
+            ruta,
+            follow_redirects=False,
+        )
+        self.assertEqual(segunda_respuesta.status_code, 303)
+        with open(archivo_proyecto, "r", encoding="utf-8") as archivo:
+            proyecto_reabierto = json.load(archivo)
+        self.assertTrue(proyecto_reabierto["marca_no_sobrescribir"])
+
     def test_pagina_produccion_responde(self):
         self.crear_proyecto()
         respuesta = self.cliente.get("/produccion/pergamino-prueba")
