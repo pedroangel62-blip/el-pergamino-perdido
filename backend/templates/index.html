@@ -379,6 +379,35 @@
 
     <h1>📜 EL PERGAMINO PERDIDO</h1>
 
+    {% if proyectos_aprobados %}
+        <section class="indice-panel">
+            <h2>PROYECTOS EDITORIALES APROBADOS</h2>
+            <p class="indice-resumen">
+                Continúa estos Pergaminos sin volver a generar el guion
+                ni el plan visual y sin consumir créditos de OpenAI.
+            </p>
+
+            {% for proyecto in proyectos_aprobados %}
+                <form
+                    method="post"
+                    action="/recuperar-proyecto-aprobado/{{ proyecto.proyecto_id }}"
+                >
+                    <button type="submit">
+                        {% if proyecto.existente %}
+                            Abrir
+                        {% else %}
+                            Recuperar
+                        {% endif %}
+                        {{ proyecto.tema }}
+                        {% if proyecto.numero %}
+                            · Pergamino {{ proyecto.numero }}
+                        {% endif %}
+                    </button>
+                </form>
+            {% endfor %}
+        </section>
+    {% endif %}
+
     <form method="post" action="/generar">
         <section class="indice-panel">
             <h2>ÍNDICE MAESTRO DE TEMAS</h2>

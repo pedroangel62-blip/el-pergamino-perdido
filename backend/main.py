@@ -72,6 +72,7 @@ from backend.voz import (
 
 TOTAL_IMAGENES = 8
 DIRECTORIO_PROYECTOS = "backend/proyectos"
+DIRECTORIO_PROYECTOS_APROBADOS = "backend/data/proyectos_aprobados"
 MAXIMO_BYTES_FOTOGRAFIA = 20 * 1024 * 1024
 TIEMPO_MAXIMO_DESCARGA = 30
 
@@ -109,9 +110,11 @@ app.mount(
 )
 
 def contexto_indice_temas(request: Request) -> dict:
-    return construir_contexto_indice(
+    contexto = construir_contexto_indice(
         DIRECTORIO_PROYECTOS
     )
+    contexto["proyectos_aprobados"] = listar_proyectos_aprobados()
+    return contexto
 
 
 templates = Jinja2Templates(
@@ -142,6 +145,45 @@ def crear_slug(texto: str) -> str:
     ).strip("-")
 
     return slug[:50].rstrip("-") or "sin-tema"
+
+
+def listar_proyectos_aprobados() -> list[dict]:
+    proyectos = []
+    directorio = DIRECTORIO_PROYECTOS_APROBADOS
+
+    if not os.path.isdir(directorio):
+        return proyectos
+
+    for nombre in sorted(os.listdir(directorio)):
+        if not nombre.endswith(".json"):
+            continue
+
+        ruta = os.path.join(directorio, nombre)
+        try:
+            with open(ruta, "r", encoding="utf-8") as archivo:
+                definicion = json.load(archivo)
+        except (OSError, json.JSONDecodeError):
+            continue
+
+        proyecto_id = str(definicion.get("proyecto_id", "")).strip()
+        tema = str(definicion.get("tema", "")).strip()
+        if not proyecto_id or not tema:
+            continue
+
+        proyectos.append({
+            "proyecto_id": proyecto_id,
+            "tema": tema,
+            "numero": str(definicion.get("numero", "")).strip(),
+            "existente": os.path.isfile(
+                os.path.join(
+                    DIRECTORIO_PROYECTOS,
+                    proyecto_id,
+                    "proyecto.json",
+                )
+            ),
+        })
+
+    return proyectos
 
 
 def validar_proyecto_id(proyecto_id: str) -> str:
@@ -383,6 +425,75 @@ def cargar_proyecto(
     resultado["_proyecto_id"] = proyecto_id
 
     return tema, resultado
+
+
+def recuperar_proyecto_aprobado(proyecto_id: str) -> str:
+    proyecto_id = validar_proyecto_id(proyecto_id)
+    ruta_definicion = os.path.join(
+        DIRECTORIO_PROYECTOS_APROBADOS,
+        f"{proyecto_id}.json",
+    )
+    if not os.path.isfile(ruta_definicion):
+        raise FileNotFoundError(
+            "No existe un proyecto editorial aprobado con ese identificador."
+        )
+
+    directorio = obtener_directorio_proyecto(proyecto_id)
+    ruta_proyecto = os.path.join(directorio, "proyecto.json")
+    if os.path.isfile(ruta_proyecto):
+        cargar_proyecto(proyecto_id)
+        return proyecto_id
+    if os.path.exists(directorio):
+        raise ValueError(
+            "La carpeta de destino ya existe pero no contiene un proyecto válido."
+        )
+
+    try:
+        with open(ruta_definicion, "r", encoding="utf-8") as archivo:
+            definicion = json.load(archivo)
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(
+            "La definición del proyecto aprobado no es válida."
+        ) from error
+
+    if definicion.get("proyecto_id") != proyecto_id:
+        raise ValueError(
+            "El identificador interno del proyecto aprobado no coincide."
+        )
+
+    tema = str(definicion.get("tema", "")).strip()
+    resultado = definicion.get("resultado")
+    if not tema or not isinstance(resultado, dict):
+        raise ValueError("El proyecto aprobado está incompleto.")
+
+    plan_visual = resultado.get("plan_visual")
+    if not isinstance(plan_visual, list) or len(plan_visual) != TOTAL_IMAGENES:
+        raise ValueError(
+            "El proyecto aprobado debe contener exactamente ocho imágenes."
+        )
+    validar_anclas_plan_visual(
+        str(resultado.get("guion", "")),
+        plan_visual,
+    )
+
+    ficha_indice = obtener_tema_por_id(
+        str(definicion.get("tema_indice_id", ""))
+    )
+    if ficha_indice["titulo"] != tema:
+        raise ValueError(
+            "El tema del proyecto no coincide con el índice maestro."
+        )
+
+    os.makedirs(os.path.join(directorio, "imagenes"))
+    resultado = dict(resultado)
+    resultado["_proyecto_id"] = proyecto_id
+    guardar_proyecto(
+        proyecto_id,
+        tema,
+        resultado,
+        crear_referencia_tema(ficha_indice),
+    )
+    return proyecto_id
 
 
 def guardar_candidatas(
@@ -1107,6 +1218,21 @@ async def inicio(request: Request):
             "voz": None,
             "voz_generando": False
         }
+    )
+
+
+@app.post("/recuperar-proyecto-aprobado/{proyecto_id}")
+async def abrir_proyecto_aprobado(proyecto_id: str):
+    try:
+        proyecto_id = recuperar_proyecto_aprobado(proyecto_id)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return RedirectResponse(
+        url=f"/proyecto/{proyecto_id}",
+        status_code=303,
     )
 
 

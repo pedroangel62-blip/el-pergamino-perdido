@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.14
+MANUAL MAESTRO — VERSIÓN 1.15
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.14:
+Cambios obligatorios de la versión 1.15:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -61,6 +61,10 @@ Cambios obligatorios de la versión 1.14:
 * recuperación automática de montajes interrumpidos sin regenerar voz ni
   imágenes y sin perder sus aprobaciones;
 * limpieza limitada a temporales `montaje-*` del proyecto afectado;
+* conservación en Git de los proyectos editoriales ya aprobados para poder
+  recuperarlos sin repetir llamadas de generación;
+* reapertura idempotente: recuperar un proyecto existente nunca sobrescribirá
+  imágenes, voz, música, sincronización ni aprobaciones posteriores;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -609,3 +613,12 @@ la presencia de todos los recursos obligatorios y cada huella del manifiesto.
 Excluirá cualquier archivo con extensión SRT, incluso escrito con mayúsculas.
 
 La aplicación no publicará en Instagram ni copiará archivos a un servicio externo sin autorización expresa de Pedro Ángel.
+
+Proyectos editoriales aprobados
+
+Un guion y un plan visual aprobados podrán guardarse como definición versionada
+en `backend/data/proyectos_aprobados`. La pantalla inicial permitirá recuperar
+esa definición en una carpeta independiente sin llamar a OpenAI. Si el proyecto
+ya existe, el botón se limitará a abrirlo: nunca reescribirá `proyecto.json` ni
+ningún recurso posterior. Recuperar el proyecto no autoriza a generar voz,
+imágenes, música, vídeo ni efectuar llamadas externas con coste.
