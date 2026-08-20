@@ -208,7 +208,76 @@
         }
       }
     ],
-    "musica": "Banda sonora instrumental documental de misterio arqueológico, sin voces ni coros, percusión andina muy sutil, texturas de viento desértico y cuerdas graves contenidas. Evolución lenta, sin golpes de tráiler, dejando espacio completo a la narración. Duración aproximada de 90 segundos, con final preparado para un fundido suave durante los últimos 3 segundos sobre el sello de El Pergamino Perdido.",
+    "sincronizacion_aprobada": {
+      "aprobada": true,
+      "metodo": "elevenlabs_semantic_alignment",
+      "duracion_voz": 106.606,
+      "duracion_total": 109.606,
+      "voz_sha256": "01969c9abc8b3c300c3aabbbf0643e8e08bd2f40431317fc8ee970355bfd2e0b",
+      "alineacion_sha256": "7bf68827bcf50093826b5a5dfc05fb31daf7e9d7c82a60482ef2ed270056ba9c",
+      "portada_segundos": 3.0,
+      "sin_subtitulos": true,
+      "segmentos": [
+        {
+          "numero": 1,
+          "frase_entrada": "El desierto de Nazca esconde un secreto",
+          "inicio": 0.0,
+          "fin": 3.0
+        },
+        {
+          "numero": 2,
+          "frase_entrada": "gigantesco.",
+          "inicio": 3.0,
+          "fin": 16.544
+        },
+        {
+          "numero": 3,
+          "frase_entrada": "Monos, colibríes, arañas y líneas kilométricas cubren una extensión",
+          "inicio": 16.544,
+          "fin": 26.9
+        },
+        {
+          "numero": 4,
+          "frase_entrada": "No fueron talladas profundamente. Sus creadores retiraron las piedras oscuras",
+          "inicio": 26.9,
+          "fin": 45.011
+        },
+        {
+          "numero": 5,
+          "frase_entrada": "Durante años se dijo que solo podían haberse creado desde el aire.",
+          "inicio": 45.011,
+          "fin": 57.654
+        },
+        {
+          "numero": 6,
+          "frase_entrada": "Lo que todavía no conocemos con certeza es su finalidad.",
+          "inicio": 57.654,
+          "fin": 83.44
+        },
+        {
+          "numero": 7,
+          "frase_entrada": "En 2024, arqueólogos apoyados por inteligencia artificial localizaron trescientos tres",
+          "inicio": 83.44,
+          "fin": 95.84
+        },
+        {
+          "numero": 8,
+          "frase_entrada": "Después de dos mil años, el desierto de Nazca todavía conserva",
+          "inicio": 95.84,
+          "fin": 106.606
+        },
+        {
+          "numero": 9,
+          "frase_entrada": "Fin de la narración · entra el sello fijo",
+          "inicio": 106.606,
+          "fin": 109.606,
+          "voz": false,
+          "musica": true,
+          "movimiento": "zoom_suave_seguro"
+        }
+      ]
+    },
+    "musica": "Banda sonora instrumental documental de misterio arqueológico, sin voces ni coros, percusión andina muy sutil, texturas de viento desértico y cuerdas graves contenidas. Evolución lenta, sin golpes de tráiler, dejando espacio completo a la narración. Duración exacta de 110 segundos para cubrir los 109,606 segundos del vídeo; mantener la música durante la Imagen 9 y aplicar un fundido suave en sus últimos 3 segundos sobre el sello de El Pergamino Perdido.",
     "minimax": "Vídeo documental vertical 9:16 sobre las Líneas de Nazca. Movimientos de cámara lentos y realistas sobre fotografías y recreaciones aprobadas, sin deformar los geoglifos, sin texto, sin subtítulos, sin ovnis ni elementos fantásticos. Mantener continuidad del desierto y terminar la narración en la Imagen 8; después mostrar durante 3 segundos el sello maestro con zoom máximo del 2 % mientras se desvanece la música.",
     "publicacion": {
       "titulo": "📜 EL PERGAMINO XIV — LAS LÍNEAS DE NAZCA",
@@ -224,7 +293,8 @@
     },
     "_aprobaciones": {
       "guion": true,
-      "plan_visual": true
+      "plan_visual": true,
+      "sincronizacion": true
     },
     "_dossier": {
       "hechos_confirmados": [
