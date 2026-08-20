@@ -1,10 +1,10 @@
 
 EL PERGAMINO PERDIDO
-MANUAL MAESTRO — VERSIÓN 1.12
+MANUAL MAESTRO — VERSIÓN 1.13
 
 Esta versión sustituye las reglas incompatibles de las versiones anteriores.
 
-Cambios obligatorios de la versión 1.12:
+Cambios obligatorios de la versión 1.13:
 
 * portada fija de 3 segundos al inicio de todos los Reels;
 * guion aprobado antes de generar la voz;
@@ -54,6 +54,10 @@ Cambios obligatorios de la versión 1.12:
 * bloqueo si la voz o cualquiera de las ocho imágenes ha cambiado después de
   calcular y aprobar la sincronización;
 * informe `verificacion_previa.json` con todos los requisitos y bloqueos;
+* bloqueo del empaquetado si `video_final.mp4` cambia después de aprobarse;
+* inclusión de la Imagen 9 maestra dentro del paquete final;
+* manifiesto SHA-256 y comprobación CRC de todos los archivos del ZIP;
+* exclusión de cualquier archivo SRT, sin distinguir mayúsculas o minúsculas;
 * aprobación separada de sincronización, música y vídeo borrador;
 * montaje FFmpeg vertical 1080 por 1920 a 30 fps;
 * vídeo final y paquete ZIP solo después de aprobación humana.
@@ -584,5 +588,12 @@ Solo una aprobación humana explícita permitirá crear:
 El paquete conservará vídeo, imágenes, voz, música, sincronización, los
 informes de verificación por fotogramas, control visual y control de audio,
 metadatos y textos de publicación. No incluirá archivos de subtítulos.
+
+Antes de crear el ZIP, la aplicación comprobará que `video_final.mp4` conserva
+exactamente la huella SHA-256 registrada al aprobar el borrador. El paquete
+incluirá también la Imagen 9 maestra y `manifiesto_integridad.json`, con tamaño
+y huella SHA-256 de cada archivo. Después de escribir el ZIP, verificará su CRC,
+la presencia de todos los recursos obligatorios y cada huella del manifiesto.
+Excluirá cualquier archivo con extensión SRT, incluso escrito con mayúsculas.
 
 La aplicación no publicará en Instagram ni copiará archivos a un servicio externo sin autorización expresa de Pedro Ángel.

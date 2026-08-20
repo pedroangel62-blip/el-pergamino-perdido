@@ -10,6 +10,7 @@ import unittest
 import zipfile
 
 from backend.produccion import (
+    ARCHIVO_MANIFIESTO,
     ARCHIVO_VERIFICACION_AUDIO,
     ARCHIVO_VERIFICACION_PREVIA,
     ARCHIVO_VERIFICACION_TIMELINE,
@@ -636,6 +637,11 @@ class MontajeTests(unittest.TestCase):
             self.assertLess(volumen_final_cierre, volumen_inicio_cierre)
 
             aprobar_borrador(directorio)
+            video_final = os.path.join(directorio, "video_final.mp4")
+            with open(video_final, "rb") as archivo:
+                video_final_aprobado = archivo.read()
+            with open(video_final, "ab") as archivo:
+                archivo.write(b"alteracion-posterior")
             resultado = {
                 "publicacion": {
                     "titulo": "Título",
@@ -644,6 +650,16 @@ class MontajeTests(unittest.TestCase):
                     "comentario_fijado": "Comentario",
                 }
             }
+            with self.assertRaisesRegex(ValueError, "ha cambiado"):
+                crear_paquete(directorio, resultado)
+            with open(video_final, "wb") as archivo:
+                archivo.write(video_final_aprobado)
+            with open(
+                os.path.join(directorio, "SUBTITULOS.SRT"),
+                "w",
+                encoding="utf-8",
+            ) as archivo:
+                archivo.write("No debe incluirse")
             estado_final = crear_paquete(directorio, resultado)
 
             self.assertEqual(estado_final["estado"], "paquete_preparado")
@@ -651,6 +667,17 @@ class MontajeTests(unittest.TestCase):
 
             with zipfile.ZipFile(paquete) as archivo_zip:
                 nombres = set(archivo_zip.namelist())
+                manifiesto = json.loads(
+                    archivo_zip.read(ARCHIVO_MANIFIESTO)
+                )
+                self.assertIsNone(archivo_zip.testzip())
+                for entrada in manifiesto["archivos"]:
+                    self.assertEqual(
+                        hashlib.sha256(
+                            archivo_zip.read(entrada["ruta"])
+                        ).hexdigest(),
+                        entrada["sha256"],
+                    )
 
             self.assertIn("video_final.mp4", nombres)
             self.assertIn("publicacion.txt", nombres)
@@ -659,7 +686,20 @@ class MontajeTests(unittest.TestCase):
             self.assertIn(ARCHIVO_VERIFICACION_VISUAL, nombres)
             self.assertIn(ARCHIVO_VERIFICACION_AUDIO, nombres)
             self.assertIn(ARCHIVO_VERIFICACION_PREVIA, nombres)
-            self.assertNotIn("subtitulos.srt", nombres)
+            self.assertIn(ARCHIVO_MANIFIESTO, nombres)
+            self.assertIn(
+                "imagen9-sello-el-pergamino-perdido.jpeg",
+                nombres,
+            )
+            self.assertTrue(manifiesto["verificado"])
+            self.assertTrue(manifiesto["sin_subtitulos"])
+            self.assertEqual(
+                manifiesto["video_final_sha256"],
+                hashlib.sha256(video_final_aprobado).hexdigest(),
+            )
+            self.assertFalse(
+                any(nombre.lower().endswith(".srt") for nombre in nombres)
+            )
 
     def test_reel_sintetico_completo_a_30_fps(self):
         with tempfile.TemporaryDirectory() as directorio:
