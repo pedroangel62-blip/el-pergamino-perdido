@@ -1,6 +1,8 @@
 from datetime import datetime
+from fractions import Fraction
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -18,12 +20,13 @@ ESCALA_SEGURA_CIERRE = 0.90
 ANCHO_VIDEO = 1080
 ALTO_VIDEO = 1920
 FPS_VIDEO = 30
+TRANSICION_SEGUNDOS = 0.15
 MAXIMO_BYTES_MUSICA = 50 * 1024 * 1024
 EXTENSIONES_MUSICA = {".mp3", ".wav", ".m4a", ".aac", ".ogg"}
 ARCHIVO_ESTADO = "produccion.json"
 ARCHIVO_SINCRONIZACION = "sincronizacion.json"
 ARCHIVO_VERIFICACION_TIMELINE = "verificacion_timeline.json"
-ARCHIVO_SUBTITULOS = "subtitulos.srt"
+ARCHIVO_VERIFICACION_VISUAL = "verificacion_visual.json"
 ARCHIVO_BORRADOR = "video_borrador.mp4"
 ARCHIVO_FINAL = "video_final.mp4"
 ARCHIVO_PUBLICACION = "publicacion.txt"
@@ -105,6 +108,8 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         ARCHIVO_PUBLICACION,
         ARCHIVO_PAQUETE,
         ARCHIVO_VERIFICACION_TIMELINE,
+        ARCHIVO_VERIFICACION_VISUAL,
+        "subtitulos.srt",
     ):
         ruta = os.path.join(directorio_proyecto, nombre)
         if os.path.isfile(ruta):
@@ -749,74 +754,6 @@ def incorporar_plan_fotogramas(
     return plan
 
 
-def _marca_srt(segundos: float) -> str:
-    milisegundos = max(0, round(segundos * 1000))
-    horas, resto = divmod(milisegundos, 3_600_000)
-    minutos, resto = divmod(resto, 60_000)
-    segundos_enteros, milesimas = divmod(resto, 1000)
-    return f"{horas:02}:{minutos:02}:{segundos_enteros:02},{milesimas:03}"
-
-
-def crear_subtitulos(sincronizacion: list[dict]) -> str:
-    bloques = []
-    contador = 1
-
-    for segmento in sincronizacion:
-        palabras_alineadas = segmento.get("palabras_alineadas")
-
-        if isinstance(palabras_alineadas, list) and palabras_alineadas:
-            fragmentos_alineados = [
-                palabras_alineadas[indice:indice + 9]
-                for indice in range(0, len(palabras_alineadas), 9)
-            ]
-
-            for fragmento in fragmentos_alineados:
-                inicio = float(fragmento[0]["inicio"])
-                fin = float(fragmento[-1]["fin"])
-                bloques.append(
-                    "\n".join(
-                        [
-                            str(contador),
-                            f"{_marca_srt(inicio)} --> {_marca_srt(fin)}",
-                            " ".join(
-                                str(palabra["texto"])
-                                for palabra in fragmento
-                            ),
-                        ]
-                    )
-                )
-                contador += 1
-
-            continue
-
-        palabras = str(segmento["texto"]).split()
-        fragmentos = [
-            palabras[indice:indice + 9]
-            for indice in range(0, len(palabras), 9)
-        ] or [[]]
-        duracion_fragmento = float(segmento["duracion"]) / len(fragmentos)
-
-        for indice, fragmento in enumerate(fragmentos):
-            inicio = float(segmento["inicio"]) + duracion_fragmento * indice
-            fin = (
-                float(segmento["fin"])
-                if indice + 1 == len(fragmentos)
-                else inicio + duracion_fragmento
-            )
-            bloques.append(
-                "\n".join(
-                    [
-                        str(contador),
-                        f"{_marca_srt(inicio)} --> {_marca_srt(fin)}",
-                        " ".join(fragmento),
-                    ]
-                )
-            )
-            contador += 1
-
-    return "\n\n".join(bloques) + "\n"
-
-
 def preparar_sincronizacion(
     directorio_proyecto: str,
     guion: str,
@@ -873,13 +810,6 @@ def preparar_sincronizacion(
             "actualizado": ahora_iso(),
         },
     )
-
-    with open(
-        os.path.join(directorio_proyecto, ARCHIVO_SUBTITULOS),
-        "w",
-        encoding="utf-8",
-    ) as archivo:
-        archivo.write(crear_subtitulos(sincronizacion))
 
     guardar_estado(
         directorio_proyecto,
@@ -1117,6 +1047,140 @@ def contar_fotogramas_video(ruta: str) -> int:
     return fotogramas
 
 
+def obtener_firmas_fotogramas(ruta: str) -> list[str]:
+    resultado = subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            ruta,
+            "-map",
+            "0:v:0",
+            "-f",
+            "framemd5",
+            "-",
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=120,
+    )
+
+    if resultado.returncode != 0:
+        raise RuntimeError(
+            "FFmpeg no pudo comprobar el movimiento de los fotogramas."
+        )
+
+    firmas = [
+        linea.rsplit(",", 1)[-1].strip()
+        for linea in resultado.stdout.splitlines()
+        if linea.strip() and not linea.lstrip().startswith("#")
+    ]
+
+    if not firmas:
+        raise RuntimeError("No se pudieron analizar los fotogramas del clip.")
+
+    return firmas
+
+
+def validar_efectos_visuales_clips(
+    plan_fotogramas: list[dict],
+    clips: list[str],
+    fps: int,
+) -> dict:
+    if len(plan_fotogramas) != 9 or len(clips) != 9:
+        raise ValueError(
+            "El control visual requiere las ocho imágenes y la Imagen 9."
+        )
+
+    transiciones = []
+
+    for corte, clip in zip(
+        plan_fotogramas[:TOTAL_IMAGENES],
+        clips[:TOTAL_IMAGENES],
+        strict=True,
+    ):
+        firmas = obtener_firmas_fotogramas(clip)
+        esperados = int(corte["fotogramas"])
+
+        if len(firmas) != esperados or len(firmas) < 3:
+            raise RuntimeError(
+                f"No puede comprobarse el fundido de la Imagen {corte['numero']}."
+            )
+
+        firma_central = firmas[len(firmas) // 2]
+        entrada_detectada = firmas[0] != firma_central
+        salida_detectada = firmas[-1] != firma_central
+
+        if not entrada_detectada or not salida_detectada:
+            raise RuntimeError(
+                f"El fundido de la Imagen {corte['numero']} no es visible."
+            )
+
+        transiciones.append(
+            {
+                "imagen": int(corte["numero"]),
+                "fundido_entrada_detectado": entrada_detectada,
+                "fundido_salida_detectado": salida_detectada,
+            }
+        )
+
+    firmas_cierre = obtener_firmas_fotogramas(clips[-1])
+    esperados_cierre = int(plan_fotogramas[-1]["fotogramas"])
+
+    if len(firmas_cierre) != esperados_cierre:
+        raise RuntimeError(
+            "No puede comprobarse el movimiento de la Imagen 9."
+        )
+
+    duracion_transicion = max(TRANSICION_SEGUNDOS, 2.0 / fps)
+    fotograma_referencia = min(
+        len(firmas_cierre) - 2,
+        max(1, math.ceil(duracion_transicion * fps) + 1),
+    )
+    fundido_cierre = firmas_cierre[0] != firmas_cierre[fotograma_referencia]
+    zoom_detectado = firmas_cierre[fotograma_referencia] != firmas_cierre[-1]
+
+    if not fundido_cierre:
+        raise RuntimeError("El fundido de entrada de la Imagen 9 no es visible.")
+
+    if not zoom_detectado:
+        raise RuntimeError("El zoom suave de la Imagen 9 no es visible.")
+
+    margen_seguro_por_lado = (
+        1.0 - ESCALA_SEGURA_CIERRE * ZOOM_MAXIMO_CIERRE
+    ) / 2.0
+
+    if margen_seguro_por_lado < 0.04:
+        raise RuntimeError(
+            "El zoom de la Imagen 9 no conserva el margen mínimo de seguridad."
+        )
+
+    return {
+        "verificados": True,
+        "transiciones": {
+            "tipo": "fundido_a_negro_discreto",
+            "duracion_segundos": round(duracion_transicion, 3),
+            "cortes_verificados": len(transiciones),
+            "detalle": transiciones,
+        },
+        "cierre": {
+            "fundido_entrada_detectado": fundido_cierre,
+            "zoom_detectado": zoom_detectado,
+            "zoom_inicial": 1.0,
+            "zoom_final_maximo": ZOOM_MAXIMO_CIERRE,
+            "escala_frontal": ESCALA_SEGURA_CIERRE,
+            "margen_seguro_por_lado_porcentaje": round(
+                margen_seguro_por_lado * 100,
+                2,
+            ),
+            "fotogramas": esperados_cierre,
+        },
+    }
+
+
 def validar_clips_fotograma_a_fotograma(
     plan_fotogramas: list[dict],
     clips: list[str],
@@ -1181,7 +1245,10 @@ def _crear_clip(
         raise ValueError("Un clip debe contener al menos un fotograma.")
 
     duracion = fotogramas / fps
-    fundido = min(0.25, duracion / 4)
+    fundido = min(
+        max(TRANSICION_SEGUNDOS, 2.0 / fps),
+        duracion / 4,
+    )
     salida_fundido = max(0.0, duracion - fundido)
     filtro = (
         "[0:v]split=2[fondo][frente];"
@@ -1234,6 +1301,7 @@ def _crear_clip_cierre(
     alto_seguro = max(1, round(alto * ESCALA_SEGURA_CIERRE))
     total_fotogramas = max(2, round(CIERRE_SEGUNDOS * fps))
     incremento_zoom = (ZOOM_MAXIMO_CIERRE - 1.0) / (total_fotogramas - 1)
+    fundido = max(TRANSICION_SEGUNDOS, 2.0 / fps)
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
@@ -1245,7 +1313,7 @@ def _crear_clip_cierre(
         f"z='min(zoom+{incremento_zoom:.8f},{ZOOM_MAXIMO_CIERRE:.3f})':"
         "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
         f"s={ancho}x{alto}:fps={fps},"
-        "format=yuv420p,fade=t=in:st=0:d=0.250[video]"
+        f"format=yuv420p,fade=t=in:st=0:d={fundido:.3f}[video]"
     )
     ejecutar(
         [
@@ -1277,33 +1345,14 @@ def _crear_clip_cierre(
     )
 
 
-def _escapar_subtitulos(ruta: str) -> str:
-    return (
-        os.path.abspath(ruta)
-        .replace("\\", "/")
-        .replace(":", "\\:")
-        .replace("'", "\\'")
-    )
-
-
 def _mezclar_video_audio(
     video_base: str,
     voz: str,
     musica: str | None,
-    subtitulos: str,
     inicio_cierre_video: float,
     duracion_video_total: float,
     salida: str,
 ) -> None:
-    estilo = (
-        "FontName=Arial,FontSize=18,PrimaryColour=&H00FFFFFF,"
-        "OutlineColour=&H00101010,BorderStyle=1,Outline=2,Shadow=1,"
-        "Alignment=2,MarginV=110"
-    )
-    filtro_subtitulos = (
-        f"subtitles='{_escapar_subtitulos(subtitulos)}':"
-        f"force_style='{estilo}'"
-    )
     comando = ["ffmpeg", "-y", "-i", video_base, "-i", voz]
 
     if musica:
@@ -1348,8 +1397,6 @@ def _mezclar_video_audio(
 
     comando.extend(
         [
-            "-vf",
-            filtro_subtitulos,
             "-t",
             f"{duracion_video_total:.6f}",
             "-c:v",
@@ -1376,6 +1423,9 @@ def validar_salida_multimedia(
     ruta: str,
     duracion_esperada: float,
     fotogramas_esperados: int | None = None,
+    ancho_esperado: int | None = None,
+    alto_esperado: int | None = None,
+    fps_esperados: int | None = None,
 ) -> dict:
     sondeo = subprocess.run(
         [
@@ -1383,7 +1433,7 @@ def validar_salida_multimedia(
             "-v",
             "error",
             "-show_entries",
-            "stream=codec_type,codec_name",
+            "stream=codec_type,codec_name,width,height,r_frame_rate,pix_fmt",
             "-show_entries",
             "format=duration",
             "-of",
@@ -1421,6 +1471,28 @@ def validar_salida_multimedia(
 
     if not audio:
         raise RuntimeError("El borrador no contiene la pista de voz.")
+
+    ancho = int(video.get("width", 0))
+    alto = int(video.get("height", 0))
+
+    try:
+        fps = float(Fraction(str(video.get("r_frame_rate", "0/1"))))
+    except (ValueError, ZeroDivisionError) as error:
+        raise RuntimeError(
+            "FFprobe no devolvió una frecuencia de fotogramas válida."
+        ) from error
+
+    if ancho_esperado is not None and ancho != int(ancho_esperado):
+        raise RuntimeError("El borrador no tiene el ancho vertical planificado.")
+
+    if alto_esperado is not None and alto != int(alto_esperado):
+        raise RuntimeError("El borrador no tiene el alto vertical planificado.")
+
+    if fps_esperados is not None and abs(fps - float(fps_esperados)) > 0.001:
+        raise RuntimeError("El borrador no conserva los fotogramas por segundo.")
+
+    if ancho <= 0 or alto <= 0 or ancho * 16 != alto * 9:
+        raise RuntimeError("El borrador no conserva la proporción vertical 9:16.")
 
     if abs(duracion - duracion_esperada) > 0.5:
         raise RuntimeError(
@@ -1479,6 +1551,10 @@ def validar_salida_multimedia(
         "audio_codec": str(audio.get("codec_name", "")),
         "audio_max_db": float(valor),
         "fotogramas": fotogramas,
+        "ancho": ancho,
+        "alto": alto,
+        "fps": fps,
+        "pix_fmt": str(video.get("pix_fmt", "")),
     }
 
 
@@ -1516,6 +1592,14 @@ def generar_borrador(
     sello = obtener_ruta_sello_cierre(sello_cierre)
     voz = os.path.join(directorio_proyecto, "voz.mp3")
     duracion_voz = obtener_duracion(voz)
+    subtitulos_heredados = os.path.join(
+        directorio_proyecto,
+        "subtitulos.srt",
+    )
+
+    if os.path.isfile(subtitulos_heredados):
+        os.remove(subtitulos_heredados)
+
     plan_fotogramas = crear_plan_fotogramas(sincronizacion, fps)
     inicio_cierre_video = float(plan_fotogramas[-1]["inicio_video"])
     duracion_total = float(plan_fotogramas[-1]["fin_video"])
@@ -1523,11 +1607,6 @@ def generar_borrador(
     musica = obtener_ruta_musica(directorio_proyecto)
     if musica and not estado.get("musica_aprobada"):
         raise ValueError("La música cargada todavía no está aprobada.")
-
-    subtitulos = os.path.join(directorio_proyecto, ARCHIVO_SUBTITULOS)
-
-    if not os.path.isfile(subtitulos):
-        raise FileNotFoundError("No se encuentra el archivo de subtítulos.")
 
     salida = os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
 
@@ -1568,6 +1647,11 @@ def generar_borrador(
             plan_fotogramas,
             clips,
         )
+        efectos_visuales = validar_efectos_visuales_clips(
+            plan_fotogramas,
+            clips,
+            fps,
+        )
 
         lista = os.path.join(temporal, "clips.txt")
         with open(lista, "w", encoding="utf-8") as archivo:
@@ -1603,7 +1687,6 @@ def generar_borrador(
             video_base,
             voz,
             musica,
-            subtitulos,
             inicio_cierre_video,
             duracion_total,
             temporal_salida,
@@ -1612,6 +1695,9 @@ def generar_borrador(
             temporal_salida,
             duracion_total,
             fotogramas_esperados=fotogramas_totales,
+            ancho_esperado=ancho,
+            alto_esperado=alto,
+            fps_esperados=fps,
         )
         os.replace(temporal_salida, salida)
 
@@ -1635,6 +1721,26 @@ def generar_borrador(
             "actualizado": ahora_iso(),
         },
     )
+    guardar_json_atomico(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_VISUAL,
+        ),
+        {
+            "verificada_automaticamente": True,
+            "requiere_revision_humana": True,
+            "sin_subtitulos": True,
+            "resolucion": {
+                "ancho": verificacion["ancho"],
+                "alto": verificacion["alto"],
+                "proporcion": "9:16",
+                "fps": verificacion["fps"],
+                "formato_pixel": verificacion["pix_fmt"],
+            },
+            **efectos_visuales,
+            "actualizado": ahora_iso(),
+        },
+    )
 
     return guardar_estado(
         directorio_proyecto,
@@ -1649,6 +1755,8 @@ def generar_borrador(
         audio_codec=verificacion["audio_codec"],
         audio_max_db=verificacion["audio_max_db"],
         timeline_verificada=True,
+        control_visual_verificado=True,
+        sin_subtitulos=True,
         desviacion_maxima_ms=round(desviacion_maxima_ms, 3),
         fotogramas_totales=verificacion["fotogramas"],
         sello_cierre=ARCHIVO_SELLO_CIERRE,
@@ -1775,7 +1883,11 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
                 for nombre in sorted(archivos):
                     ruta = os.path.join(raiz, nombre)
 
-                    if ruta in {paquete, temporal} or nombre.startswith("."):
+                    if (
+                        ruta in {paquete, temporal}
+                        or nombre.startswith(".")
+                        or nombre == "subtitulos.srt"
+                    ):
                         continue
 
                     relativo = os.path.relpath(ruta, directorio_proyecto)
@@ -1809,6 +1921,12 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
             ARCHIVO_VERIFICACION_TIMELINE,
         )
     ) or {}
+    verificacion_visual = cargar_json(
+        os.path.join(
+            directorio_proyecto,
+            ARCHIVO_VERIFICACION_VISUAL,
+        )
+    ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
@@ -1837,6 +1955,11 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
                 verificacion_timeline.get("verificada") is True
             ),
             "verificacion_timeline": verificacion_timeline,
+            "control_visual_verificado": (
+                verificacion_visual.get("verificada_automaticamente") is True
+            ),
+            "verificacion_visual": verificacion_visual,
+            "sin_subtitulos": True,
             "total_imagenes": total_imagenes,
             "cierre": datos_sincronizacion.get("cierre"),
             "duracion_total": datos_sincronizacion.get(

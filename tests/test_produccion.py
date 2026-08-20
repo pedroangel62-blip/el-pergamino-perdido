@@ -11,6 +11,7 @@ import zipfile
 
 from backend.produccion import (
     ARCHIVO_VERIFICACION_TIMELINE,
+    ARCHIVO_VERIFICACION_VISUAL,
     CIERRE_SEGUNDOS,
     _crear_clip_cierre,
     aprobar_borrador,
@@ -20,7 +21,6 @@ from backend.produccion import (
     crear_paquete,
     crear_plan_fotogramas,
     crear_sincronizacion,
-    crear_subtitulos,
     crear_texto_publicacion,
     generar_borrador,
     guardar_musica,
@@ -46,6 +46,27 @@ def crear_audio(ruta: str, duracion: float, frecuencia: int) -> None:
             f"sine=frequency={frecuencia}:duration={duracion}",
             "-q:a",
             "7",
+            ruta,
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def crear_imagen_sintetica(ruta: str, tono: int) -> None:
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=180x320:rate=1",
+            "-vf",
+            f"hue=h={tono}",
+            "-frames:v",
+            "1",
             ruta,
         ],
         check=True,
@@ -209,9 +230,6 @@ class SincronizacionTests(unittest.TestCase):
             self.assertEqual(actual["fin"], siguiente["inicio"])
             self.assertTrue(actual["frase_entrada"])
 
-        subtitulos = crear_subtitulos(segmentos)
-        self.assertGreater(subtitulos.count(" --> "), 8)
-
     def test_rechaza_un_guion_demasiado_corto(self):
         with self.assertRaisesRegex(ValueError, "demasiado corto"):
             crear_sincronizacion("solo siete palabras para un guion corto", 20)
@@ -272,9 +290,7 @@ class SincronizacionTests(unittest.TestCase):
             all(segmento.get("palabras_alineadas") for segmento in segmentos)
         )
 
-        subtitulos = crear_subtitulos(segmentos)
         primera_palabra = segmentos[0]["palabras_alineadas"][0]
-        self.assertIn("00:00:00,000", subtitulos)
         self.assertEqual(primera_palabra["texto"], "Primera")
         self.assertEqual(
             segmentos[2]["frase_entrada"],
@@ -463,20 +479,16 @@ class MontajeTests(unittest.TestCase):
             os.makedirs(imagenes)
 
             for numero in range(1, 9):
-                with open(
+                crear_imagen_sintetica(
                     os.path.join(imagenes, f"imagen{numero}.png"),
-                    "wb",
-                ) as archivo:
-                    archivo.write(PNG_UN_PIXEL)
+                    numero * 35,
+                )
 
             voz = os.path.join(directorio, "voz.mp3")
             musica_origen = os.path.join(directorio, "musica-origen.mp3")
-            sello = os.path.join(directorio, "sello.png")
-            with open(sello, "wb") as archivo:
-                archivo.write(PNG_UN_PIXEL)
-            crear_audio(voz, 8.0, 440)
+            crear_audio(voz, 20.0, 440)
             duracion_voz = obtener_duracion(voz)
-            crear_audio(musica_origen, 8.0, 220)
+            crear_audio(musica_origen, 20.0, 220)
             guion = " ".join(f"palabra{indice}" for indice in range(1, 81))
             guardar_alineacion_uniforme(directorio, guion, duracion_voz)
             plan_visual = crear_plan_visual(
@@ -492,10 +504,19 @@ class MontajeTests(unittest.TestCase):
                 ]
             )
             aprobar_imagenes(directorio)
+            with open(
+                os.path.join(directorio, "subtitulos.srt"),
+                "w",
+                encoding="utf-8",
+            ) as archivo:
+                archivo.write("archivo heredado que debe eliminarse")
             segmentos = preparar_sincronizacion(
                 directorio,
                 guion,
                 plan_visual,
+            )
+            self.assertFalse(
+                os.path.exists(os.path.join(directorio, "subtitulos.srt"))
             )
             aprobar_sincronizacion(directorio)
 
@@ -509,7 +530,6 @@ class MontajeTests(unittest.TestCase):
                 ancho=180,
                 alto=320,
                 fps=10,
-                sello_cierre=sello,
             )
 
             self.assertEqual(len(segmentos), 8)
@@ -538,6 +558,22 @@ class MontajeTests(unittest.TestCase):
             self.assertEqual(
                 timeline["fotogramas_totales"],
                 estado["fotogramas_totales"],
+            )
+            ruta_visual = os.path.join(
+                directorio,
+                ARCHIVO_VERIFICACION_VISUAL,
+            )
+            self.assertTrue(os.path.isfile(ruta_visual))
+            with open(ruta_visual, "r", encoding="utf-8") as archivo:
+                control_visual = json.load(archivo)
+            self.assertTrue(control_visual["verificada_automaticamente"])
+            self.assertTrue(control_visual["sin_subtitulos"])
+            self.assertTrue(control_visual["cierre"]["zoom_detectado"])
+            self.assertGreaterEqual(
+                control_visual["cierre"][
+                    "margen_seguro_por_lado_porcentaje"
+                ],
+                4.0,
             )
             self.assertAlmostEqual(
                 float(sondeo["format"]["duration"]),
@@ -578,6 +614,65 @@ class MontajeTests(unittest.TestCase):
             self.assertIn("publicacion.txt", nombres)
             self.assertIn("sincronizacion.json", nombres)
             self.assertIn(ARCHIVO_VERIFICACION_TIMELINE, nombres)
+            self.assertIn(ARCHIVO_VERIFICACION_VISUAL, nombres)
+            self.assertNotIn("subtitulos.srt", nombres)
+
+    def test_reel_sintetico_completo_a_30_fps(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            imagenes = os.path.join(directorio, "imagenes")
+            os.makedirs(imagenes)
+
+            for numero in range(1, 9):
+                crear_imagen_sintetica(
+                    os.path.join(imagenes, f"imagen{numero}.png"),
+                    numero * 35,
+                )
+
+            voz = os.path.join(directorio, "voz.mp3")
+            crear_audio(voz, 75.0, 440)
+            duracion_voz = obtener_duracion(voz)
+            guion = " ".join(
+                f"palabra{indice}" for indice in range(1, 161)
+            )
+            guardar_alineacion_uniforme(directorio, guion, duracion_voz)
+            plan_visual = crear_plan_visual(
+                [
+                    "palabra1 palabra2",
+                    "palabra5 palabra6",
+                    "palabra35 palabra36",
+                    "palabra59 palabra60",
+                    "palabra83 palabra84",
+                    "palabra107 palabra108",
+                    "palabra131 palabra132",
+                    "palabra151 palabra152",
+                ]
+            )
+            aprobar_imagenes(directorio)
+            preparar_sincronizacion(directorio, guion, plan_visual)
+            aprobar_sincronizacion(directorio)
+
+            estado = generar_borrador(
+                directorio,
+                ancho=180,
+                alto=320,
+                fps=30,
+            )
+
+            self.assertEqual(estado["fps"], 30)
+            self.assertTrue(estado["control_visual_verificado"])
+            self.assertTrue(estado["sin_subtitulos"])
+            with open(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_VISUAL),
+                "r",
+                encoding="utf-8",
+            ) as archivo:
+                control_visual = json.load(archivo)
+            self.assertEqual(control_visual["cierre"]["fotogramas"], 90)
+            self.assertEqual(
+                control_visual["transiciones"]["cortes_verificados"],
+                8,
+            )
+            self.assertEqual(control_visual["resolucion"]["fps"], 30.0)
 
 
 if __name__ == "__main__":
