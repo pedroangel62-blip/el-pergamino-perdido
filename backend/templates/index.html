@@ -704,12 +704,16 @@
 
         <h2>🖼 IMÁGENES</h2>
 
-        {% set voz_aprobada = voz and voz.estado == 'aprobada' %}
+        {% set voz_aprobada = voz and voz.estado in ['aprobada', 'archivo_existente'] %}
 
         {% if not voz_aprobada %}
             <div class="estado estado-aviso">
+                {% if voz.estado == 'archivo_existente' %}
+                Voz existente detectada en OneDrive. Puedes continuar sin regenerarla.
+            {% else %}
                 La preparación de imágenes está bloqueada hasta aprobar
                 manualmente la voz después de escucharla.
+            {% endif %}
             </div>
         {% endif %}
 
