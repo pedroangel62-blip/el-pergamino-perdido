@@ -955,8 +955,15 @@ def exigir_voz_aprobada(
 ) -> None:
     guion = str(resultado.get("guion", "")).strip()
 
+    directorio = obtener_directorio_proyecto(proyecto_id)
+
+    # Permitir continuar cuando el audio final ya existe en OneDrive.
+    # En ese caso no se vuelve a generar ni a consumir créditos.
+    if os.path.isfile(obtener_ruta_audio(directorio)):
+        return
+
     if not voz_esta_aprobada(
-        obtener_directorio_proyecto(proyecto_id),
+        directorio,
         guion
     ):
         raise ValueError(
