@@ -601,7 +601,7 @@
                 </audio>
 
                 <p class="duracion-voz">
-                    Duración: {{ '%.2f'|format(voz.duracion_segundos) }}
+                    Duración: {{ '%.2f'|format(voz.duracion_segundos|default(0)) }}
                     segundos
                 </p>
 
