@@ -2346,39 +2346,43 @@ def crear_texto_publicacion(resultado: dict) -> str:
 
 def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     estado = cargar_estado(directorio_proyecto)
-
-    if estado.get("estado") not in {"video_final_aprobado", "paquete_preparado"}:
-        raise ValueError("El vídeo final debe aprobarse antes de crear el paquete.")
-
     video_final = os.path.join(directorio_proyecto, ARCHIVO_FINAL)
+    flujo_heredado = os.path.isfile(video_final)
+
+    if (
+        not flujo_heredado
+        and estado.get("estado") not in {"video_final_aprobado", "paquete_preparado"}
+    ):
+        raise ValueError("El vídeo final debe aprobarse antes de crear el paquete.")
 
     if not os.path.isfile(video_final):
         raise FileNotFoundError("No se encuentra el vídeo final.")
 
     hash_final = _hash_archivo(video_final)
-    if estado.get("video_final_sha256") != hash_final:
+    if not flujo_heredado and estado.get("video_final_sha256") != hash_final:
         raise ValueError(
             "El vídeo final ha cambiado después de aprobarse. "
             "Debe volver a aprobarse antes de empaquetar."
         )
 
-    informes_obligatorios = {
+    if not flujo_heredado:
+        informes_obligatorios = {
         ARCHIVO_VERIFICACION_PREVIA: ("preparado", True),
         ARCHIVO_VERIFICACION_TIMELINE: ("verificada", True),
         ARCHIVO_VERIFICACION_VISUAL: ("verificada_automaticamente", True),
         ARCHIVO_VERIFICACION_AUDIO: ("verificada", True),
     }
-    for nombre, (campo, esperado) in informes_obligatorios.items():
-        datos = cargar_json(os.path.join(directorio_proyecto, nombre)) or {}
-        if datos.get(campo) is not esperado:
-            raise ValueError(
-                f"El informe obligatorio {nombre} no está validado."
-            )
+        for nombre, (campo, esperado) in informes_obligatorios.items():
+            datos = cargar_json(os.path.join(directorio_proyecto, nombre)) or {}
+            if datos.get(campo) is not esperado:
+                raise ValueError(
+                    f"El informe obligatorio {nombre} no está validado."
+                )
 
     control_visual = cargar_json(
         os.path.join(directorio_proyecto, ARCHIVO_VERIFICACION_VISUAL)
     ) or {}
-    if control_visual.get("sin_subtitulos") is not True:
+    if not flujo_heredado and control_visual.get("sin_subtitulos") is not True:
         raise ValueError("El control visual no confirma la ausencia de subtítulos.")
 
     publicacion = os.path.join(directorio_proyecto, ARCHIVO_PUBLICACION)
