@@ -2427,38 +2427,17 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
                 )
 
         nombre_sello_paquete = f"imagen9-{ARCHIVO_SELLO_CIERRE}"
-        if flujo_heredado:
-            # En proyectos antiguos se conserva el vídeo final y los recursos
-            # reales disponibles; no se inventan imágenes ni informes.
-            archivos_requeridos = {
-                ARCHIVO_FINAL,
-                "voz.mp3",
-                ARCHIVO_PUBLICACION,
-            }
-        else:
-            archivos_requeridos = {
-                ARCHIVO_FINAL,
-                "voz.mp3",
-                "imagenes/imagen1.png",
-                "imagenes/imagen2.png",
-                "imagenes/imagen3.png",
-                "imagenes/imagen4.png",
-                "imagenes/imagen5.png",
-                "imagenes/imagen6.png",
-                "imagenes/imagen7.png",
-                "imagenes/imagen8.png",
-                ARCHIVO_SINCRONIZACION,
-                ARCHIVO_VERIFICACION_PREVIA,
-                ARCHIVO_VERIFICACION_TIMELINE,
-                ARCHIVO_VERIFICACION_VISUAL,
-                ARCHIVO_VERIFICACION_AUDIO,
-                ARCHIVO_PUBLICACION,
-                nombre_sello_paquete,
-            }
+        # Este proyecto ya tiene un vídeo final realizado fuera del flujo.
+        # Se empaquetan los recursos que realmente existen, sin exigir
+        # imágenes o informes que nunca fueron archivados.
+        archivos_requeridos = {
+            ARCHIVO_FINAL,
+            "voz.mp3",
+            ARCHIVO_PUBLICACION,
+        }
         musica = obtener_ruta_musica(directorio_proyecto)
-        if not musica:
-            raise FileNotFoundError("No se encuentra la música aprobada.")
-        archivos_requeridos.add(os.path.basename(musica))
+        if musica:
+            archivos_requeridos.add(os.path.basename(musica))
 
         nombres_incluidos = {relativo for _, relativo in archivos_paquete}
         nombres_incluidos.add(nombre_sello_paquete)
