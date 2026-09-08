@@ -925,6 +925,15 @@ def obtener_estado_voz_interfaz(
     )
     estado = cargar_estado_voz(directorio)
 
+    if not estado and os.path.isfile(obtener_ruta_audio(directorio)):
+        estado = {
+            "estado": "archivo_existente",
+            "aprobada": False,
+            "archivo": "voz.mp3",
+            "origen": "OneDrive",
+            "actualizado": datetime.now().isoformat(timespec="seconds"),
+        }
+
     if not estado:
         return None
 
