@@ -129,9 +129,18 @@
 
     <section>
         <h2>1. Preparación</h2>
-        <div class="estado{% if voz and voz.estado == 'aprobada' %} correcto{% endif %}">
-            Voz: {{ 'aprobada' if voz and voz.estado == 'aprobada' else 'pendiente' }}
+        <div class="estado{% if voz and voz.estado in ['aprobada', 'archivo_existente'] %} correcto{% endif %}">
+            {% if voz and voz.estado == 'aprobada' %}
+                Voz: aprobada
+            {% elif voz and voz.estado == 'archivo_existente' %}
+                Voz: disponible · archivo existente en OneDrive
+            {% else %}
+                Voz: pendiente
+            {% endif %}
         </div>
+        {% if voz and voz.audio_url %}
+            <audio controls preload="metadata" src="{{ voz.audio_url }}"></audio>
+        {% endif %}
         <div class="estado{% if produccion.imagenes_aprobadas %} correcto{% endif %}">
             Imágenes: {{ produccion.total_imagenes }} de 8 ·
             {{ 'aprobadas' if produccion.imagenes_aprobadas else 'pendientes de aprobación' }}
