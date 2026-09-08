@@ -94,11 +94,19 @@ def cargar_estado_voz(
         # Un audio colocado manualmente en la carpeta sincronizada de OneDrive
         # debe aparecer como disponible aunque todavía no tenga metadatos JSON.
         if os.path.isfile(obtener_ruta_audio(directorio_proyecto)):
+            duracion = None
+            try:
+                with open(obtener_ruta_audio(directorio_proyecto), "rb") as audio:
+                    duracion = calcular_duracion_mp3(audio.read())
+            except (OSError, ValueError):
+                duracion = None
+
             return {
                 "estado": "archivo_existente",
                 "aprobada": False,
                 "archivo": "voz.mp3",
                 "origen": "OneDrive",
+                "duracion_segundos": duracion,
                 "actualizado": ahora_iso(),
                 "limite_segundos": LIMITE_DURACION_VOZ,
             }
