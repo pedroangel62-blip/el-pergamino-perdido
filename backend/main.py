@@ -2466,3 +2466,27 @@ async def crear_paquete_proyecto(proyecto_id: str):
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     return redirigir_produccion(proyecto_id)
+
+
+@app.get("/meta/instagram/callback", response_class=HTMLResponse)
+async def meta_instagram_callback(request: Request):
+    """Recibe temporalmente el retorno OAuth de Meta durante la conexión."""
+    error = request.query_params.get("error")
+    error_description = request.query_params.get("error_description")
+    code = request.query_params.get("code")
+    if error:
+        detalle = error_description or error
+        return HTMLResponse(
+            f"<h1>Conexión de Meta no completada</h1><p>{detalle}</p>",
+            status_code=400,
+        )
+    if not code:
+        return HTMLResponse(
+            "<h1>Falta el código de autorización de Meta.</h1>",
+            status_code=400,
+        )
+    return HTMLResponse(
+        "<h1>Autorización recibida</h1>"
+        "<p>La aplicación ha recibido el retorno de Meta. " 
+        "La conexión definitiva se configurará en el siguiente paso.</p>",
+    )
