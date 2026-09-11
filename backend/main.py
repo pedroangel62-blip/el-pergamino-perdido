@@ -1,4 +1,5 @@
 from datetime import datetime
+from dotenv import load_dotenv
 from html import escape as escape_html
 import ipaddress
 import json
@@ -32,6 +33,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from openai import OpenAI
 from starlette.concurrency import run_in_threadpool
+
+load_dotenv()
 
 from backend.busqueda_imagenes import buscar_imagenes_reales
 from backend.indice_temas import (
