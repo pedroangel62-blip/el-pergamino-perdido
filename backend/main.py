@@ -3,13 +3,14 @@ import ipaddress
 import json
 import os
 import re
+import secrets
 import shutil
 import socket
 import tempfile
 import time
 import unicodedata
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin, urlparse
+from urllib.parse import quote, urljoin, urlparse
 from urllib.request import (
     HTTPRedirectHandler,
     Request as UrlRequest,
@@ -68,6 +69,14 @@ from backend.voz import (
     obtener_configuracion,
     obtener_ruta_audio,
     voz_esta_aprobada,
+)
+
+from backend.instagram import (
+    InstagramError,
+    completar_oauth,
+    estado_cuenta,
+    iniciar_oauth,
+    publicar_media,
 )
 
 
@@ -2468,25 +2477,350 @@ async def crear_paquete_proyecto(proyecto_id: str):
     return redirigir_produccion(proyecto_id)
 
 
+def obtener_url_publica(request: Request) -> str:
+    """Obtiene el host público respetando las cabeceras del túnel."""
+    protocolo = (
+        request.headers.get("x-forwarded-proto")
+        or request.url.scheme
+    ).split(",", 1)[0].strip()
+    host = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("host")
+        or ""
+    ).split(",", 1)[0].strip()
+
+    if not host:
+        raise HTTPException(
+            status_code=400,
+            detail="No se pudo determinar el host público de la aplicación.",
+        )
+
+    return f"{protocolo}://{host}".rstrip("/")
+
+
+def obtener_proyectos_con_video_final() -> list[dict]:
+    """Devuelve los proyectos locales que pueden demostrarse/publicarse."""
+    proyectos = []
+    if not os.path.isdir(DIRECTORIO_PROYECTOS):
+        return proyectos
+
+    for nombre in sorted(os.listdir(DIRECTORIO_PROYECTOS)):
+        try:
+            proyecto_id = validar_proyecto_id(nombre)
+        except ValueError:
+            continue
+
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        video = os.path.join(directorio, "video_final.mp4")
+        if not os.path.isfile(video):
+            continue
+
+        tema = proyecto_id
+        try:
+            tema, _ = cargar_proyecto(proyecto_id)
+        except (FileNotFoundError, ValueError):
+            pass
+
+        proyectos.append(
+            {
+                "proyecto_id": proyecto_id,
+                "tema": tema,
+            }
+        )
+
+    return proyectos
+
+
+def exigir_clave_publicacion(
+    request: Request,
+    datos: dict,
+) -> None:
+    """Evita que un túnel público pueda publicar sin autorización local."""
+    configurada = os.getenv("INSTAGRAM_PUBLISH_KEY", "").strip()
+    if not configurada:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Falta configurar INSTAGRAM_PUBLISH_KEY en el entorno local."
+            ),
+        )
+
+    proporcionada = str(
+        datos.get("publish_key")
+        or request.headers.get("x-pergamino-publish-key")
+        or ""
+    ).strip()
+
+    if (
+        not proporcionada
+        or not secrets.compare_digest(proporcionada, configurada)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="La clave local de publicación no es válida.",
+        )
+
+
+def renderizar_pagina_instagram(request: Request) -> str:
+    estado = estado_cuenta()
+    proyectos = obtener_proyectos_con_video_final()
+    partes = [
+        "<!doctype html>",
+        '<html lang="es"><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        "<title>Instagram · El Pergamino Perdido</title>",
+        (
+            "<style>"
+            "body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;"
+            "padding:0 18px;background:#f5f1e8;color:#222}"
+            "main{background:#fff;padding:28px;border-radius:14px;"
+            "box-shadow:0 2px 14px #0002}"
+            "label{display:block;margin:18px 0 6px;font-weight:700}"
+            "select,textarea,input{box-sizing:border-box;width:100%;padding:11px;"
+            "font:inherit;border:1px solid #bbb;border-radius:7px}"
+            "textarea{min-height:120px;resize:vertical}"
+            "button,a.boton{display:inline-block;margin-top:18px;padding:12px 18px;"
+            "border:0;border-radius:7px;background:#1769aa;color:white;"
+            "font-weight:700;text-decoration:none;cursor:pointer}"
+            "button:disabled{opacity:.6;cursor:wait}"
+            ".estado{padding:12px;border-radius:8px;background:#eef8ef;"
+            "border:1px solid #79b984}"
+            ".aviso{padding:12px;border-radius:8px;background:#fff7df;"
+            "border:1px solid #d5aa35}"
+            "pre{white-space:pre-wrap;background:#f2f2f2;padding:12px;"
+            "border-radius:8px}"
+            "</style>"
+        ),
+        "</head><body><main>",
+        "<h1>📜 Publicar en Instagram</h1>",
+        (
+            "<p>El Pergamino Perdido prepara y publica manualmente el "
+            "vídeo final aprobado en la cuenta profesional conectada.</p>"
+        ),
+    ]
+
+    if not estado.get("connected"):
+        partes.extend(
+            [
+                '<p class="aviso">No hay ninguna cuenta conectada.</p>',
+                '<a class="boton" href="/meta/instagram/login">'
+                "Conectar cuenta de Instagram</a>",
+            ]
+        )
+    else:
+        username = escape_html(
+            str(estado.get("username") or estado.get("name") or "cuenta")
+        )
+        partes.append(
+            '<p class="estado">Conectada: @' + username + "</p>"
+        )
+
+        opciones = ['<option value="">Selecciona un Reel final</option>']
+        for proyecto in proyectos:
+            proyecto_id = escape_html(
+                str(proyecto["proyecto_id"]),
+                quote=True,
+            )
+            tema = escape_html(str(proyecto["tema"]))
+            opciones.append(
+                '<option value="' + proyecto_id + '">'
+                + tema
+                + "</option>"
+            )
+
+        partes.extend(
+            [
+                '<form id="form-instagram">',
+                '<label for="proyecto_id">Vídeo final aprobado</label>',
+                '<select id="proyecto_id" required>',
+                "".join(opciones),
+                "</select>",
+                '<label for="caption">Texto de publicación</label>',
+                '<textarea id="caption" maxlength="2200" required>'
+                "</textarea>",
+                '<label for="publish_key">Clave local de publicación</label>',
+                '<input id="publish_key" type="password" autocomplete="off" '
+                'required>',
+                '<button id="publicar" type="submit">Publicar Reel</button>',
+                "</form>",
+                '<pre id="resultado" hidden></pre>',
+                "<script>",
+                "(function(){",
+                'const form=document.getElementById("form-instagram");',
+                'const boton=document.getElementById("publicar");',
+                'const salida=document.getElementById("resultado");',
+                'form.addEventListener("submit",async function(event){',
+                "event.preventDefault();boton.disabled=true;",
+                'salida.hidden=false;salida.textContent="Publicando...";',
+                "try{",
+                'const respuesta=await fetch("/meta/instagram/publish",{',
+                'method:"POST",headers:{"Content-Type":"application/json"},',
+                "body:JSON.stringify({",
+                'proyecto_id:document.getElementById("proyecto_id").value,',
+                'caption:document.getElementById("caption").value,',
+                'media_type:"REELS",',
+                'publish_key:document.getElementById("publish_key").value',
+                "})});",
+                "const datos=await respuesta.json();",
+                "if(!respuesta.ok)throw new Error(datos.detail||"
+                '"No se pudo publicar.");',
+                'salida.textContent="Publicado correctamente. ID: "+datos.media_id;',
+                "}catch(error){salida.textContent=error.message;}",
+                "finally{boton.disabled=false;}",
+                "});})();",
+                "</script>",
+            ]
+        )
+
+        if not proyectos:
+            partes.append(
+                '<p class="aviso">No hay ningún vídeo final en el servidor local. '
+                "Primero genera y aprueba un proyecto.</p>"
+            )
+
+    partes.extend(
+        [
+            '<p><a href="/">Volver al Centro de Producción</a></p>',
+            "</main></body></html>",
+        ]
+    )
+    return "".join(partes)
+
+
+@app.get("/meta/instagram", response_class=HTMLResponse)
+async def pagina_instagram(request: Request):
+    return HTMLResponse(renderizar_pagina_instagram(request))
+
+
+@app.get("/meta/instagram/login")
+@app.get("/meta/instagram/connect")
+async def iniciar_conexion_instagram():
+    try:
+        return RedirectResponse(
+            url=iniciar_oauth(),
+            status_code=307,
+        )
+    except InstagramError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
 @app.get("/meta/instagram/callback", response_class=HTMLResponse)
 async def meta_instagram_callback(request: Request):
-    """Recibe temporalmente el retorno OAuth de Meta durante la conexión."""
     error = request.query_params.get("error")
     error_description = request.query_params.get("error_description")
-    code = request.query_params.get("code")
+    code = request.query_params.get("code", "")
+    state = request.query_params.get("state", "")
+
     if error:
-        detalle = error_description or error
+        detalle = escape_html(
+            error_description or error,
+            quote=False,
+        )
         return HTMLResponse(
-            f"<h1>Conexión de Meta no completada</h1><p>{detalle}</p>",
+            "<h1>Conexión de Instagram no completada</h1>"
+            "<p>" + detalle + "</p>",
             status_code=400,
         )
-    if not code:
+
+    try:
+        cuenta = completar_oauth(code, state)
+    except InstagramError as exc:
         return HTMLResponse(
-            "<h1>Falta el código de autorización de Meta.</h1>",
+            "<h1>No se pudo conectar Instagram</h1>"
+            "<p>" + escape_html(str(exc), quote=False) + "</p>",
             status_code=400,
         )
-    return HTMLResponse(
-        "<h1>Autorización recibida</h1>"
-        "<p>La aplicación ha recibido el retorno de Meta. " 
-        "La conexión definitiva se configurará en el siguiente paso.</p>",
+
+    nombre = escape_html(
+        str(cuenta.get("username") or cuenta.get("name") or "cuenta"),
+        quote=False,
     )
+    return HTMLResponse(
+        "<h1>Instagram conectado</h1>"
+        "<p>Cuenta conectada: @" + nombre + "</p>"
+        '<p><a href="/meta/instagram">Ir a publicar un Reel</a></p>'
+    )
+
+
+@app.get("/meta/instagram/status")
+async def estado_instagram():
+    return estado_cuenta()
+
+
+@app.post("/meta/instagram/publish")
+async def publicar_en_instagram(request: Request):
+    try:
+        datos = await request.json()
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="El cuerpo de la petición no es JSON válido.",
+        ) from error
+
+    if not isinstance(datos, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="El cuerpo de la petición debe ser un objeto JSON.",
+        )
+
+    exigir_clave_publicacion(request, datos)
+
+    tipo = str(datos.get("media_type") or "REELS").upper().strip()
+    media_url = str(datos.get("media_url") or "").strip()
+    proyecto_id = str(datos.get("proyecto_id") or "").strip()
+
+    if proyecto_id:
+        if tipo != "REELS":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Los proyectos del Centro de Producción se publican "
+                    "como REELS."
+                ),
+            )
+
+        try:
+            proyecto_id = validar_proyecto_id(proyecto_id)
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail=str(error),
+            ) from error
+
+        ruta_video = os.path.join(
+            obtener_directorio_proyecto(proyecto_id),
+            "video_final.mp4",
+        )
+        if not os.path.isfile(ruta_video):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "El proyecto no tiene un vídeo final aprobado disponible."
+                ),
+            )
+
+        media_url = (
+            obtener_url_publica(request)
+            + "/proyectos/"
+            + quote(proyecto_id, safe="")
+            + "/video_final.mp4"
+        )
+
+    if not media_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes indicar proyecto_id o media_url.",
+        )
+
+    try:
+        resultado = await run_in_threadpool(
+            publicar_media,
+            media_url,
+            str(datos.get("caption") or ""),
+            tipo,
+            bool(datos.get("share_to_feed", True)),
+        )
+    except InstagramError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+    return resultado
