@@ -220,3 +220,6 @@ __marimo__/
 backend/imagenes/
 # Proyectos generados
 backend/proyectos/
+
+# Tokens y estado local de Instagram
+backend/data/instagram/
