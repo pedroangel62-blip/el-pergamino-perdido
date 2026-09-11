@@ -1,4 +1,5 @@
 from datetime import datetime
+from html import escape as escape_html
 import ipaddress
 import json
 import os
