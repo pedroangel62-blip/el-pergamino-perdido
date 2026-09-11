@@ -49,6 +49,7 @@ jobs:
             backend/produccion_remota.py \
             backend/indice_temas.py \
             backend/produccion.py
+            backend/instagram.py
 
       - name: Ejecutar pruebas
         run: python -m unittest discover -s tests -v
