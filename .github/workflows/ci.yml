@@ -48,7 +48,7 @@ jobs:
             backend/voz.py \
             backend/produccion_remota.py \
             backend/indice_temas.py \
-            backend/produccion.py
+            backend/produccion.py \\
             backend/instagram.py
 
       - name: Ejecutar pruebas
