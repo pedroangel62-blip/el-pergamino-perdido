@@ -58,15 +58,24 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 En Windows, después de clonar o actualizar el proyecto, se puede abrir
-`scripts\Abrir-El-Pergamino.cmd`. Inicia el servidor y un Quick Tunnel en
-segundo plano, espera a que Cloudflare entregue la URL y abre directamente el
-panel de Instagram. `scripts\Detener-El-Pergamino.cmd` detiene únicamente los
-procesos registrados por ese lanzador.
+`scripts\Abrir-El-Pergamino.cmd`. Inicia el servidor en segundo plano y abre el
+panel de Instagram usando exactamente el dominio de
+`INSTAGRAM_REDIRECT_URI`. Si ese dominio es un Quick Tunnel, el lanzador solo
+reutiliza el túnel que ya esté activo; nunca inventa otra URL porque Meta la
+rechazaría. `scripts\Detener-El-Pergamino.cmd` detiene únicamente los procesos
+registrados por ese lanzador.
 
-El Quick Tunnel necesita que el PC esté encendido y que Windows mantenga esos
-procesos. Para trabajar con el PC apagado hace falta trasladar el servidor y
-la publicación a un servicio siempre encendido y sustituir el Quick Tunnel
-por un túnel con nombre y dominio estable.
+Para que el arranque sea automático después de un reinicio, hay que usar un
+túnel con nombre y un dominio estable. En ese caso, configura en `.env` el
+`INSTAGRAM_REDIRECT_URI` con ese dominio y `CLOUDFLARED_TUNNEL_NAME` con el
+nombre del túnel ya creado en Cloudflare. El túnel debe tener una regla que
+envíe ese dominio a `http://127.0.0.1:8765`. El Quick Tunnel actual necesita
+que el PC esté encendido y que el proceso original siga abierto; su URL no se
+puede regenerar conservando el mismo nombre.
+
+Para trabajar con el PC apagado hace falta trasladar el servidor, los secretos
+y la publicación a un servicio siempre encendido y mantener un túnel con
+nombre y dominio estable.
 
 ## Producción final
 
