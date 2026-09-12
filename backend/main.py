@@ -1418,7 +1418,8 @@ async def generar(
 TEMA
 
 {tema}
-"""
+""",
+            text={"format": {"type": "json_object"}},
         )
     except Exception as error:
         raise HTTPException(
@@ -1426,9 +1427,20 @@ TEMA
             detail=detalle_error_openai(error),
         ) from error
 
+    texto_respuesta = str(respuesta.output_text or "").strip()
+    if texto_respuesta.startswith(chr(96) * 3):
+        texto_respuesta = re.sub(
+            r"^[\\x60]{3}(?:json)?\\s*|\\s*[\\x60]{3}$",
+            "",
+            texto_respuesta,
+            flags=re.IGNORECASE,
+        ).strip()
+
     try:
-        resultado = json.loads(respuesta.output_text)
-    except (TypeError, json.JSONDecodeError) as error:
+        resultado = json.loads(texto_respuesta)
+        if not isinstance(resultado, dict):
+            raise ValueError("La respuesta JSON no es un objeto.")
+    except (TypeError, ValueError, json.JSONDecodeError) as error:
         raise HTTPException(
             status_code=502,
             detail=(
