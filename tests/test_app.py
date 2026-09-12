@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -19,6 +20,26 @@ class AplicacionTests(unittest.TestCase):
     def tearDown(self):
         main.DIRECTORIO_PROYECTOS = self.directorio_anterior
         self.directorio_temporal.cleanup()
+
+    def test_url_publica_fija_prevalece_sobre_host_local(self):
+        request = SimpleNamespace(
+            headers={},
+            url=SimpleNamespace(scheme="http"),
+        )
+        with patch.dict(
+            os.environ,
+            {
+                "INSTAGRAM_PUBLIC_BASE_URL": (
+                    "https://pergamino-equipo.tailnet.ts.net/"
+                ),
+            },
+        ):
+            resultado = main.obtener_url_publica(request)
+
+        self.assertEqual(
+            resultado,
+            "https://pergamino-equipo.tailnet.ts.net",
+        )
 
     def crear_proyecto(self, proyecto_id: str = "pergamino-prueba") -> None:
         directorio = os.path.join(self.directorio_temporal.name, proyecto_id)
