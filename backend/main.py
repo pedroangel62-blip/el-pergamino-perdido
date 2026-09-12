@@ -120,7 +120,7 @@ def obtener_cliente_openai() -> OpenAI:
 
 
 def obtener_modelo_openai() -> str:
-    return os.getenv("OPENAI_MODEL", "gpt-5").strip() or "gpt-5"
+    return os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
 
 
 def detalle_error_openai(error: Exception) -> str:
