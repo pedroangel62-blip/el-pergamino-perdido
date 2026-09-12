@@ -80,6 +80,7 @@ from backend.instagram import (
     completar_oauth,
     estado_cuenta,
     iniciar_oauth,
+    publicar_comentario,
     publicar_media,
 )
 
@@ -2502,6 +2503,35 @@ def obtener_url_publica(request: Request) -> str:
     return f"{protocolo}://{host}".rstrip("/")
 
 
+def obtener_datos_publicacion_instagram(
+    resultado: dict,
+) -> tuple[str, str]:
+    """Convierte la publicación aprobada en caption y comentario."""
+    publicacion = resultado.get("publicacion", {})
+    if not isinstance(publicacion, dict):
+        return "", ""
+
+    partes = [
+        str(publicacion.get("titulo", "")).strip(),
+        str(publicacion.get("descripcion", "")).strip(),
+    ]
+    hashtags = publicacion.get("hashtags", [])
+    if isinstance(hashtags, list):
+        texto_hashtags = " ".join(
+            str(hashtag).strip()
+            for hashtag in hashtags
+            if str(hashtag).strip()
+        )
+        if texto_hashtags:
+            partes.append(texto_hashtags)
+
+    caption = "\n\n".join(parte for parte in partes if parte)
+    comentario = str(
+        publicacion.get("comentario_fijado", "")
+    ).strip()
+    return caption, comentario
+
+
 def obtener_proyectos_con_video_final() -> list[dict]:
     """Devuelve los proyectos locales que pueden demostrarse/publicarse."""
     proyectos = []
@@ -2520,8 +2550,13 @@ def obtener_proyectos_con_video_final() -> list[dict]:
             continue
 
         tema = proyecto_id
+        caption = ""
+        comentario_fijado = ""
         try:
-            tema, _ = cargar_proyecto(proyecto_id)
+            tema, resultado = cargar_proyecto(proyecto_id)
+            caption, comentario_fijado = obtener_datos_publicacion_instagram(
+                resultado
+            )
         except (FileNotFoundError, ValueError):
             pass
 
@@ -2529,6 +2564,8 @@ def obtener_proyectos_con_video_final() -> list[dict]:
             {
                 "proyecto_id": proyecto_id,
                 "tema": tema,
+                "caption": caption,
+                "comentario_fijado": comentario_fijado,
             }
         )
 
@@ -2598,8 +2635,8 @@ def renderizar_pagina_instagram(request: Request) -> str:
         "</head><body><main>",
         "<h1>📜 Publicar en Instagram</h1>",
         (
-            "<p>El Pergamino Perdido prepara y publica manualmente el "
-            "vídeo final aprobado en la cuenta profesional conectada.</p>"
+            "<p>El botón publica el vídeo final aprobado y deja automáticamente "
+            "el comentario editorial del proyecto.</p>"
         ),
     ]
 
@@ -2626,8 +2663,18 @@ def renderizar_pagina_instagram(request: Request) -> str:
                 quote=True,
             )
             tema = escape_html(str(proyecto["tema"]))
+            caption = escape_html(
+                str(proyecto.get("caption", "")),
+                quote=True,
+            )
+            comentario_fijado = escape_html(
+                str(proyecto.get("comentario_fijado", "")),
+                quote=True,
+            )
             opciones.append(
-                '<option value="' + proyecto_id + '">'
+                '<option value="' + proyecto_id + '" '
+                'data-caption="' + caption + '" '
+                'data-comentario-fijado="' + comentario_fijado + '">'
                 + tema
                 + "</option>"
             )
@@ -2642,6 +2689,12 @@ def renderizar_pagina_instagram(request: Request) -> str:
                 '<label for="caption">Texto de publicación</label>',
                 '<textarea id="caption" maxlength="2200" required>'
                 "</textarea>",
+                '<label for="comentario_fijado">Comentario automático</label>',
+                '<textarea id="comentario_fijado" maxlength="2200" '
+                'readonly required></textarea>',
+                '<p class="aviso">El comentario se publica automáticamente. '
+                "La API oficial de Instagram no ofrece la operación de fijarlo; "
+                "por eso la pantalla nunca lo marcará como fijado.</p>",
                 '<label for="publish_key">Clave local de publicación</label>',
                 '<input id="publish_key" type="password" autocomplete="off" '
                 'required>',
@@ -2653,6 +2706,15 @@ def renderizar_pagina_instagram(request: Request) -> str:
                 'const form=document.getElementById("form-instagram");',
                 'const boton=document.getElementById("publicar");',
                 'const salida=document.getElementById("resultado");',
+                'const proyectos=document.getElementById("proyecto_id");',
+                'const caption=document.getElementById("caption");',
+                'const comentario=document.getElementById("comentario_fijado");',
+                'function cargarTextoAprobado(){',
+                'const opcion=proyectos.options[proyectos.selectedIndex];',
+                'caption.value=opcion?.dataset.caption||"";',
+                'comentario.value=opcion?.dataset.comentarioFijado||"";',
+                '}',
+                'proyectos.addEventListener("change",cargarTextoAprobado);',
                 'form.addEventListener("submit",async function(event){',
                 "event.preventDefault();boton.disabled=true;",
                 'salida.hidden=false;salida.textContent="Publicando...";',
@@ -2660,18 +2722,29 @@ def renderizar_pagina_instagram(request: Request) -> str:
                 'const respuesta=await fetch("/meta/instagram/publish",{',
                 'method:"POST",headers:{"Content-Type":"application/json"},',
                 "body:JSON.stringify({",
-                'proyecto_id:document.getElementById("proyecto_id").value,',
-                'caption:document.getElementById("caption").value,',
+                'proyecto_id:proyectos.value,',
+                'caption:caption.value,',
+                'comentario_fijado:comentario.value,',
                 'media_type:"REELS",',
                 'publish_key:document.getElementById("publish_key").value',
                 "})});",
                 "const datos=await respuesta.json();",
                 "if(!respuesta.ok)throw new Error(datos.detail||"
                 '"No se pudo publicar.");',
-                'salida.textContent="Publicado correctamente. ID: "+datos.media_id;',
+                'let mensaje="Reel publicado correctamente. ID: "+datos.media_id;',
+                'if(datos.comentario?.success){',
+                'mensaje+="\\nComentario publicado y verificado.";',
+                'if(datos.comentario.comment_pinned===false)',
+                'mensaje+="\\nEl comentario no está fijado: Instagram no permite fijarlo desde su API oficial.";',
+                '}else if(datos.comentario?.error){',
+                'mensaje+="\\nEl Reel sí está publicado, pero el comentario no pudo publicarse: "+datos.comentario.error;',
+                '}else if(datos.comentario?.skipped){',
+                'mensaje+="\\nNo había comentario editorial configurado.";',
+                '}',
+                'salida.textContent=mensaje;',
                 "}catch(error){salida.textContent=error.message;}",
                 "finally{boton.disabled=false;}",
-                "});})();",
+                "});cargarTextoAprobado();})();",
                 "</script>",
             ]
         )
@@ -2817,6 +2890,10 @@ async def publicar_en_instagram(request: Request):
     tipo = str(datos.get("media_type") or "REELS").upper().strip()
     media_url = str(datos.get("media_url") or "").strip()
     proyecto_id = str(datos.get("proyecto_id") or "").strip()
+    caption = str(datos.get("caption") or "").strip()
+    comentario_fijado = str(
+        datos.get("comentario_fijado") or ""
+    ).strip()
 
     if proyecto_id:
         if tipo != "REELS":
@@ -2855,6 +2932,21 @@ async def publicar_en_instagram(request: Request):
             + "/video_final.mp4"
         )
 
+        if not caption or not comentario_fijado:
+            try:
+                _, resultado_proyecto = cargar_proyecto(proyecto_id)
+                caption_defecto, comentario_defecto = (
+                    obtener_datos_publicacion_instagram(resultado_proyecto)
+                )
+                if not caption:
+                    caption = caption_defecto
+                if not comentario_fijado:
+                    comentario_fijado = comentario_defecto
+            except (FileNotFoundError, ValueError):
+                # El vídeo se puede publicar aunque el caption/comentario se
+                # haya proporcionado explícitamente en la petición.
+                pass
+
     if not media_url:
         raise HTTPException(
             status_code=400,
@@ -2865,11 +2957,71 @@ async def publicar_en_instagram(request: Request):
         resultado = await run_in_threadpool(
             publicar_media,
             media_url,
-            str(datos.get("caption") or ""),
+            caption,
             tipo,
             bool(datos.get("share_to_feed", True)),
         )
     except InstagramError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
+    if comentario_fijado:
+        try:
+            resultado["comentario"] = await run_in_threadpool(
+                publicar_comentario,
+                str(resultado["media_id"]),
+                comentario_fijado,
+            )
+        except InstagramError as error:
+            # El Reel ya existe: se devuelve su ID para poder reintentar solo
+            # el comentario sin duplicar la publicación.
+            resultado["comentario"] = {
+                "success": False,
+                "error": str(error),
+                "media_id": resultado.get("media_id"),
+            }
+    else:
+        resultado["comentario"] = {
+            "success": False,
+            "skipped": True,
+            "error": "No hay comentario editorial configurado.",
+        }
+
     return resultado
+
+
+@app.post("/meta/instagram/comment")
+async def publicar_comentario_en_instagram(request: Request):
+    """Permite completar el comentario de un Reel ya publicado."""
+    try:
+        datos = await request.json()
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="El cuerpo de la petición no es JSON válido.",
+        ) from error
+
+    if not isinstance(datos, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="El cuerpo de la petición debe ser un objeto JSON.",
+        )
+
+    exigir_clave_publicacion(request, datos)
+    media_id = str(datos.get("media_id") or "").strip()
+    message = str(
+        datos.get("message") or datos.get("comentario_fijado") or ""
+    ).strip()
+    if not media_id or not message:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes indicar media_id y message.",
+        )
+
+    try:
+        return await run_in_threadpool(
+            publicar_comentario,
+            media_id,
+            message,
+        )
+    except InstagramError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
