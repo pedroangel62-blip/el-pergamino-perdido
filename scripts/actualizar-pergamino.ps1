@@ -54,5 +54,19 @@ foreach ($relativePath in $FilesToUpdate) {
     Write-Host "Actualizado: $relativePath"
 }
 
+$serverConnections = @(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue)
+foreach ($connection in $serverConnections) {
+    $process = Get-Process -Id $connection.OwningProcess -ErrorAction SilentlyContinue
+    if ($null -eq $process) {
+        continue
+    }
+    if (@("python", "pythonw") -notcontains $process.ProcessName.ToLowerInvariant()) {
+        Write-Warning "No detengo el proceso del puerto 8765 porque no es Python: $($process.ProcessName)"
+        continue
+    }
+    Stop-Process -Id $process.Id -Force
+    Write-Host "Servidor detenido para cargar la versión nueva (PID $($process.Id))."
+}
+
 Remove-Item -LiteralPath $TempRoot -Recurse -Force
 Write-Host "Actualización terminada. Se ha conservado el archivo .env y los datos locales."
