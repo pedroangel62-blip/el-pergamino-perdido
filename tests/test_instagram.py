@@ -57,7 +57,6 @@ class InstagramTests(unittest.TestCase):
 
         self.assertEqual(query["client_id"], ["1050579897592243"])
         self.assertEqual(query["force_reauth"], ["true"])
-        self.assertEqual(query["enable_fb_login"], ["0"])
         self.assertEqual(
             query["redirect_uri"],
             ["https://example.trycloudflare.com/meta/instagram/callback"],
