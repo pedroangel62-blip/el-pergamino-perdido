@@ -20,7 +20,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 
-OAUTH_AUTHORIZE_URL = "https://www.instagram.com/oauth/authorize"
+OAUTH_AUTHORIZE_URL = "https://api.instagram.com/oauth/authorize"
 OAUTH_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 GRAPH_BASE_URL = "https://graph.instagram.com"
 
@@ -278,7 +278,6 @@ def iniciar_oauth() -> str:
     )
 
     parametros = {
-        "force_reauth": "true",
         "client_id": _app_id(),
         "redirect_uri": redirect_uri,
         "response_type": "code",
