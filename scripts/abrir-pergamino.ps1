@@ -120,6 +120,25 @@ if ($isTailscale) {
 New-Item -ItemType Directory -Path $TempRoot -Force | Out-Null
 Remove-Item -LiteralPath $ServerLog, $ServerErrorLog, $TunnelLog, $TunnelErrorLog -Force -ErrorAction SilentlyContinue
 
+$serverPids = @(
+    Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique
+)
+foreach ($serverPid in $serverPids) {
+    $existingServer = Get-Process -Id ([int]$serverPid) -ErrorAction SilentlyContinue
+    if ($null -eq $existingServer) {
+        continue
+    }
+    if (@("python", "pythonw") -notcontains $existingServer.ProcessName.ToLowerInvariant()) {
+        throw "El puerto 8765 está ocupado por un proceso que no pertenece a Python: $($existingServer.ProcessName)"
+    }
+    Stop-Process -Id $existingServer.Id -Force
+    Write-Host "Servidor anterior detenido para cargar la versión actual (PID $($existingServer.Id))."
+}
+if ($serverPids.Count -gt 0) {
+    Start-Sleep -Milliseconds 500
+}
+
 $serverConnection = Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue
 $serverProcess = $null
 if ($null -eq $serverConnection) {
@@ -133,7 +152,7 @@ if ($null -eq $serverConnection) {
         -PassThru
     Write-Host "Servidor iniciado en segundo plano (PID $($serverProcess.Id))."
 } else {
-    Write-Host "Ya hay un servidor escuchando en el puerto 8765; se reutiliza."
+    throw "No se pudo liberar el puerto 8765 para cargar la versión actual."
 }
 
 $tunnelProcess = $null
