@@ -55,8 +55,9 @@ class InstagramTests(unittest.TestCase):
         url = instagram.iniciar_oauth()
         query = parse_qs(urlparse(url).query)
 
+        self.assertEqual(urlparse(url).netloc, "api.instagram.com")
         self.assertEqual(query["client_id"], ["1050579897592243"])
-        self.assertEqual(query["force_reauth"], ["true"])
+        self.assertNotIn("force_reauth", query)
         self.assertEqual(
             query["redirect_uri"],
             ["https://example.trycloudflare.com/meta/instagram/callback"],
