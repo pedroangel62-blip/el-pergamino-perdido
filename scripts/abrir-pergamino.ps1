@@ -85,6 +85,7 @@ if (-not [string]::IsNullOrWhiteSpace($configuredPublicBase)) {
     $registeredPublicBase = $configuredPublicBase
 }
 $panelUrl = "$registeredPublicBase/meta/instagram"
+$homeUrl = "$registeredPublicBase/"
 $isQuickTunnel = $redirectUri.Host -like "*.trycloudflare.com"
 $isTailscale = $registeredPublicBase -match "\.ts\.net$"
 
@@ -209,5 +210,5 @@ $pidData = @{
     tunnel_mode = $tunnelMode
 }
 $pidData | ConvertTo-Json | Set-Content -LiteralPath $PidFile -Encoding UTF8
-Write-Host "URL pública: $panelUrl"
-Start-Process $panelUrl
+Write-Host "URL pública: $homeUrl"
+Start-Process $homeUrl
