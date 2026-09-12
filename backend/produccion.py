@@ -2347,7 +2347,13 @@ def crear_texto_publicacion(resultado: dict) -> str:
 def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     estado = cargar_estado(directorio_proyecto)
     video_final = os.path.join(directorio_proyecto, ARCHIVO_FINAL)
-    flujo_heredado = os.path.isfile(video_final)
+    # Un vídeo existente no implica que el proyecto sea heredado: el flujo
+    # actual también crea video_final.mp4 al aprobar el borrador. Solo se
+    # considera heredado cuando no existe la huella de aprobación moderna.
+    flujo_heredado = (
+        os.path.isfile(video_final)
+        and not estado.get("video_final_sha256")
+    )
 
     if (
         not flujo_heredado
