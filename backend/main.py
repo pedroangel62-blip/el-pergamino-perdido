@@ -1429,12 +1429,14 @@ TEMA
 
     texto_respuesta = str(respuesta.output_text or "").strip()
     if texto_respuesta.startswith(chr(96) * 3):
-        texto_respuesta = re.sub(
-            r"^[\\x60]{3}(?:json)?\\s*|\\s*[\\x60]{3}$",
-            "",
-            texto_respuesta,
-            flags=re.IGNORECASE,
-        ).strip()
+        lineas_respuesta = texto_respuesta.splitlines()
+        lineas_respuesta = lineas_respuesta[1:]
+        if (
+            lineas_respuesta
+            and lineas_respuesta[-1].strip() == chr(96) * 3
+        ):
+            lineas_respuesta = lineas_respuesta[:-1]
+        texto_respuesta = "\\n".join(lineas_respuesta).strip()
 
     try:
         resultado = json.loads(texto_respuesta)
