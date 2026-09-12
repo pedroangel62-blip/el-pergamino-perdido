@@ -278,6 +278,8 @@ def iniciar_oauth() -> str:
     )
 
     parametros = {
+        "force_reauth": "true",
+        "enable_fb_login": "0",
         "client_id": _app_id(),
         "redirect_uri": redirect_uri,
         "response_type": "code",
