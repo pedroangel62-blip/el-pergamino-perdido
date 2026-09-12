@@ -107,9 +107,11 @@ if ($null -eq $serverConnection) {
     Write-Host "Ya hay un servidor escuchando en el puerto 8765; se reutiliza."
 }
 
-$funnelOutput = (& $TailscalePath funnel --bg "http://127.0.0.1:8765" 2>&1 | Out-String).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw "Tailscale no pudo activar Funnel. Inicia sesión y aprueba la autorización que aparezca. $funnelOutput"
+Write-Host "Activando Tailscale Funnel. Si se abre una autorización en el navegador, apruébala y vuelve aquí."
+& $TailscalePath funnel --bg "http://127.0.0.1:8765"
+$funnelExitCode = $LASTEXITCODE
+if ($funnelExitCode -ne 0) {
+    throw "Tailscale no pudo activar Funnel. Inicia sesión y aprueba la autorización que aparezca."
 }
 
 $publicBase = Get-FunnelUrl $TailscalePath
