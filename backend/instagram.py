@@ -1,8 +1,13 @@
 """Integración mínima y segura con Instagram Business Login.
 
-Este módulo implementa el flujo oficial de Instagram Login y la publicación
-de una imagen o un Reel mediante el Graph API de Instagram. Los tokens se
-guardan únicamente en el estado local indicado por variables de entorno.
+Este módulo implementa el flujo oficial de Instagram Login, la publicación
+de una imagen o un Reel y la creación idempotente del comentario de cierre
+mediante el Graph API de Instagram. Los tokens se guardan únicamente en el
+estado local indicado por variables de entorno.
+
+La API oficial permite crear y moderar comentarios, pero no expone una
+operación para fijarlos. Por eso el resultado de ``publicar_comentario``
+indica expresamente que el fijado requiere la interfaz de Instagram.
 """
 
 from __future__ import annotations
@@ -283,7 +288,8 @@ def iniciar_oauth() -> str:
         "response_type": "code",
         "scope": (
             "instagram_business_basic,"
-            "instagram_business_content_publish"
+            "instagram_business_content_publish,"
+            "instagram_business_manage_comments"
         ),
         "state": state,
     }
@@ -589,4 +595,99 @@ def publicar_media(
         "container_id": container_id,
         "media_id": media_id,
         "media_type": tipo,
+    }
+
+
+def _listar_comentarios(
+    account: dict[str, Any],
+    media_id: str,
+) -> list[dict[str, Any]]:
+    """Lee los comentarios visibles del contenido para evitar duplicados."""
+    data = _graph_request(
+        "GET",
+        f"{media_id}/comments",
+        str(account["access_token"]),
+        params={"fields": "id,text"},
+    )
+    comentarios = data.get("data", [])
+    if not isinstance(comentarios, list):
+        return []
+    return [comentario for comentario in comentarios if isinstance(comentario, dict)]
+
+
+def publicar_comentario(
+    media_id: str,
+    message: str,
+) -> dict[str, Any]:
+    """Crea y verifica un comentario, sin duplicarlo al reintentar.
+
+    Instagram no ofrece una operación oficial de fijado en este API. El
+    comentario se deja preparado y el resultado informa de esa limitación
+    para que la interfaz no lo presente como fijado cuando no lo está.
+    """
+    identificador = str(media_id or "").strip()
+    if not identificador or "/" in identificador or "?" in identificador:
+        raise InstagramError("El identificador del Reel no es válido.")
+
+    texto = str(message or "").strip()
+    if not texto:
+        raise InstagramError("El comentario no puede estar vacío.")
+    if len(texto) > 2200:
+        raise InstagramError(
+            "El comentario supera los 2200 caracteres."
+        )
+
+    account = _renovar_si_necesario(cargar_cuenta())
+    token = str(account["access_token"])
+    comentarios = _listar_comentarios(account, identificador)
+
+    existente = next(
+        (
+            comentario
+            for comentario in comentarios
+            if str(comentario.get("text", "")).strip() == texto
+            and str(comentario.get("id", "")).strip()
+        ),
+        None,
+    )
+    creado = False
+
+    if existente is not None:
+        comment_id = str(existente["id"]).strip()
+    else:
+        creado_data = _graph_request(
+            "POST",
+            f"{identificador}/comments",
+            token,
+            params={"message": texto},
+        )
+        comment_id = str(creado_data.get("id", "")).strip()
+        if not comment_id:
+            raise InstagramAPIError(
+                "Instagram no devolvió el identificador del comentario."
+            )
+        creado = True
+
+    verificado_data = _graph_request(
+        "GET",
+        comment_id,
+        token,
+        params={"fields": "id,text"},
+    )
+    verificado_id = str(verificado_data.get("id", "")).strip()
+    verificado_texto = str(verificado_data.get("text", "")).strip()
+    if verificado_id != comment_id or verificado_texto != texto:
+        raise InstagramAPIError(
+            "Instagram no permitió verificar el comentario publicado."
+        )
+
+    return {
+        "success": True,
+        "media_id": identificador,
+        "comment_id": comment_id,
+        "comment_created": creado,
+        "comment_verified": True,
+        "comment_pinned": False,
+        "pin_supported_by_official_api": False,
+        "pin_requires_instagram_interface": True,
     }
