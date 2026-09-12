@@ -118,6 +118,24 @@ def obtener_cliente_openai() -> OpenAI:
 
     return OpenAI(api_key=api_key)
 
+
+def obtener_modelo_openai() -> str:
+    return os.getenv("OPENAI_MODEL", "gpt-5").strip() or "gpt-5"
+
+
+def detalle_error_openai(error: Exception) -> str:
+    detalle = str(error).strip() or "La API no devolvió detalles."
+    detalle = re.sub(
+        r"sk-[A-Za-z0-9_-]+",
+        "[secreto oculto]",
+        detalle,
+    )
+    return (
+        "No se pudo generar el pergamino con OpenAI. "
+        f"Modelo configurado: {obtener_modelo_openai()}. "
+        f"Detalle: {detalle[:500]}"
+    )
+
 app.mount(
     "/proyectos",
     StaticFiles(directory=DIRECTORIO_PROYECTOS),
@@ -1012,7 +1030,7 @@ def ajustar_guion_a_duracion(
         int(palabras_actuales * proporcion * 0.96)
     )
     respuesta = obtener_cliente_openai().responses.create(
-        model="gpt-5.6-luna",
+        model=obtener_modelo_openai(),
         input=f"""
 Acorta el siguiente guion de El Pergamino Perdido para que su narración
 quede entre 76 y 80 segundos en la misma voz. El audio actual dura
@@ -1388,9 +1406,10 @@ async def generar(
         ficha_indice
     )
 
-    respuesta = obtener_cliente_openai().responses.create(
-        model="gpt-5.6-luna",
-        input=f"""
+    try:
+        respuesta = obtener_cliente_openai().responses.create(
+            model=obtener_modelo_openai(),
+            input=f"""
 {manual_maestro}
 
 {plantilla_generacion}
@@ -1400,9 +1419,23 @@ TEMA
 
 {tema}
 """
-    )
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=detalle_error_openai(error),
+        ) from error
 
-    resultado = json.loads(respuesta.output_text)
+    try:
+        resultado = json.loads(respuesta.output_text)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "OpenAI respondió, pero no devolvió un JSON válido para "
+                "el Pergamino."
+            ),
+        ) from error
     plan_visual = resultado.get("plan_visual")
 
     if (
