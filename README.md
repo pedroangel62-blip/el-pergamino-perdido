@@ -18,6 +18,15 @@ Aplicación web para preparar Reels documentales de El Pergamino Perdido con con
 12. El borrador aprobado se convierte en vídeo final y paquete ZIP descargable.
 13. Cada Pergamino se conserva en su propia carpeta con `proyecto.json` como fuente de verdad.
 
+Al abrir `Instagram`, la pantalla carga automáticamente el caption y el
+comentario editorial del proyecto aprobado. Al autorizar la publicación,
+primero se publica el Reel y después se crea y verifica ese comentario sin
+duplicarlo si se reintenta. El permiso `instagram_business_manage_comments`
+se solicita junto con los permisos de publicación; si se añade a una conexión
+existente, hay que volver a autorizar la cuenta una vez. La API oficial de
+Instagram no expone una operación para fijar comentarios, por lo que el
+programa no afirma que el comentario esté fijado cuando no puede comprobarlo.
+
 ## Índice maestro
 
 El catálogo vive en `backend/data/indice_temas.json` e incluye:
@@ -47,6 +56,17 @@ Instale las dependencias y ejecute:
 python -m pip install -r requirements.txt
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+En Windows, después de clonar o actualizar el proyecto, se puede abrir
+`scripts\Abrir-El-Pergamino.cmd`. Inicia el servidor y un Quick Tunnel en
+segundo plano, espera a que Cloudflare entregue la URL y abre directamente el
+panel de Instagram. `scripts\Detener-El-Pergamino.cmd` detiene únicamente los
+procesos registrados por ese lanzador.
+
+El Quick Tunnel necesita que el PC esté encendido y que Windows mantenga esos
+procesos. Para trabajar con el PC apagado hace falta trasladar el servidor y
+la publicación a un servicio siempre encendido y sustituir el Quick Tunnel
+por un túnel con nombre y dominio estable.
 
 ## Producción final
 
