@@ -139,9 +139,11 @@ $tunnelProcess = $null
 $publicPanelReady = $false
 $tunnelMode = ""
 if ($isTailscale) {
-    $funnelOutput = (& $TailscalePath funnel --bg "http://127.0.0.1:8765" 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) {
-        throw "Tailscale no pudo activar Funnel. Inicia sesión y aprueba Funnel cuando lo solicite. $funnelOutput"
+    Write-Host "Activando o reutilizando Tailscale Funnel..."
+    & $TailscalePath funnel --bg "http://127.0.0.1:8765"
+    $funnelExitCode = $LASTEXITCODE
+    if ($funnelExitCode -ne 0) {
+        throw "Tailscale no pudo activar Funnel. Inicia sesión y aprueba Funnel cuando lo solicite."
     }
     $tunnelMode = "tailscale"
     for ($attempt = 0; $attempt -lt 60 -and -not $publicPanelReady; $attempt++) {
