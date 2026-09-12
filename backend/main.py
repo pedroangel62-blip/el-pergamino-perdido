@@ -1436,7 +1436,7 @@ TEMA
             and lineas_respuesta[-1].strip() == chr(96) * 3
         ):
             lineas_respuesta = lineas_respuesta[:-1]
-        texto_respuesta = "\\n".join(lineas_respuesta).strip()
+        texto_respuesta = chr(10).join(lineas_respuesta).strip()
 
     try:
         resultado = json.loads(texto_respuesta)
