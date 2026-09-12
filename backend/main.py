@@ -2746,6 +2746,51 @@ async def meta_instagram_callback(request: Request):
     )
 
 
+@app.api_route(
+    "/meta/instagram/deauthorize",
+    methods=["GET", "POST"],
+)
+async def desautorizar_instagram():
+    """Punto de retorno que Meta usa al retirar la autorización."""
+    return {"success": True}
+
+
+@app.api_route(
+    "/meta/instagram/data-deletion",
+    methods=["GET", "POST"],
+)
+async def solicitar_eliminacion_datos_instagram(request: Request):
+    """Devuelve la respuesta estándar para una solicitud de eliminación."""
+    redirect_uri = os.getenv("INSTAGRAM_REDIRECT_URI", "").strip()
+    datos_redirect = urlparse(redirect_uri)
+    if datos_redirect.scheme and datos_redirect.netloc:
+        base_publica = (
+            f"{datos_redirect.scheme}://{datos_redirect.netloc}"
+        )
+    else:
+        base_publica = str(request.base_url).rstrip("/")
+
+    codigo = secrets.token_urlsafe(18)
+    return {
+        "url": (
+            f"{base_publica}/meta/instagram/data-deletion/status"
+            f"?code={quote(codigo)}"
+        ),
+        "confirmation_code": codigo,
+    }
+
+
+@app.get(
+    "/meta/instagram/data-deletion/status",
+    response_class=HTMLResponse,
+)
+async def estado_eliminacion_datos_instagram():
+    return HTMLResponse(
+        "<h1>Solicitud de eliminación recibida</h1>"
+        "<p>La solicitud de eliminación de datos ha sido registrada.</p>"
+    )
+
+
 @app.get("/meta/instagram/status")
 async def estado_instagram():
     return estado_cuenta()
