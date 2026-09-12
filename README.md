@@ -60,18 +60,27 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 En Windows, después de clonar o actualizar el proyecto, se puede abrir
 `scripts\Abrir-El-Pergamino.cmd`. Inicia el servidor en segundo plano y abre el
 panel de Instagram usando exactamente el dominio de
-`INSTAGRAM_REDIRECT_URI`. Si ese dominio es un Quick Tunnel, el lanzador solo
-reutiliza el túnel que ya esté activo; nunca inventa otra URL porque Meta la
-rechazaría. `scripts\Detener-El-Pergamino.cmd` detiene únicamente los procesos
-registrados por ese lanzador.
+`INSTAGRAM_REDIRECT_URI`. `scripts\Detener-El-Pergamino.cmd` detiene únicamente
+los procesos registrados por ese lanzador.
 
-Para que el arranque sea automático después de un reinicio, hay que usar un
-túnel con nombre y un dominio estable. En ese caso, configura en `.env` el
-`INSTAGRAM_REDIRECT_URI` con ese dominio y `CLOUDFLARED_TUNNEL_NAME` con el
-nombre del túnel ya creado en Cloudflare. El túnel debe tener una regla que
-envíe ese dominio a `http://127.0.0.1:8765`. El Quick Tunnel actual necesita
-que el PC esté encendido y que el proceso original siga abierto; su URL no se
-puede regenerar conservando el mismo nombre.
+La configuración recomendada para trabajar con un único acceso directo es
+Tailscale Funnel. Ejecuta una sola vez `scripts\Configurar-Tailscale.cmd` tras
+instalar e iniciar sesión en Tailscale. El asistente activa Funnel hacia
+`http://127.0.0.1:8765`, obtiene el nombre estable `*.ts.net`, actualiza el
+origen público local y muestra la URL exacta que debe añadirse en Meta como
+OAuth redirect URI. Después, el acceso directo `Abrir-El-Pergamino.cmd` inicia
+el servidor, activa Funnel y abre la web; no hace falta mantener una segunda
+ventana de túnel abierta.
+
+Si el dominio registrado es un Quick Tunnel, el lanzador solo reutiliza el
+túnel que ya esté activo; nunca inventa otra URL porque Meta la rechazaría.
+Como alternativa, también admite un túnel con nombre de Cloudflare y un
+dominio propio configurados mediante `CLOUDFLARED_TUNNEL_NAME`.
+
+Tailscale Funnel y cualquier túnel local requieren que el PC esté encendido y
+conectado a Internet. No pueden mantener la aplicación disponible cuando el
+PC está apagado. El plan gratuito de Tailscale puede tener límites de uso y
+no sustituye a un servidor siempre encendido.
 
 Para trabajar con el PC apagado hace falta trasladar el servidor, los secretos
 y la publicación a un servicio siempre encendido y mantener un túnel con
