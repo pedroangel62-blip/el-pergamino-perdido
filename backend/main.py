@@ -2483,7 +2483,52 @@ async def crear_paquete_proyecto(proyecto_id: str):
 
 
 def obtener_url_publica(request: Request) -> str:
-    """Obtiene el host público respetando las cabeceras del túnel."""
+    """Obtiene la base pública para que Instagram descargue el vídeo.
+
+    Cuando el panel se abre a través de un túnel, las cabeceras reenviadas
+    contienen la dirección pública. INSTAGRAM_PUBLIC_BASE_URL permite fijar
+    esa dirección de forma explícita, de modo que publicar siga siendo
+    correcto aunque el usuario abra el panel desde localhost.
+    """
+    base_configurada = os.getenv(
+        "INSTAGRAM_PUBLIC_BASE_URL",
+        "",
+    ).strip().rstrip("/")
+    if base_configurada:
+        try:
+            datos_configurados = urlparse(base_configurada)
+            hostname_configurado = datos_configurados.hostname
+            puerto_configurado = datos_configurados.port
+        except ValueError as error:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "INSTAGRAM_PUBLIC_BASE_URL no contiene una URL válida."
+                ),
+            ) from error
+
+        if (
+            datos_configurados.scheme != "https"
+            or not datos_configurados.netloc
+            or not hostname_configurado
+            or puerto_configurado is not None
+            or datos_configurados.path not in {"", "/"}
+            or datos_configurados.params
+            or datos_configurados.query
+            or datos_configurados.fragment
+            or datos_configurados.username
+            or datos_configurados.password
+        ):
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "INSTAGRAM_PUBLIC_BASE_URL debe ser el origen HTTPS "
+                    "público, sin ruta ni credenciales."
+                ),
+            )
+
+        return datos_configurados.geturl().rstrip("/")
+
     protocolo = (
         request.headers.get("x-forwarded-proto")
         or request.url.scheme
@@ -2501,7 +2546,6 @@ def obtener_url_publica(request: Request) -> str:
         )
 
     return f"{protocolo}://{host}".rstrip("/")
-
 
 def obtener_datos_publicacion_instagram(
     resultado: dict,
