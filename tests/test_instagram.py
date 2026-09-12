@@ -55,7 +55,10 @@ class InstagramTests(unittest.TestCase):
         url = instagram.iniciar_oauth()
         query = parse_qs(urlparse(url).query)
 
-        self.assertEqual(urlparse(url).netloc, "api.instagram.com")
+        self.assertEqual(
+            urlparse(url).netloc,
+            "api.instagram.com",
+        )
         self.assertEqual(query["client_id"], ["1050579897592243"])
         self.assertNotIn("force_reauth", query)
         self.assertEqual(
@@ -64,7 +67,11 @@ class InstagramTests(unittest.TestCase):
         )
         self.assertEqual(
             query["scope"],
-            ["instagram_business_basic,instagram_business_content_publish"],
+            [
+                "instagram_business_basic,"
+                "instagram_business_content_publish,"
+                "instagram_business_manage_comments"
+            ],
         )
         self.assertTrue(query["state"][0])
         self.assertTrue(self.estado.is_file())
@@ -124,6 +131,96 @@ class InstagramTests(unittest.TestCase):
             cuerpo["video_url"],
             "https://example.trycloudflare.com/video_final.mp4",
         )
+
+    def test_publica_y_verifica_comentario_sin_devolver_el_token(self):
+        token = "token-privado-de-prueba"
+        self.cuenta.write_text(
+            json.dumps(
+                {
+                    "instagram_user_id": "17840000000000000",
+                    "username": "elpergaminoperdidos",
+                    "access_token": token,
+                    "token_type": "long_lived",
+                    "expires_at": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        respuestas = [
+            RespuestaFalsa({"data": []}),
+            RespuestaFalsa({"id": "comment-1"}),
+            RespuestaFalsa(
+                {
+                    "id": "comment-1",
+                    "text": "Comentario de prueba del Pergamino",
+                }
+            ),
+        ]
+        with patch.object(instagram, "urlopen", side_effect=respuestas) as abrir:
+            resultado = instagram.publicar_comentario(
+                "media-1",
+                "Comentario de prueba del Pergamino",
+            )
+
+        self.assertTrue(resultado["success"])
+        self.assertEqual(resultado["comment_id"], "comment-1")
+        self.assertTrue(resultado["comment_created"])
+        self.assertTrue(resultado["comment_verified"])
+        self.assertFalse(resultado["comment_pinned"])
+        self.assertFalse(resultado["pin_supported_by_official_api"])
+        self.assertNotIn("access_token", resultado)
+        self.assertNotIn(token, json.dumps(resultado))
+        self.assertEqual(abrir.call_count, 3)
+
+        crear_peticion = abrir.call_args_list[1].args[0]
+        self.assertIn(
+            "message=Comentario+de+prueba+del+Pergamino",
+            crear_peticion.full_url,
+        )
+
+    def test_reintento_reutiliza_comentario_existente(self):
+        token = "token-privado-de-prueba"
+        self.cuenta.write_text(
+            json.dumps(
+                {
+                    "instagram_user_id": "17840000000000000",
+                    "username": "elpergaminoperdidos",
+                    "access_token": token,
+                    "token_type": "long_lived",
+                    "expires_at": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        respuestas = [
+            RespuestaFalsa(
+                {
+                    "data": [
+                        {
+                            "id": "comment-existente",
+                            "text": "Comentario de prueba del Pergamino",
+                        }
+                    ]
+                }
+            ),
+            RespuestaFalsa(
+                {
+                    "id": "comment-existente",
+                    "text": "Comentario de prueba del Pergamino",
+                }
+            ),
+        ]
+        with patch.object(instagram, "urlopen", side_effect=respuestas) as abrir:
+            resultado = instagram.publicar_comentario(
+                "media-1",
+                "Comentario de prueba del Pergamino",
+            )
+
+        self.assertFalse(resultado["comment_created"])
+        self.assertEqual(resultado["comment_id"], "comment-existente")
+        self.assertEqual(abrir.call_count, 2)
 
 
 if __name__ == "__main__":
