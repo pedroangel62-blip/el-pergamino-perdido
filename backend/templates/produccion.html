@@ -286,8 +286,9 @@
         {% if musicas_base %}
             <h3>Biblioteca musical guardada</h3>
             <p class="resumen">
-                Escucha las pistas y pulsa «Usar esta pista». Se copiará al proyecto
-                sin generar música nueva.
+                Solo se muestran las MP3 preparadas para montaje.
+                Los WAV maestros se conservan en OneDrive y no se usan aquí.
+                Escucha una pista y pulsa «Usar esta pista» para copiarla al proyecto.
             </p>
             {% for grupo in musicas_base %}
                 <h4>{{ grupo.nombre }}</h4>

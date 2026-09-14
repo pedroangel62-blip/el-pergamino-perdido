@@ -107,6 +107,7 @@ MIME_MUSICA = {
     ".aac": "audio/aac",
     ".ogg": "audio/ogg",
 }
+CARPETA_MUSICA_MONTAJE = "MP3_MONTAJE"
 
 os.makedirs(DIRECTORIO_PROYECTOS, exist_ok=True)
 
@@ -2678,6 +2679,16 @@ def obtener_ruta_musica_base(ruta_relativa: str) -> str:
         raise ValueError("La pista musical solicitada no es válida.")
 
     ruta_normalizada = ruta_relativa.replace("/", os.sep).replace("\\", os.sep)
+    partes = [parte for parte in ruta_normalizada.split(os.sep) if parte]
+    if (
+        not partes
+        or partes[0].casefold() != CARPETA_MUSICA_MONTAJE.casefold()
+        or os.path.splitext(ruta_normalizada)[1].lower() != ".mp3"
+    ):
+        raise ValueError(
+            "Solo se pueden seleccionar pistas MP3 de MP3_MONTAJE."
+        )
+
     raiz = os.path.realpath(DIRECTORIO_MUSICA_BASE)
     ruta = os.path.realpath(os.path.join(raiz, ruta_normalizada))
 
@@ -2699,25 +2710,30 @@ def obtener_ruta_musica_base(ruta_relativa: str) -> str:
 
 
 def listar_musicas_base() -> list[dict]:
-    raiz = os.path.realpath(DIRECTORIO_MUSICA_BASE)
+    raiz_base = os.path.realpath(DIRECTORIO_MUSICA_BASE)
+    raiz = os.path.realpath(
+        os.path.join(raiz_base, CARPETA_MUSICA_MONTAJE)
+    )
     if not os.path.isdir(raiz):
         return []
 
-    grupos = {}
+    pistas = []
     for directorio, _, archivos in os.walk(raiz):
         for nombre_archivo in sorted(archivos, key=str.casefold):
             extension = os.path.splitext(nombre_archivo)[1].lower()
-            if extension not in EXTENSIONES_MUSICA:
+            if extension != ".mp3":
                 continue
 
             ruta = os.path.join(directorio, nombre_archivo)
-            relativa = os.path.relpath(ruta, raiz).replace(os.sep, "/")
-            carpeta = relativa.split("/", 1)[0] if "/" in relativa else "Biblioteca"
-            grupos.setdefault(carpeta, []).append(
+            relativa = os.path.relpath(
+                ruta,
+                raiz_base,
+            ).replace(os.sep, "/")
+            pistas.append(
                 {
                     "nombre": os.path.splitext(nombre_archivo)[0].replace("_", " "),
                     "archivo": nombre_archivo,
-                    "formato": extension[1:].upper(),
+                    "formato": "MP3",
                     "ruta": relativa,
                     "url": (
                         "/api/musicas-base/"
@@ -2726,18 +2742,17 @@ def listar_musicas_base() -> list[dict]:
                 }
             )
 
+    if not pistas:
+        return []
+
     return [
         {
-            "nombre": nombre,
+            "nombre": CARPETA_MUSICA_MONTAJE,
             "pistas": sorted(
                 pistas,
-                key=lambda pista: (
-                    pista["nombre"].casefold(),
-                    pista["formato"],
-                ),
+                key=lambda pista: pista["nombre"].casefold(),
             ),
         }
-        for nombre, pistas in sorted(grupos.items(), key=lambda item: item[0].casefold())
     ]
 
 

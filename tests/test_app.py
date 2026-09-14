@@ -497,9 +497,18 @@ class AplicacionTests(unittest.TestCase):
                 with open(ruta_pista, "wb") as archivo:
                     archivo.write(b"pista de prueba")
 
+                carpeta_maestros = os.path.join(biblioteca, "WAV_MAESTROS")
+                os.makedirs(carpeta_maestros)
+                with open(
+                    os.path.join(carpeta_maestros, "Maestro_Prueba.wav"),
+                    "wb",
+                ) as archivo:
+                    archivo.write(b"maestro que no se muestra")
+
                 pagina = self.cliente.get("/produccion/pergamino-prueba")
                 self.assertEqual(pagina.status_code, 200)
                 self.assertIn("Misterio Prueba", pagina.text)
+                self.assertNotIn("Maestro Prueba", pagina.text)
                 self.assertIn("/api/musicas-base/MP3_MONTAJE/Misterio_Prueba.mp3", pagina.text)
 
                 catalogo = self.cliente.get("/api/musicas-base")
@@ -507,6 +516,10 @@ class AplicacionTests(unittest.TestCase):
                 self.assertEqual(
                     catalogo.json()["grupos"][0]["pistas"][0]["formato"],
                     "MP3",
+                )
+                self.assertNotIn(
+                    "Maestro_Prueba",
+                    json.dumps(catalogo.json(), ensure_ascii=False),
                 )
 
                 preescucha = self.cliente.get(
