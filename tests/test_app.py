@@ -176,6 +176,30 @@ class AplicacionTests(unittest.TestCase):
             proyecto_reabierto = json.load(archivo)
         self.assertTrue(proyecto_reabierto["marca_no_sobrescribir"])
 
+    def test_proyecto_local_guardado_aparece_y_se_abre(self):
+        self.crear_proyecto("pergamino-kubrick")
+
+        respuesta = self.cliente.get("/")
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn("PROYECTOS EDITORIALES APROBADOS Y GUARDADOS", respuesta.text)
+        self.assertIn("Tema de prueba", respuesta.text)
+        self.assertIn(
+            "/recuperar-proyecto-aprobado/pergamino-kubrick",
+            respuesta.text,
+        )
+
+        respuesta_apertura = self.cliente.post(
+            "/recuperar-proyecto-aprobado/pergamino-kubrick",
+            follow_redirects=False,
+        )
+
+        self.assertEqual(respuesta_apertura.status_code, 303)
+        self.assertEqual(
+            respuesta_apertura.headers["location"],
+            "/proyecto/pergamino-kubrick",
+        )
+
     def test_pagina_produccion_responde(self):
         self.crear_proyecto()
         respuesta = self.cliente.get("/produccion/pergamino-prueba")
