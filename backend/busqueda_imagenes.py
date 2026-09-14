@@ -665,7 +665,10 @@ def validar_url_publica_pagina(url: str) -> str:
 
     hostname = datos.hostname.rstrip(".").casefold()
 
-    if hostname in {"localhost", "127.0.0.1", "::1"}:
+    if (
+        hostname in {"localhost", "127.0.0.1", "::1"}
+        or hostname.endswith(".local")
+    ):
         raise ValueError(
             "La página de origen no es pública."
         )
@@ -876,8 +879,12 @@ def ampliar_candidatas_con_galerias(
     )
     ampliadas = list(originales_validas)
     paginas_vistas = set()
+    fuentes_para_expandir = (
+        originales_validas
+        or eliminar_duplicados(candidatas)
+    )
 
-    for candidata_padre in originales_validas[
+    for candidata_padre in fuentes_para_expandir[
         :MAXIMO_PAGINAS_GALERIA
     ]:
         fuente_url = texto_seguro(
@@ -1243,6 +1250,7 @@ def obtener_metadatos(candidata: dict) -> str:
             texto_seguro(candidata.get("titulo")),
             texto_seguro(candidata.get("autor")),
             texto_seguro(candidata.get("descripcion")),
+            texto_seguro(candidata.get("contexto_fuente")),
             texto_seguro(candidata.get("fuente_nombre")),
             texto_seguro(candidata.get("fuente_url")),
             texto_seguro(candidata.get("imagen_url")),
