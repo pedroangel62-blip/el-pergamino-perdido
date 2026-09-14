@@ -824,6 +824,12 @@ Prompt IA: {{ escena.prompt }}</pre>
                             Fotografías encontradas
                         </h4>
 
+                        <div class="estado estado-aviso">
+                            Las nuevas búsquedas se añaden a las anteriores.
+                            Si la primera fotografía era mejor, puedes
+                            volver a seleccionarla aquí.
+                        </div>
+
                         <div class="candidatas-grid">
                             {% for candidata in candidatas_escena %}
                                 {% set candidata_seleccionada =
@@ -847,6 +853,13 @@ Prompt IA: {{ escena.prompt }}</pre>
                                     {% if candidata.descripcion %}
                                         <p class="candidata-descripcion">
                                             {{ candidata.descripcion }}
+                                        </p>
+                                    {% endif %}
+
+                                    {% if candidata.origen_galeria %}
+                                        <p class="candidata-descripcion">
+                                            Procede de otra fotografía de la
+                                            misma página de origen.
                                         </p>
                                     {% endif %}
 

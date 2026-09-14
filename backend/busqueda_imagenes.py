@@ -1,18 +1,31 @@
+import ipaddress
 import os
 import re
+import socket
 import unicodedata
 from collections import Counter
+from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import quote, urlparse
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urljoin, urlparse
+from urllib.request import (
+    HTTPRedirectHandler,
+    Request,
+    build_opener,
+)
 
 from openai import OpenAI
 
 
 MODELO_BUSQUEDA = "gpt-5.6-luna"
-MAXIMO_RESULTADOS = 8
+MAXIMO_RESULTADOS = 10
 MAXIMO_CONSULTAS = 8
 MAXIMO_LLAMADAS_WEB = 4
 MAXIMO_RESULTADOS_POR_BUSQUEDA = 10
+MAXIMO_PAGINAS_GALERIA = 3
+MAXIMO_IMAGENES_POR_PAGINA = 12
+MAXIMO_BYTES_PAGINA = 2 * 1024 * 1024
+TIEMPO_MAXIMO_PAGINA = 8
 VARIABLE_MODO = "BUSQUEDA_IMAGENES_MODO"
 MODO_PRUEBA = "prueba"
 MODO_REAL = "real"
@@ -218,7 +231,12 @@ def convertir_a_diccionario(valor: Any) -> dict:
         return valor
 
     if hasattr(valor, "model_dump"):
-        return valor.model_dump()
+        try:
+            return valor.model_dump(mode="json")
+        except TypeError:
+            return valor.model_dump()
+        except Exception:
+            return {}
 
     return {}
 
@@ -433,7 +451,12 @@ def extraer_consultas_ejecutadas(elemento: dict) -> list[str]:
 
 def extraer_resultados_imagen(respuesta: Any) -> list[dict]:
     resultados = []
-    elementos_salida = getattr(respuesta, "output", None) or []
+    datos_respuesta = convertir_a_diccionario(respuesta)
+    elementos_salida = (
+        getattr(respuesta, "output", None)
+        or datos_respuesta.get("output", [])
+        or []
+    )
 
     for elemento in elementos_salida:
         datos_elemento = convertir_a_diccionario(elemento)
@@ -491,6 +514,416 @@ def extraer_resultados_imagen(respuesta: Any) -> list[dict]:
             )
 
     return resultados
+
+
+class GaleriaFotografiasHTMLParser(HTMLParser):
+    """Extrae imágenes visibles y metadatos básicos de una página fuente."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.recursos: list[tuple[str, str]] = []
+        self.titulo: list[str] = []
+        self.descripcion = ""
+        self._leyendo_titulo = False
+
+    @staticmethod
+    def _atributos(attrs: list[tuple[str, str | None]]) -> dict[str, str]:
+        return {
+            str(clave).casefold(): texto_seguro(valor)
+            for clave, valor in attrs
+            if valor is not None
+        }
+
+    @staticmethod
+    def _separar_srcset(valor: str) -> list[str]:
+        urls = []
+        for elemento in texto_seguro(valor).split(","):
+            url = elemento.strip().split(" ", 1)[0]
+            if url:
+                urls.append(url)
+        return urls
+
+    @staticmethod
+    def _parece_imagen(url: str) -> bool:
+        ruta = urlparse(url).path.casefold()
+        return bool(
+            re.search(
+                r"\.(?:avif|gif|jpe?g|png|webp)(?:$|\?)",
+                ruta,
+            )
+        ) or any(
+            palabra in url.casefold()
+            for palabra in ("image", "imagen", "photo", "foto", "media")
+        )
+
+    def _anadir_recurso(
+        self,
+        url: str,
+        descripcion: str = "",
+        exigir_extension: bool = False,
+    ) -> None:
+        url = texto_seguro(url)
+        if (
+            not url
+            or url.startswith(("#", "data:", "blob:", "javascript:"))
+            or (exigir_extension and not self._parece_imagen(url))
+        ):
+            return
+
+        self.recursos.append((url, texto_seguro(descripcion)))
+
+    def handle_starttag(
+        self,
+        tag: str,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
+        atributos = self._atributos(attrs)
+        tag = tag.casefold()
+
+        if tag == "title":
+            self._leyendo_titulo = True
+            return
+
+        if tag == "meta":
+            clave = (
+                atributos.get("property")
+                or atributos.get("name")
+                or ""
+            ).casefold()
+            contenido = atributos.get("content", "")
+
+            if clave in {"og:image", "twitter:image"}:
+                self._anadir_recurso(contenido)
+            elif clave in {"description", "og:description"}:
+                self.descripcion = contenido
+
+        elif tag == "link":
+            rel = atributos.get("rel", "").casefold()
+            if "image_src" in rel:
+                self._anadir_recurso(atributos.get("href", ""))
+
+        elif tag == "img":
+            descripcion = (
+                atributos.get("alt")
+                or atributos.get("title")
+                or atributos.get("aria-label")
+                or ""
+            )
+            for clave in (
+                "src",
+                "data-src",
+                "data-original",
+                "data-lazy-src",
+            ):
+                self._anadir_recurso(
+                    atributos.get(clave, ""),
+                    descripcion,
+                )
+
+            for clave in ("srcset", "data-srcset"):
+                for url in self._separar_srcset(
+                    atributos.get(clave, "")
+                ):
+                    self._anadir_recurso(url, descripcion)
+
+        elif tag == "a":
+            self._anadir_recurso(
+                atributos.get("href", ""),
+                atributos.get("title", ""),
+                exigir_extension=True,
+            )
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.casefold() == "title":
+            self._leyendo_titulo = False
+
+    def handle_data(self, data: str) -> None:
+        if self._leyendo_titulo:
+            texto = texto_seguro(data)
+            if texto:
+                self.titulo.append(texto)
+
+
+def validar_url_publica_pagina(url: str) -> str:
+    try:
+        datos = urlparse(texto_seguro(url))
+        puerto = datos.port
+    except ValueError as error:
+        raise ValueError(
+            "La página de origen no contiene una dirección válida."
+        ) from error
+
+    if datos.scheme not in {"http", "https"} or not datos.hostname:
+        raise ValueError(
+            "La página de origen no contiene una dirección web pública."
+        )
+
+    if datos.username or datos.password:
+        raise ValueError(
+            "La página de origen no es segura."
+        )
+
+    hostname = datos.hostname.rstrip(".").casefold()
+
+    if (
+        hostname in {"localhost", "127.0.0.1", "::1"}
+        or hostname.endswith(".local")
+    ):
+        raise ValueError(
+            "La página de origen no es pública."
+        )
+
+    try:
+        direcciones = socket.getaddrinfo(
+            hostname,
+            puerto or (443 if datos.scheme == "https" else 80),
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror as error:
+        raise ValueError(
+            "No se pudo localizar la página de origen."
+        ) from error
+
+    if not direcciones:
+        raise ValueError(
+            "No se pudo localizar la página de origen."
+        )
+
+    for direccion in direcciones:
+        ip_texto = direccion[4][0].split("%", 1)[0]
+        try:
+            ip = ipaddress.ip_address(ip_texto)
+        except ValueError as error:
+            raise ValueError(
+                "La dirección de la página de origen no es válida."
+            ) from error
+
+        if not ip.is_global:
+            raise ValueError(
+                "La página de origen no es pública."
+            )
+
+    return datos.geturl()
+
+
+class RedireccionPaginaSegura(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> Request | None:
+        validar_url_publica_pagina(newurl)
+        return super().redirect_request(
+            req,
+            fp,
+            code,
+            msg,
+            headers,
+            newurl,
+        )
+
+
+def obtener_html_publico(url: str) -> tuple[str, str]:
+    """Devuelve la URL final y el HTML de una fuente pública, si existe."""
+    url = validar_url_publica_pagina(url)
+    solicitud = Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (compatible; ElPergaminoPerdido/1.0)"
+            ),
+            "Accept": "text/html,application/xhtml+xml",
+        },
+    )
+    cliente_http = build_opener(RedireccionPaginaSegura())
+
+    try:
+        with cliente_http.open(
+            solicitud,
+            timeout=TIEMPO_MAXIMO_PAGINA,
+        ) as respuesta:
+            url_final = validar_url_publica_pagina(
+                respuesta.geturl()
+            )
+            tipo = respuesta.headers.get_content_type()
+            if tipo and tipo not in {
+                "text/html",
+                "application/xhtml+xml",
+            }:
+                return url_final, ""
+
+            longitud = respuesta.headers.get("Content-Length")
+            if longitud and int(longitud) > MAXIMO_BYTES_PAGINA:
+                return url_final, ""
+
+            contenido = respuesta.read(
+                MAXIMO_BYTES_PAGINA + 1
+            )
+    except (
+        ValueError,
+        HTTPError,
+        URLError,
+        TimeoutError,
+        OSError,
+    ):
+        return "", ""
+
+    if len(contenido) > MAXIMO_BYTES_PAGINA:
+        return "", ""
+
+    charset = "utf-8"
+    try:
+        charset = respuesta.headers.get_content_charset() or "utf-8"
+    except (AttributeError, LookupError):
+        pass
+
+    try:
+        html = contenido.decode(charset, errors="replace")
+    except LookupError:
+        html = contenido.decode("utf-8", errors="replace")
+
+    return url_final, html
+
+
+def extraer_candidatas_de_pagina(
+    fuente_url: str,
+    html: str,
+    candidata_padre: dict,
+) -> list[dict]:
+    parser = GaleriaFotografiasHTMLParser()
+
+    try:
+        parser.feed(html)
+        parser.close()
+    except Exception:
+        return []
+
+    titulo_pagina = " ".join(parser.titulo).strip()
+    contexto_padre = " ".join(
+        parte
+        for parte in (
+            texto_seguro(candidata_padre.get("titulo")),
+            texto_seguro(candidata_padre.get("descripcion")),
+            texto_seguro(parser.descripcion),
+            titulo_pagina,
+        )
+        if parte
+    )
+    fuente_nombre = (
+        texto_seguro(candidata_padre.get("fuente_nombre"))
+        or obtener_dominio(fuente_url)
+    )
+    resultados = []
+    urls_vistas = set()
+
+    for recurso, descripcion in parser.recursos:
+        imagen_url = urljoin(fuente_url, recurso)
+
+        if (
+            not es_url_web(imagen_url)
+            or imagen_url in urls_vistas
+            or imagen_url
+            == texto_seguro(candidata_padre.get("imagen_url"))
+        ):
+            continue
+
+        urls_vistas.add(imagen_url)
+        descripcion_candidata = " ".join(
+            parte
+            for parte in (
+                descripcion,
+                contexto_padre,
+            )
+            if parte
+        ).strip()
+        resultados.append(
+            {
+                "imagen_url": imagen_url,
+                "miniatura_url": imagen_url,
+                "fuente_url": fuente_url,
+                "fuente_nombre": fuente_nombre,
+                "titulo": (
+                    descripcion
+                    or titulo_pagina
+                    or texto_seguro(candidata_padre.get("titulo"))
+                ),
+                "autor": texto_seguro(
+                    candidata_padre.get("autor")
+                ),
+                "descripcion": descripcion_candidata,
+                "contexto_fuente": contexto_padre,
+                "_galeria_fuente": True,
+            }
+        )
+
+        if len(resultados) >= MAXIMO_IMAGENES_POR_PAGINA:
+            break
+
+    return resultados
+
+
+def ampliar_candidatas_con_galerias(
+    candidatas: list[dict],
+    consultas: list[str],
+    max_resultados: int,
+) -> list[dict]:
+    """Añade imágenes de las páginas fuente sin perder las originales."""
+    originales = eliminar_duplicados(candidatas)
+    originales_validas = validar_candidatas_localmente(
+        originales,
+        consultas,
+    )
+    ampliadas = list(originales_validas)
+    paginas_vistas = set()
+    fuentes_para_expandir = (
+        originales_validas
+        or eliminar_duplicados(candidatas)
+    )
+
+    for candidata_padre in fuentes_para_expandir[
+        :MAXIMO_PAGINAS_GALERIA
+    ]:
+        fuente_url = texto_seguro(
+            candidata_padre.get("fuente_url")
+        )
+        if (
+            not es_url_web(fuente_url)
+            or fuente_url in paginas_vistas
+            or fuente_url
+            == texto_seguro(candidata_padre.get("imagen_url"))
+        ):
+            continue
+
+        paginas_vistas.add(fuente_url)
+        url_final, html = obtener_html_publico(fuente_url)
+        if not html:
+            continue
+
+        ampliadas.extend(
+            extraer_candidatas_de_pagina(
+                url_final or fuente_url,
+                html,
+                candidata_padre,
+            )
+        )
+
+        if len(ampliadas) >= max_resultados * 3:
+            break
+
+    candidatas_combinadas = eliminar_duplicados(ampliadas)
+    validas = validar_candidatas_localmente(
+        candidatas_combinadas,
+        consultas,
+    )
+
+    if validas:
+        return validas[:max_resultados]
+
+    return originales_validas[:max_resultados]
 
 
 def es_url_web(url: str) -> bool:
@@ -817,6 +1250,7 @@ def obtener_metadatos(candidata: dict) -> str:
             texto_seguro(candidata.get("titulo")),
             texto_seguro(candidata.get("autor")),
             texto_seguro(candidata.get("descripcion")),
+            texto_seguro(candidata.get("contexto_fuente")),
             texto_seguro(candidata.get("fuente_nombre")),
             texto_seguro(candidata.get("fuente_url")),
             texto_seguro(candidata.get("imagen_url")),
@@ -967,22 +1401,14 @@ def validar_candidatas_localmente(
 
 
 def eliminar_duplicados(candidatas: list[dict]) -> list[dict]:
+    """Elimina la misma imagen, pero conserva galerías de una misma página."""
     candidatas_unicas = []
     urls_vistas = set()
-    metadatos_vistos = set()
 
     for candidata in candidatas:
         imagen_url = texto_seguro(candidata.get("imagen_url"))
         miniatura_url = texto_seguro(
             candidata.get("miniatura_url")
-        )
-        fuente_url = texto_seguro(candidata.get("fuente_url"))
-        descripcion = normalizar_texto(
-            candidata.get("descripcion", "")
-        )
-        clave_metadatos = (
-            fuente_url.casefold(),
-            descripcion,
         )
 
         if not imagen_url or imagen_url in urls_vistas:
@@ -991,19 +1417,10 @@ def eliminar_duplicados(candidatas: list[dict]) -> list[dict]:
         if miniatura_url and miniatura_url in urls_vistas:
             continue
 
-        if (
-            all(clave_metadatos)
-            and clave_metadatos in metadatos_vistos
-        ):
-            continue
-
         urls_vistas.add(imagen_url)
 
         if miniatura_url:
             urls_vistas.add(miniatura_url)
-
-        if all(clave_metadatos):
-            metadatos_vistos.add(clave_metadatos)
 
         candidatas_unicas.append(candidata)
 
@@ -1075,6 +1492,12 @@ def preparar_salida(candidata: dict) -> dict:
             f"Fuente: {fuente_nombre}. Verifica la página de origen."
         )
 
+    if candidata.get("_galeria_fuente"):
+        descripcion = (
+            f"{descripcion} "
+            "Candidata adicional encontrada en la misma página de origen."
+        ).strip()
+
     return {
         "imagen_url": texto_seguro(candidata.get("imagen_url")),
         "miniatura_url": (
@@ -1086,6 +1509,7 @@ def preparar_salida(candidata: dict) -> dict:
         "titulo": titulo,
         "autor": autor,
         "descripcion": descripcion,
+        "origen_galeria": bool(candidata.get("_galeria_fuente")),
     }
 
 
@@ -1112,11 +1536,11 @@ def buscar_imagenes_reales(
         consultas,
         max_resultados,
     )
-    candidatas = eliminar_duplicados(candidatas)
-    candidatas = validar_candidatas_localmente(
+    candidatas = ampliar_candidatas_con_galerias(
         candidatas,
         consultas,
-    )[:max_resultados]
+        max_resultados,
+    )
 
     if not candidatas:
         raise ValueError(
