@@ -946,6 +946,13 @@ def detectar_formato_imagen(contenido: bytes) -> str:
     ):
         return "webp"
 
+    if (
+        len(contenido) >= 12
+        and contenido[4:8] == b"ftyp"
+        and contenido[8:12] in {b"avif", b"avis"}
+    ):
+        return "avif"
+
     raise ValueError(
         "El archivo no contiene una fotografía PNG, JPEG, GIF o WebP válida."
     )
@@ -1123,6 +1130,7 @@ async def previsualizar_fotografia(url: str):
         "jpeg": "image/jpeg",
         "gif": "image/gif",
         "webp": "image/webp",
+        "avif": "image/avif",
     }
 
     return Response(
