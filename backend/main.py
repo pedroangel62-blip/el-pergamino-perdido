@@ -28,7 +28,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from openai import OpenAI
@@ -1101,6 +1101,34 @@ def guardar_fotografia_seleccionada(
     )
 
     return url_final, formato
+
+
+
+@app.get("/previsualizar-fotografia")
+async def previsualizar_fotografia(url: str):
+    """Sirve una candidata remota a través del servidor local."""
+    try:
+        contenido, _, formato = await run_in_threadpool(
+            descargar_fotografia,
+            url,
+        )
+    except (ValueError, RuntimeError, OSError) as error:
+        raise HTTPException(
+            status_code=404,
+            detail="No se pudo cargar la fotografía candidata.",
+        ) from error
+
+    tipos = {
+        "png": "image/png",
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "webp": "image/webp",
+    }
+
+    return Response(
+        content=contenido,
+        media_type=tipos.get(formato, "application/octet-stream"),
+    )
 
 
 def obtener_candidatas_guardadas(

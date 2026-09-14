@@ -257,12 +257,6 @@
             background: #eeeeee;
         }
 
-        .candidata-descripcion {
-            margin: 0 0 12px;
-            line-height: 1.4;
-            overflow-wrap: anywhere;
-        }
-
         .candidata-enlaces {
             margin-top: auto;
         }
@@ -905,37 +899,35 @@ Prompt IA: {{ escena.prompt }}</pre>
                                     candidata.imagen_url
                                     and candidata.imagen_url[:5] == 'data:'
                                 %}
+                                {% set candidata_preview_url =
+                                    candidata.miniatura_url
+                                    or candidata.imagen_url
+                                %}
+                                {% if candidata_preview_url[:7] == 'http://'
+                                    or candidata_preview_url[:8] == 'https://' %}
+                                    {% set candidata_preview_url =
+                                        '/previsualizar-fotografia?url='
+                                        ~ (candidata_preview_url|urlencode)
+                                    %}
+                                {% endif %}
 
                                 <article class="candidata{% if candidata_seleccionada %} candidata-seleccionada{% endif %}">
                                     <img
-                                        src="{{ candidata.miniatura_url }}"
+                                        src="{{ candidata_preview_url }}"
                                         alt="Candidata {{ loop.index }} para la Imagen {{ numero }}"
                                         loading="lazy"
                                         referrerpolicy="no-referrer"
                                     >
 
-                                    {% if candidata.descripcion %}
-                                        <p class="candidata-descripcion">
-                                            {{ candidata.descripcion }}
-                                        </p>
-                                    {% endif %}
-
-                                    {% if candidata.origen_galeria %}
-                                        <p class="candidata-descripcion">
-                                            Procede de otra fotografía de la
-                                            misma página de origen.
-                                        </p>
-                                    {% endif %}
-
                                     <div class="candidata-enlaces">
                                         {% if candidata.imagen_url %}
                                             <a
                                                 class="enlace-candidata"
-                                                href="{{ candidata.imagen_url }}"
+                                                href="{{ candidata_preview_url }}"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
-                                                Abrir fotografía original
+                                                Abrir fotografía
                                             </a>
                                         {% endif %}
 

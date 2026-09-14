@@ -87,6 +87,34 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn("EL PERGAMINO PERDIDO", respuesta.text)
 
+    def test_previsualiza_fotografia_remota_sin_openai(self):
+        contenido = b"\x89PNG\r\n\x1a\narchivo"
+
+        with (
+            patch.object(
+                main,
+                "descargar_fotografia",
+                return_value=(
+                    contenido,
+                    "https://cdn.example/foto.png",
+                    "png",
+                ),
+            ),
+            patch.object(
+                main,
+                "obtener_cliente_openai",
+                side_effect=AssertionError("No debe llamarse a OpenAI"),
+            ),
+        ):
+            respuesta = self.cliente.get(
+                "/previsualizar-fotografia",
+                params={"url": "https://cdn.example/foto.png"},
+            )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.headers["content-type"], "image/png")
+        self.assertEqual(respuesta.content, contenido)
+
     def test_inicio_ofrece_recuperar_nazca_sin_generar_con_ia(self):
         respuesta = self.cliente.get("/")
 
@@ -253,9 +281,10 @@ class AplicacionTests(unittest.TestCase):
 
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn(
-            "Fotografía subida desde tu equipo",
+            "Fotografía real seleccionada y guardada",
             respuesta.text,
         )
+        self.assertIn("imagen1.png", respuesta.text)
         ruta_imagen = os.path.join(
             self.directorio_temporal.name,
             proyecto_id,
