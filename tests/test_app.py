@@ -330,9 +330,14 @@ class AplicacionTests(unittest.TestCase):
         with open(ruta_proyecto, "w", encoding="utf-8") as archivo:
             json.dump(proyecto, archivo)
 
-        pagina = self.cliente.get(
-            f"/proyecto/{proyecto_id}"
-        )
+        with patch.object(
+            main,
+            "obtener_estado_voz_interfaz",
+            return_value={"estado": "aprobada"},
+        ):
+            pagina = self.cliente.get(
+                f"/proyecto/{proyecto_id}"
+            )
         self.assertEqual(pagina.status_code, 200)
         self.assertIn(
             "No hay una fotografía adecuada: generar",
