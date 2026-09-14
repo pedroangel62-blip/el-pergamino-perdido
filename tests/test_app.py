@@ -225,7 +225,7 @@ class AplicacionTests(unittest.TestCase):
             patch.object(
                 main,
                 "obtener_estado_voz_interfaz",
-                return_value={"aprobada": True},
+                return_value={"estado": "aprobada"},
             ),
             patch.object(
                 main,
