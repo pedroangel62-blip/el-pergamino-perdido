@@ -235,13 +235,13 @@ class SincronizacionTests(unittest.TestCase):
             1000 / 30,
         )
 
-    def test_ocho_segmentos_contiguos_con_portada_de_tres_segundos(self):
+    def test_ocho_segmentos_contiguos_sin_duracion_fija_de_portada(self):
         guion = " ".join(f"palabra{indice}" for indice in range(1, 161))
         segmentos = crear_sincronizacion(guion, 80.0)
 
         self.assertEqual(len(segmentos), 8)
         self.assertEqual(segmentos[0]["inicio"], 0.0)
-        self.assertEqual(segmentos[0]["fin"], 3.0)
+        self.assertEqual(segmentos[0]["fin"], 10.0)
         self.assertEqual(segmentos[-1]["fin"], 80.0)
 
         for actual, siguiente in zip(segmentos, segmentos[1:]):
@@ -291,7 +291,7 @@ class SincronizacionTests(unittest.TestCase):
         )
         tiempos_reales = set(alineacion["character_start_times_seconds"])
 
-        self.assertEqual(segmentos[0]["fin"], 3.0)
+        self.assertEqual(segmentos[0]["fin"], segmentos[1]["inicio"])
         self.assertTrue(
             all(
                 segmento["metodo"] == "elevenlabs_semantic_alignment"
@@ -301,7 +301,7 @@ class SincronizacionTests(unittest.TestCase):
         self.assertTrue(
             all(
                 segmento["inicio"] in tiempos_reales
-                for segmento in segmentos[2:]
+                for segmento in segmentos[1:]
             )
         )
         self.assertTrue(
@@ -318,6 +318,47 @@ class SincronizacionTests(unittest.TestCase):
             all(
                 segmento["semantica_validada"]
                 for segmento in segmentos
+            )
+        )
+
+
+    def test_acepta_una_imagen_2_despues_de_tres_segundos(self):
+        frases = [
+            "Portada introductoria extensa para abrir el misterio.",
+            "Segunda escena entra después de los tres segundos.",
+            "Tercera escena presenta la primera pista importante.",
+            "Cuarta escena muestra una nueva evidencia.",
+            "Quinta escena reúne los testimonios clave.",
+            "Sexta escena plantea la duda central.",
+            "Séptima escena conecta las piezas restantes.",
+            "Octava escena cierra la investigación.",
+        ]
+        guion = " ".join(frases)
+        paso = 0.1
+        alineacion = {
+            "characters": list(guion),
+            "character_start_times_seconds": [
+                round(indice * paso, 3) for indice in range(len(guion))
+            ],
+            "character_end_times_seconds": [
+                round((indice + 1) * paso, 3) for indice in range(len(guion))
+            ],
+        }
+        segmentos = crear_sincronizacion(
+            guion,
+            len(guion) * paso,
+            alineacion=alineacion,
+            plan_visual=crear_plan_visual(frases),
+        )
+
+        self.assertGreater(segmentos[1]["inicio"], 3.0)
+        self.assertGreater(segmentos[0]["duracion"], 3.0)
+        self.assertEqual(segmentos[0]["fin"], segmentos[1]["inicio"])
+        self.assertEqual(segmentos[1]["frase_entrada"], frases[1])
+        self.assertTrue(
+            all(
+                actual["fin"] == siguiente["inicio"]
+                for actual, siguiente in zip(segmentos, segmentos[1:])
             )
         )
 

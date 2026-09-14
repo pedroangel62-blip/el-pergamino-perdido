@@ -13,7 +13,6 @@ import zipfile
 
 
 TOTAL_IMAGENES = 8
-PORTADA_SEGUNDOS = 3.0
 CIERRE_SEGUNDOS = 3.0
 ZOOM_MAXIMO_CIERRE = 1.02
 ESCALA_SEGURA_CIERRE = 0.90
@@ -369,12 +368,11 @@ def crear_segmento_cierre(duracion_voz: float) -> dict:
 
 
 def _indices_inicio(total_palabras: int, duracion: float) -> list[int]:
-    inicios_tiempo = [0.0, PORTADA_SEGUNDOS]
-    tramo = (duracion - PORTADA_SEGUNDOS) / (TOTAL_IMAGENES - 1)
-    inicios_tiempo.extend(
-        PORTADA_SEGUNDOS + tramo * indice
-        for indice in range(1, TOTAL_IMAGENES - 1)
-    )
+    tramo = duracion / TOTAL_IMAGENES
+    inicios_tiempo = [
+        tramo * indice
+        for indice in range(TOTAL_IMAGENES)
+    ]
 
     indices = [0]
 
@@ -566,14 +564,12 @@ def _indices_alineados(
     duracion: float,
 ) -> tuple[list[int], list[float]]:
     total = len(palabras)
-    indice_portada = _indice_activo_en_instante(palabras, PORTADA_SEGUNDOS)
-    indice_portada = max(1, min(indice_portada, total - (TOTAL_IMAGENES - 1)))
-    indices = [0, indice_portada]
-    inicios = [0.0, PORTADA_SEGUNDOS]
-    tramo = (duracion - PORTADA_SEGUNDOS) / (TOTAL_IMAGENES - 1)
+    tramo = duracion / TOTAL_IMAGENES
+    indices = [0]
+    inicios = [0.0]
 
-    for posicion in range(2, TOTAL_IMAGENES):
-        objetivo = PORTADA_SEGUNDOS + tramo * (posicion - 1)
+    for posicion in range(1, TOTAL_IMAGENES):
+        objetivo = tramo * posicion
         minimo = indices[-1] + 1
         maximo = total - (TOTAL_IMAGENES - posicion)
         candidatos = []
@@ -641,24 +637,11 @@ def _indices_semanticos(
         for indice in indices_ancla
     ]
 
-    if tiempos_ancla[1] > PORTADA_SEGUNDOS:
-        raise ValueError(
-            "La idea visual de la Imagen 2 comienza después del segundo 3. "
-            "Debe estar activa cuando termine la portada."
-        )
-
-    if tiempos_ancla[2] <= PORTADA_SEGUNDOS:
-        raise ValueError(
-            "La frase de entrada de la Imagen 3 debe comenzar después de "
-            "los 3 segundos de portada."
-        )
-
-    indice_segundo_tres = _indice_activo_en_instante(
-        palabras,
-        PORTADA_SEGUNDOS,
-    )
-    indices = [0, indice_segundo_tres, *indices_ancla[2:]]
-    inicios = [0.0, PORTADA_SEGUNDOS, *tiempos_ancla[2:]]
+    # La Imagen 1 comienza al inicio del audio y cada corte posterior
+    # sigue la marca temporal real de su frase de entrada. La duración de
+    # la portada no es fija: la determina el siguiente ancla del guion.
+    indices = [0, *indices_ancla[1:]]
+    inicios = [0.0, *tiempos_ancla[1:]]
 
     if any(
         actual >= siguiente
@@ -692,8 +675,8 @@ def crear_sincronizacion(
     if not guion:
         raise ValueError("El guion está vacío.")
 
-    if duracion <= PORTADA_SEGUNDOS:
-        raise ValueError("La voz debe durar más de 3 segundos.")
+    if duracion <= 0:
+        raise ValueError("La voz debe durar más de 0 segundos.")
 
     coincidencias = list(re.finditer(r"\S+", guion))
 
@@ -723,12 +706,11 @@ def crear_sincronizacion(
         metodo = "elevenlabs_alignment"
     else:
         indices = _indices_inicio(len(coincidencias), duracion)
-        tramo = (duracion - PORTADA_SEGUNDOS) / (TOTAL_IMAGENES - 1)
-        inicios = [0.0, PORTADA_SEGUNDOS]
-        inicios.extend(
-            PORTADA_SEGUNDOS + tramo * indice
-            for indice in range(1, TOTAL_IMAGENES - 1)
-        )
+        tramo = duracion / TOTAL_IMAGENES
+        inicios = [
+            tramo * indice
+            for indice in range(TOTAL_IMAGENES)
+        ]
         metodo = "estimado"
 
     finales = inicios[1:] + [duracion]
@@ -754,7 +736,7 @@ def crear_sincronizacion(
             "numero": indice + 1,
             "frase_entrada": (
                 str(anclas[indice]["frase_entrada"])
-                if anclas is not None and indice not in (0, 1)
+                if anclas is not None
                 else _frase_entrada(texto)
             ),
             "texto": texto,
@@ -951,7 +933,7 @@ def preparar_sincronizacion(
             "imagenes_sha256": obtener_hashes_imagenes(
                 directorio_proyecto
             ),
-            "portada_segundos": PORTADA_SEGUNDOS,
+            "duracion_imagen_1": sincronizacion[0]["duracion"],
             "metodo": metodo,
             "semantica_validada": semantica_validada,
             "fps_timeline": FPS_VIDEO,
