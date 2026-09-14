@@ -433,7 +433,7 @@ class AplicacionTests(unittest.TestCase):
                 files={
                     "archivo": (
                         "collage-externo.png",
-                        b"\\x89PNG\\r\\n\\x1a\\narchivo",
+                        b"\x89PNG\r\n\x1a\narchivo",
                         "image/png",
                     )
                 },
