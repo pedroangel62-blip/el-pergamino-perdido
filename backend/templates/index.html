@@ -31,6 +31,28 @@
             text-align: center;
         }
 
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #ffffff;
+        }
+
+        .form-subir-fotografia {
+            margin-top: 18px;
+            padding: 15px;
+            border: 1px solid #bbbbbb;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .form-subir-fotografia small {
+            display: block;
+            margin-top: 8px;
+            color: #555555;
+            line-height: 1.4;
+        }
+
         input[type="text"],
         select {
             width: 100%;
@@ -818,6 +840,48 @@ Prompt IA: {{ escena.prompt }}</pre>
                             </button>
                         </form>
                     {% endif %}
+
+                    <form
+                        class="form-subir-fotografia"
+                        method="post"
+                        action="/subir-fotografia/{{ numero }}#imagen-{{ numero }}"
+                        enctype="multipart/form-data"
+                    >
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <label for="archivo-{{ numero }}">
+                            O subir una fotografía desde tu equipo
+                        </label>
+
+                        <input
+                            id="archivo-{{ numero }}"
+                            type="file"
+                            name="archivo"
+                            accept="image/png,image/jpeg,image/webp,image/gif"
+                            required
+                        >
+
+                        <button
+                            class="boton-secundario"
+                            type="submit"
+                        >
+                            Subir esta fotografía
+                        </button>
+
+                        <small>
+                            Se guardará localmente y no se enviará a OpenAI.
+                            Límite: 20 MB.
+                        </small>
+                    </form>
 
                     {% if candidatas_escena %}
                         <h4 class="candidatas-titulo">
