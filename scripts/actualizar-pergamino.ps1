@@ -13,6 +13,7 @@ $FilesToUpdate = @(
     "backend\main.py",
     "backend\produccion.py",
     "backend\templates\index.html",
+    "backend\templates\produccion.html",
     "backend\manual\manual_maestro.txt",
     "tests\test_busqueda_imagenes.py",
     "tests\test_instagram.py",
