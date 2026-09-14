@@ -87,6 +87,14 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn("EL PERGAMINO PERDIDO", respuesta.text)
 
+    def test_detecta_formato_avif(self):
+        contenido = b"\x00\x00\x00\x18ftypavif\x00\x00\x00\x00"
+
+        self.assertEqual(
+            main.detectar_formato_imagen(contenido),
+            "avif",
+        )
+
     def test_previsualiza_fotografia_remota_sin_openai(self):
         contenido = b"\x89PNG\r\n\x1a\narchivo"
 
