@@ -927,6 +927,16 @@ class MontajeTests(unittest.TestCase):
                 control_visual["transiciones"]["cortes_verificados"],
                 8,
             )
+            self.assertEqual(
+                control_visual["transiciones"]["tipo"],
+                "fundido_cruzado",
+            )
+            self.assertTrue(
+                all(
+                    transicion["zoom_detectado"]
+                    for transicion in control_visual["transiciones"]["detalle"]
+                )
+            )
             self.assertEqual(control_visual["resolucion"]["fps"], 30.0)
             with open(
                 os.path.join(directorio, ARCHIVO_VERIFICACION_AUDIO),

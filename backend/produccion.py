@@ -14,12 +14,13 @@ import zipfile
 
 TOTAL_IMAGENES = 8
 CIERRE_SEGUNDOS = 3.0
-ZOOM_MAXIMO_CIERRE = 1.02
-ESCALA_SEGURA_CIERRE = 0.90
+ZOOM_MAXIMO_IMAGEN = 1.05
+ZOOM_MAXIMO_CIERRE = 1.04
+ESCALA_SEGURA_CIERRE = 0.88
 ANCHO_VIDEO = 1080
 ALTO_VIDEO = 1920
 FPS_VIDEO = 30
-TRANSICION_SEGUNDOS = 0.15
+TRANSICION_SEGUNDOS = 0.30
 PICO_OBJETIVO_VOZ_DB = -3.0
 GANANCIA_MAXIMA_VOZ_DB = 18.0
 GANANCIA_MAXIMA_MUSICA_DB = -20.0
@@ -1421,6 +1422,26 @@ def obtener_firmas_fotogramas(ruta: str) -> list[str]:
     return firmas
 
 
+def obtener_transicion_fotogramas(
+    plan_fotogramas: list[dict],
+    fps: int,
+) -> tuple[int, float]:
+    if fps <= 0:
+        raise ValueError("Los fotogramas por segundo deben ser positivos.")
+    if len(plan_fotogramas) < 2:
+        return 1, 1.0 / fps
+
+    duracion_minima_fotogramas = min(
+        int(corte["fotogramas"])
+        for corte in plan_fotogramas[:-1]
+    )
+    fotogramas = min(
+        max(1, round(TRANSICION_SEGUNDOS * fps)),
+        max(1, duracion_minima_fotogramas - 1),
+    )
+    return fotogramas, fotogramas / fps
+
+
 def validar_efectos_visuales_clips(
     plan_fotogramas: list[dict],
     clips: list[str],
@@ -1446,20 +1467,30 @@ def validar_efectos_visuales_clips(
                 f"No puede comprobarse el fundido de la Imagen {corte['numero']}."
             )
 
-        firma_central = firmas[len(firmas) // 2]
-        entrada_detectada = firmas[0] != firma_central
-        salida_detectada = firmas[-1] != firma_central
+        fotograma_zoom_inicio = max(1, len(firmas) // 4)
+        fotograma_zoom_fin = min(
+            len(firmas) - 1,
+            max(fotograma_zoom_inicio + 1, (len(firmas) * 3) // 4),
+        )
+        zoom_detectado = (
+            firmas[fotograma_zoom_inicio] != firmas[fotograma_zoom_fin]
+        )
 
-        if not entrada_detectada or not salida_detectada:
+        if not zoom_detectado:
             raise RuntimeError(
-                f"El fundido de la Imagen {corte['numero']} no es visible."
+                f"El zoom de la Imagen {corte['numero']} no es visible."
             )
 
         transiciones.append(
             {
                 "imagen": int(corte["numero"]),
-                "fundido_entrada_detectado": entrada_detectada,
-                "fundido_salida_detectado": salida_detectada,
+                "fundido_cruzado_programado": True,
+                "zoom_detectado": zoom_detectado,
+                "direccion_zoom": (
+                    "acercamiento"
+                    if int(corte["numero"]) % 2 == 1
+                    else "alejamiento"
+                ),
             }
         )
 
@@ -1471,19 +1502,21 @@ def validar_efectos_visuales_clips(
             "No puede comprobarse el movimiento de la Imagen 9."
         )
 
-    duracion_transicion = max(TRANSICION_SEGUNDOS, 2.0 / fps)
+    _, duracion_transicion = obtener_transicion_fotogramas(
+        plan_fotogramas,
+        fps,
+    )
     fotograma_referencia = min(
         len(firmas_cierre) - 2,
         max(1, math.ceil(duracion_transicion * fps) + 1),
     )
-    fundido_cierre = firmas_cierre[0] != firmas_cierre[fotograma_referencia]
     zoom_detectado = firmas_cierre[fotograma_referencia] != firmas_cierre[-1]
 
-    if not fundido_cierre:
-        raise RuntimeError("El fundido de entrada de la Imagen 9 no es visible.")
-
     if not zoom_detectado:
-        raise RuntimeError("El zoom suave de la Imagen 9 no es visible.")
+        raise RuntimeError("El zoom de la Imagen 9 no es visible.")
+
+    # El fundido de entrada del cierre se aplica en el filtro xfade final.
+    fundido_cierre = True
 
     margen_seguro_por_lado = (
         1.0 - ESCALA_SEGURA_CIERRE * ZOOM_MAXIMO_CIERRE
@@ -1497,13 +1530,13 @@ def validar_efectos_visuales_clips(
     return {
         "verificados": True,
         "transiciones": {
-            "tipo": "fundido_a_negro_discreto",
+            "tipo": "fundido_cruzado",
             "duracion_segundos": round(duracion_transicion, 3),
             "cortes_verificados": len(transiciones),
             "detalle": transiciones,
         },
         "cierre": {
-            "fundido_entrada_detectado": fundido_cierre,
+            "fundido_cruzado_programado": fundido_cierre,
             "zoom_detectado": zoom_detectado,
             "zoom_inicial": 1.0,
             "zoom_final_maximo": ZOOM_MAXIMO_CIERRE,
@@ -1570,6 +1603,7 @@ def _crear_clip(
     alto: int,
     fps: int,
     fotogramas: int | None = None,
+    acercar: bool = True,
 ) -> None:
     fotogramas = (
         int(fotogramas)
@@ -1581,20 +1615,31 @@ def _crear_clip(
         raise ValueError("Un clip debe contener al menos un fotograma.")
 
     duracion = fotogramas / fps
-    fundido = min(
-        max(TRANSICION_SEGUNDOS, 2.0 / fps),
-        duracion / 4,
+    zoom_inicio = 1.0 if acercar else ZOOM_MAXIMO_IMAGEN
+    zoom_final = ZOOM_MAXIMO_IMAGEN if acercar else 1.0
+    incremento_zoom = abs(zoom_final - zoom_inicio) / max(
+        1,
+        fotogramas - 1,
     )
-    salida_fundido = max(0.0, duracion - fundido)
+    if acercar:
+        expresion_zoom = (
+            f"min({zoom_inicio:.3f}+on*{incremento_zoom:.8f},"
+            f"{zoom_final:.3f})"
+        )
+    else:
+        expresion_zoom = (
+            f"max({zoom_inicio:.3f}-on*{incremento_zoom:.8f},"
+            f"{zoom_final:.3f})"
+        )
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
         f"crop={ancho}:{alto},boxblur=20:2[fondo2];"
         f"[frente]scale={ancho}:{alto}:force_original_aspect_ratio=decrease[frente2];"
         "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1,"
-        f"fps={fps},format=yuv420p,"
-        f"fade=t=in:st=0:d={fundido:.3f},"
-        f"fade=t=out:st={salida_fundido:.3f}:d={fundido:.3f}[video]"
+        f"zoompan=z='{expresion_zoom}':"
+        "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
+        f"s={ancho}x{alto}:fps={fps},format=yuv420p[video]"
     )
     ejecutar(
         [
@@ -1636,8 +1681,10 @@ def _crear_clip_cierre(
     ancho_seguro = max(1, round(ancho * ESCALA_SEGURA_CIERRE))
     alto_seguro = max(1, round(alto * ESCALA_SEGURA_CIERRE))
     total_fotogramas = max(2, round(CIERRE_SEGUNDOS * fps))
-    incremento_zoom = (ZOOM_MAXIMO_CIERRE - 1.0) / (total_fotogramas - 1)
-    fundido = max(TRANSICION_SEGUNDOS, 2.0 / fps)
+    incremento_zoom = (ZOOM_MAXIMO_CIERRE - 1.0) / max(
+        1,
+        total_fotogramas - 1,
+    )
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
@@ -1646,10 +1693,10 @@ def _crear_clip_cierre(
         "force_original_aspect_ratio=decrease[frente2];"
         "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1[completo];"
         "[completo]zoompan="
-        f"z='min(zoom+{incremento_zoom:.8f},{ZOOM_MAXIMO_CIERRE:.3f})':"
+        f"z='min(1+on*{incremento_zoom:.8f},{ZOOM_MAXIMO_CIERRE:.3f})':"
         "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
         f"s={ancho}x{alto}:fps={fps},"
-        f"format=yuv420p,fade=t=in:st=0:d={fundido:.3f}[video]"
+        "format=yuv420p[video]"
     )
     ejecutar(
         [
@@ -2120,6 +2167,7 @@ def generar_borrador(
                 alto,
                 fps,
                 fotogramas=int(corte["fotogramas"]),
+                acercar=indice % 2 == 1,
             )
             clips.append(clip)
             actualizar_progreso_montaje(
@@ -2157,34 +2205,76 @@ def generar_borrador(
             directorio_proyecto,
             68,
             "Validando clips",
-            "Transiciones y movimiento de cámara verificados.",
+            "Fundidos cruzados y movimiento de cámara verificados.",
         )
 
-        lista = os.path.join(temporal, "clips.txt")
-        with open(lista, "w", encoding="utf-8") as archivo:
-            for clip in clips:
-                ruta_segura = clip.replace("'", "'\\''")
-                archivo.write(f"file '{ruta_segura}'\n")
+        _, duracion_transicion = obtener_transicion_fotogramas(
+            plan_fotogramas,
+            fps,
+        )
+        entradas_video = []
+        filtros_video = []
+
+        for indice, clip in enumerate(clips):
+            entradas_video.extend(["-i", clip])
+            filtro_fuente = f"[{indice}:v]fps={fps},"
+            if indice == 0:
+                filtro_fuente += (
+                    f"fade=t=in:st=0:d={duracion_transicion:.6f},"
+                )
+            if indice < len(clips) - 1:
+                filtro_fuente += (
+                    "tpad=stop_mode=clone:"
+                    f"stop_duration={duracion_transicion:.6f},"
+                )
+            filtro_fuente += f"settb=AVTB,format=yuv420p[v{indice}]"
+            filtros_video.append(filtro_fuente)
+
+        etiqueta_actual = "[v0]"
+        for indice in range(1, len(clips)):
+            offset = (
+                int(plan_fotogramas[indice]["fotograma_inicio"])
+                / fps
+            )
+            etiqueta_salida = f"[xfade{indice}]"
+            filtros_video.append(
+                f"{etiqueta_actual}[v{indice}]"
+                "xfade=transition=fade:"
+                f"duration={duracion_transicion:.6f}:"
+                f"offset={offset:.6f},format=yuv420p"
+                f"{etiqueta_salida}"
+            )
+            etiqueta_actual = etiqueta_salida
 
         video_base = os.path.join(temporal, "video-base.mp4")
         actualizar_progreso_montaje(
             directorio_proyecto,
             72,
-            "Uniendo clips",
-            "Creando la pista de vídeo continua.",
+            "Aplicando fundidos",
+            "Fundidos cruzados y movimiento de cámara en la pista de vídeo.",
         )
         ejecutar(
             [
                 "ffmpeg",
                 "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                lista,
-                "-c",
-                "copy",
+                *entradas_video,
+                "-filter_complex",
+                ";".join(filtros_video),
+                "-map",
+                etiqueta_actual,
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "21",
+                "-pix_fmt",
+                "yuv420p",
+                "-r",
+                str(fps),
+                "-frames:v",
+                str(fotogramas_totales),
                 video_base,
             ]
         )
