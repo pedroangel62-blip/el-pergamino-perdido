@@ -947,7 +947,7 @@ def detectar_formato_imagen(contenido: bytes) -> str:
         return "webp"
 
     raise ValueError(
-        "El archivo descargado no es una fotografía PNG, JPEG, GIF o WebP."
+        "El archivo no contiene una fotografía PNG, JPEG, GIF o WebP válida."
     )
 
 
@@ -1006,6 +1006,57 @@ def descargar_fotografia(url: str) -> tuple[bytes, str, str]:
     return contenido, url_final, formato
 
 
+def guardar_contenido_fotografia(
+    proyecto_id: str,
+    numero: int,
+    contenido: bytes
+) -> None:
+    directorio = obtener_directorio_imagenes(proyecto_id)
+    os.makedirs(directorio, exist_ok=True)
+    descriptor, ruta_temporal = tempfile.mkstemp(
+        prefix=f".imagen{numero}-",
+        suffix=".tmp",
+        dir=directorio
+    )
+
+    try:
+        with os.fdopen(descriptor, "wb") as archivo:
+            archivo.write(contenido)
+
+        os.replace(
+            ruta_temporal,
+            obtener_ruta_imagen(proyecto_id, numero)
+        )
+    except Exception:
+        if os.path.exists(ruta_temporal):
+            os.remove(ruta_temporal)
+        raise
+
+
+def crear_candidata_fotografia_local(
+    proyecto_id: str,
+    numero: int,
+    nombre_archivo: str,
+    formato: str
+) -> dict:
+    ruta = obtener_ruta_imagen(proyecto_id, numero)
+    marca_tiempo = int(os.path.getmtime(ruta))
+    url = (
+        f"/proyectos/{proyecto_id}/imagenes/"
+        f"imagen{numero}.png?v={marca_tiempo}"
+    )
+
+    return {
+        "imagen_url": url,
+        "miniatura_url": url,
+        "descripcion": (
+            "Fotografía subida desde tu equipo"
+            f" ({nombre_archivo or 'archivo local'}; {formato})."
+        ),
+        "origen_local": True,
+    }
+
+
 def guardar_fotografia_seleccionada(
     proyecto_id: str,
     numero: int,
@@ -1043,26 +1094,11 @@ def guardar_fotografia_seleccionada(
             "No se pudo descargar ni la fotografía original ni su miniatura."
         ) from ultimo_error
 
-    directorio = obtener_directorio_imagenes(proyecto_id)
-    os.makedirs(directorio, exist_ok=True)
-    descriptor, ruta_temporal = tempfile.mkstemp(
-        prefix=f".imagen{numero}-",
-        suffix=".tmp",
-        dir=directorio
+    guardar_contenido_fotografia(
+        proyecto_id,
+        numero,
+        contenido
     )
-
-    try:
-        with os.fdopen(descriptor, "wb") as archivo:
-            archivo.write(contenido)
-
-        os.replace(
-            ruta_temporal,
-            obtener_ruta_imagen(proyecto_id, numero)
-        )
-    except Exception:
-        if os.path.exists(ruta_temporal):
-            os.remove(ruta_temporal)
-        raise
 
     return url_final, formato
 
@@ -2065,6 +2101,146 @@ async def buscar_fotografias(
         numero,
         resultados_busqueda
     )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "tema": tema,
+            "resultado": resultado,
+            "resultado_json": resultado_json,
+            "imagenes": obtener_imagenes_generadas(
+                proyecto_id
+            ),
+            "candidatas": obtener_candidatas_guardadas(
+                proyecto_id
+            ),
+            "selecciones": obtener_selecciones_guardadas(
+                proyecto_id
+            ),
+            "imagen_generando": None,
+            "voz": obtener_estado_voz_interfaz(
+                proyecto_id
+            ),
+            "voz_generando": False
+        }
+    )
+
+
+@app.post(
+    "/subir-fotografia/{numero}",
+    response_class=HTMLResponse
+)
+async def subir_fotografia(
+    numero: int,
+    request: Request,
+    archivo: UploadFile = File(...),
+    resultado_json: str = Form(...),
+    tema: str = Form("")
+):
+    if numero < 1 or numero > TOTAL_IMAGENES:
+        raise HTTPException(
+            status_code=400,
+            detail="El número de imagen debe estar entre 1 y 8."
+        )
+
+    try:
+        resultado = json.loads(resultado_json)
+    except json.JSONDecodeError as error:
+        raise HTTPException(
+            status_code=400,
+            detail="Los datos del Pergamino no son válidos."
+        ) from error
+
+    plan_visual = resultado.get("plan_visual", [])
+    if (
+        not isinstance(plan_visual, list)
+        or len(plan_visual) < numero
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"No existe la imagen {numero} en el plan visual."
+        )
+
+    if not requiere_fotografia_real(plan_visual[numero - 1]):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Esta escena no está configurada para usar "
+                "una fotografía real."
+            )
+        )
+
+    try:
+        proyecto_id = obtener_proyecto_id(resultado)
+        exigir_voz_aprobada(
+            proyecto_id,
+            resultado
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    contenido = await archivo.read(
+        MAXIMO_BYTES_FOTOGRAFIA + 1
+    )
+
+    if not contenido:
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo está vacío."
+        )
+
+    if len(contenido) > MAXIMO_BYTES_FOTOGRAFIA:
+        raise HTTPException(
+            status_code=400,
+            detail="La fotografía supera el límite de 20 MB."
+        )
+
+    try:
+        formato = detectar_formato_imagen(contenido)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        ) from error
+
+    nombre_archivo = str(
+        archivo.filename or "archivo local"
+    ).replace("\\", "/").rsplit("/", 1)[-1][:120]
+
+    try:
+        guardar_contenido_fotografia(
+            proyecto_id,
+            numero,
+            contenido
+        )
+        candidata = crear_candidata_fotografia_local(
+            proyecto_id,
+            numero,
+            nombre_archivo,
+            formato
+        )
+        guardar_candidatas(
+            proyecto_id,
+            numero,
+            [candidata]
+        )
+        guardar_seleccion(
+            proyecto_id,
+            numero,
+            0,
+            candidata,
+            candidata["imagen_url"],
+            formato
+        )
+    except OSError as error:
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo guardar la fotografía subida."
+        ) from error
 
     return templates.TemplateResponse(
         request=request,
