@@ -1734,8 +1734,7 @@ async def iniciar_generacion_voz(
     request: Request,
     background_tasks: BackgroundTasks,
     resultado_json: str = Form(...),
-    tema: str = Form(""),
-    confirmar_recreacion_ia: str = Form("")
+    tema: str = Form("")
 ):
     try:
         resultado_formulario = json.loads(
@@ -2455,7 +2454,8 @@ async def iniciar_generacion_imagen(
     request: Request,
     background_tasks: BackgroundTasks,
     resultado_json: str = Form(...),
-    tema: str = Form("")
+    tema: str = Form(""),
+    confirmar_recreacion_ia: str = Form("")
 ):
     if numero < 1 or numero > TOTAL_IMAGENES:
         raise HTTPException(
@@ -2540,7 +2540,7 @@ async def iniciar_generacion_imagen(
 
             permitir_recreacion_ia = True
 
-    ruta = obtener_ruta_imagen(    ruta = obtener_ruta_imagen(
+    ruta = obtener_ruta_imagen(
         proyecto_id,
         numero
     )
