@@ -392,6 +392,89 @@ class AplicacionTests(unittest.TestCase):
         self.assertTrue(crear.call_args.args[-1])
 
 
+    def test_subir_imagen_externa_en_recreacion_ia_no_llama_openai(self):
+        proyecto_id = "pergamino-imagen-externa-ia"
+        self.crear_proyecto(proyecto_id)
+
+        ruta_proyecto = os.path.join(
+            self.directorio_temporal.name,
+            proyecto_id,
+            "proyecto.json",
+        )
+        with open(ruta_proyecto, "r", encoding="utf-8") as archivo:
+            proyecto = json.load(archivo)
+
+        proyecto["resultado"]["_proyecto_id"] = proyecto_id
+        with open(ruta_proyecto, "w", encoding="utf-8") as archivo:
+            json.dump(proyecto, archivo)
+
+        with (
+            patch.object(main, "exigir_voz_aprobada"),
+            patch.object(
+                main,
+                "obtener_estado_voz_interfaz",
+                return_value={"estado": "aprobada"},
+            ),
+            patch.object(
+                main,
+                "obtener_cliente_openai",
+                side_effect=AssertionError("No debe llamarse a OpenAI"),
+            ),
+        ):
+            respuesta = self.cliente.post(
+                "/subir-fotografia/1",
+                data={
+                    "tema": "Tema de prueba",
+                    "resultado_json": json.dumps(
+                        proyecto["resultado"],
+                        ensure_ascii=False,
+                    ),
+                },
+                files={
+                    "archivo": (
+                        "collage-externo.png",
+                        b"\\x89PNG\\r\\n\\x1a\\narchivo",
+                        "image/png",
+                    )
+                },
+            )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn(
+            "Imagen externa subida y guardada",
+            respuesta.text,
+        )
+        self.assertIn(
+            "Subir una imagen creada fuera de la aplicación",
+            respuesta.text,
+        )
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(
+                    self.directorio_temporal.name,
+                    proyecto_id,
+                    "imagenes",
+                    "imagen1.png",
+                )
+            )
+        )
+
+        with open(
+            os.path.join(
+                self.directorio_temporal.name,
+                proyecto_id,
+                "seleccion-imagen-1.json",
+            ),
+            "r",
+            encoding="utf-8",
+        ) as archivo:
+            seleccion = json.load(archivo)
+
+        self.assertEqual(
+            seleccion["fotografia"]["origen"],
+            "imagen_externa",
+        )
+
     def test_pagina_produccion_responde(self):
         self.crear_proyecto()
         respuesta = self.cliente.get("/produccion/pergamino-prueba")
