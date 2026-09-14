@@ -220,7 +220,7 @@ class AplicacionTests(unittest.TestCase):
         with open(ruta_proyecto, "w", encoding="utf-8") as archivo:
             json.dump(proyecto, archivo)
 
-        with patch.object(main, "exigir_voz_aprobada"):
+        with (\n            patch.object(main, "exigir_voz_aprobada"),\n            patch.object(\n                main,\n                "obtener_cliente_openai",\n                side_effect=AssertionError("No debe llamarse a OpenAI"),\n            ),\n        ):
             respuesta = self.cliente.post(
                 "/subir-fotografia/1",
                 data={
@@ -233,7 +233,7 @@ class AplicacionTests(unittest.TestCase):
                 files={
                     "archivo": (
                         "foto.png",
-                        b"\\x89PNG\\r\\n\\x1a\\narchivo",
+                        b"\x89PNG\r\n\x1a\narchivo",
                         "image/png",
                     )
                 },
