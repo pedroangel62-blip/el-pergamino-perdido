@@ -167,6 +167,53 @@
             text-align: center;
         }
 
+        .estado-generando {
+            color: #173d5c;
+            border: 1px solid #78a9d1;
+            background: #eef7ff;
+            text-align: left;
+        }
+
+        .generacion-cabecera {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+        }
+
+        .rueda-generando {
+            width: 20px;
+            height: 20px;
+            flex: 0 0 20px;
+            border: 3px solid #b8d2e8;
+            border-top-color: #1769aa;
+            border-radius: 50%;
+            animation: girar-generacion 1s linear infinite;
+        }
+
+        @keyframes girar-generacion {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .generacion-tiempo,
+        .generacion-proxima {
+            margin: 10px 0 0;
+            font-weight: 700;
+        }
+
+        .generacion-ayuda {
+            margin: 10px 0 0;
+            line-height: 1.4;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .rueda-generando {
+                animation: none;
+            }
+        }
+
         .voz-bloque {
             padding: 20px;
             margin-top: 15px;
@@ -1033,9 +1080,40 @@ Prompt IA: {{ escena.prompt }}</pre>
 
                 {% elif imagen_generando == numero %}
 
-                    <div class="estado">
-                        Generando la Imagen {{ numero }}.
-                        Puede tardar varios minutos.
+                    <div
+                        class="estado estado-generando"
+                        role="status"
+                        aria-live="polite"
+                    >
+                        <div class="generacion-cabecera">
+                            <span
+                                class="rueda-generando"
+                                aria-hidden="true"
+                            ></span>
+                            <strong>
+                                Generando la Imagen {{ numero }}
+                            </strong>
+                        </div>
+
+                        <p class="generacion-ayuda">
+                            La generación está en curso. No pulses de nuevo
+                            el botón ni cierres esta página.
+                        </p>
+
+                        <p class="generacion-tiempo">
+                            Tiempo transcurrido:
+                            <span id="tiempo-generacion-{{ numero }}">
+                                00:00
+                            </span>
+                        </p>
+
+                        <p class="generacion-proxima">
+                            Próxima comprobación automática en
+                            <span id="proxima-comprobacion-{{ numero }}">
+                                10
+                            </span>
+                            segundos.
+                        </p>
                     </div>
 
                     <form
@@ -1063,16 +1141,84 @@ Prompt IA: {{ escena.prompt }}</pre>
                     </form>
 
                     <script>
-                        window.setTimeout(function () {
+                        (function () {
                             const formulario =
                                 document.getElementById(
                                     "form-comprobar-imagen-{{ numero }}"
                                 );
+                            const tiempo =
+                                document.getElementById(
+                                    "tiempo-generacion-{{ numero }}"
+                                );
+                            const proxima =
+                                document.getElementById(
+                                    "proxima-comprobacion-{{ numero }}"
+                                );
+                            const clave =
+                                "pergamino-generacion-{{ resultado._proyecto_id }}-{{ numero }}";
+                            let inicio = Date.now();
 
-                            if (formulario) {
-                                formulario.submit();
+                            try {
+                                const guardado = Number(
+                                    sessionStorage.getItem(clave)
+                                );
+
+                                if (Number.isFinite(guardado) && guardado > 0) {
+                                    inicio = guardado;
+                                } else {
+                                    sessionStorage.setItem(
+                                        clave,
+                                        String(inicio)
+                                    );
+                                }
+                            } catch (error) {
+                                // Si el navegador bloquea sessionStorage,
+                                // el avisador sigue funcionando durante esta carga.
                             }
-                        }, 10000);
+
+                            function formatearTiempo(segundos) {
+                                const minutos = Math.floor(segundos / 60);
+                                const restantes = segundos % 60;
+
+                                return String(minutos).padStart(2, "0")
+                                    + ":"
+                                    + String(restantes).padStart(2, "0");
+                            }
+
+                            function actualizarAvisador() {
+                                const transcurrido = Math.max(
+                                    0,
+                                    Math.floor(
+                                        (Date.now() - inicio) / 1000
+                                    )
+                                );
+
+                                if (tiempo) {
+                                    tiempo.textContent =
+                                        formatearTiempo(transcurrido);
+                                }
+
+                                if (proxima) {
+                                    const restante =
+                                        10 - (transcurrido % 10);
+                                    proxima.textContent = String(
+                                        restante === 0 ? 10 : restante
+                                    );
+                                }
+                            }
+
+                            actualizarAvisador();
+                            window.setInterval(
+                                actualizarAvisador,
+                                1000
+                            );
+
+                            window.setTimeout(function () {
+                                if (formulario) {
+                                    formulario.submit();
+                                }
+                            }, 10000);
+                        }());
                     </script>
 
                 {% elif imagen_generando %}
