@@ -8,9 +8,12 @@ $DownloadUrl = "https://github.com/pedroangel62-blip/el-pergamino-perdido/archiv
 $SourceRoot = Join-Path $ExtractRoot "el-pergamino-perdido-main"
 
 $FilesToUpdate = @(
+    "backend\busqueda_imagenes.py",
     "backend\instagram.py",
     "backend\main.py",
+    "backend\templates\index.html",
     "backend\manual\manual_maestro.txt",
+    "tests\test_busqueda_imagenes.py",
     "tests\test_instagram.py",
     "tests\test_app.py",
     "README.md",
