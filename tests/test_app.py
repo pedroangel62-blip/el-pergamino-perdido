@@ -510,6 +510,9 @@ class AplicacionTests(unittest.TestCase):
                 self.assertIn("Misterio Prueba", pagina.text)
                 self.assertNotIn("Maestro Prueba", pagina.text)
                 self.assertIn("/api/musicas-base/MP3_MONTAJE/Misterio_Prueba.mp3", pagina.text)
+                self.assertIn('id="abrir-biblioteca-musica"', pagina.text)
+                self.assertIn('id="biblioteca-musica-dialog"', pagina.text)
+                self.assertIn("Abrir biblioteca musical", pagina.text)
 
                 catalogo = self.cliente.get("/api/musicas-base")
                 self.assertEqual(catalogo.status_code, 200)

@@ -85,11 +85,64 @@
         }
 
         audio, video { width: 100%; margin: 12px 0; }
+        .biblioteca-lanzador {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin: 14px 0 22px;
+            padding: 14px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            background: #fffaf0;
+        }
+        .biblioteca-lanzador p {
+            margin: 0;
+            color: #655544;
+        }
+        .biblioteca-lanzador button {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .dialogo-musica {
+            width: min(760px, calc(100vw - 28px));
+            max-width: 760px;
+            max-height: min(82vh, 760px);
+            padding: 0;
+            border: 1px solid var(--borde);
+            border-radius: 14px;
+            color: var(--tinta);
+            background: var(--papel);
+            box-shadow: 0 18px 60px rgba(47, 37, 28, 0.28);
+        }
+        .dialogo-musica:not([open]) { display: none; }
+        .dialogo-musica::backdrop {
+            background: rgba(47, 37, 28, 0.58);
+        }
+        .dialogo-musica-contenido {
+            max-height: min(82vh, 760px);
+            overflow-y: auto;
+            padding: 22px;
+        }
+        .dialogo-musica-cabecera {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .dialogo-musica-cabecera h3 { margin: 0; }
+        .dialogo-musica-cerrar {
+            min-height: 38px;
+            padding: 6px 12px;
+            background: #655544;
+            font-size: 20px;
+            line-height: 1;
+        }
         .biblioteca-musica {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 12px;
-            margin: 14px 0 22px;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin: 14px 0 0;
         }
         .pista-musica {
             padding: 14px;
@@ -100,9 +153,17 @@
         .pista-musica h4 { margin: 0 0 4px; }
         .pista-musica small { color: #655544; }
         .pista-musica form { margin: 0; }
+        .pista-musica audio { margin: 8px 0 10px; }
         .pista-musica button {
             width: 100%;
             font-size: 14px;
+        }
+        @media (max-width: 620px) {
+            .biblioteca-lanzador {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .biblioteca-lanzador button { width: 100%; }
         }
         video { max-height: 70vh; background: black; }
 
@@ -284,28 +345,56 @@
         <pre>{{ resultado.musica }}</pre>
 
         {% if musicas_base %}
-            <h3>Biblioteca musical guardada</h3>
-            <p class="resumen">
-                Solo se muestran las MP3 preparadas para montaje.
-                Los WAV maestros se conservan en OneDrive y no se usan aquí.
-                Escucha una pista y pulsa «Usar esta pista» para copiarla al proyecto.
-            </p>
+            {% set total_pistas = namespace(valor=0) %}
             {% for grupo in musicas_base %}
-                <h4>{{ grupo.nombre }}</h4>
-                <div class="biblioteca-musica">
-                    {% for pista in grupo.pistas %}
-                        <article class="pista-musica">
-                            <h4>{{ pista.nombre }}</h4>
-                            <small>{{ pista.formato }} · {{ pista.archivo }}</small>
-                            <audio controls preload="none" src="{{ pista.url }}"></audio>
-                            <form method="post" action="/produccion/{{ proyecto_id }}/musica-biblioteca">
-                                <input type="hidden" name="ruta_biblioteca" value="{{ pista.ruta }}">
-                                <button type="submit">Usar esta pista</button>
-                            </form>
-                        </article>
+                {% set total_pistas.valor = total_pistas.valor + (grupo.pistas|length) %}
+            {% endfor %}
+            <div class="biblioteca-lanzador">
+                <p>
+                    Biblioteca disponible: <strong>{{ total_pistas.valor }} MP3</strong>.
+                    Los WAV maestros permanecen fuera de este selector.
+                </p>
+                <button type="button" id="abrir-biblioteca-musica">
+                    Abrir biblioteca musical
+                </button>
+            </div>
+
+            <dialog
+                id="biblioteca-musica-dialog"
+                class="dialogo-musica"
+                aria-labelledby="titulo-biblioteca-musica"
+            >
+                <div class="dialogo-musica-contenido">
+                    <div class="dialogo-musica-cabecera">
+                        <h3 id="titulo-biblioteca-musica">Biblioteca musical</h3>
+                        <button
+                            type="button"
+                            class="dialogo-musica-cerrar"
+                            data-cerrar-musica
+                            aria-label="Cerrar biblioteca musical"
+                        >×</button>
+                    </div>
+                    <p class="resumen">
+                        Escucha una pista y pulsa «Usar esta pista» para copiarla al proyecto.
+                    </p>
+                    {% for grupo in musicas_base %}
+                        <h4>{{ grupo.nombre }}</h4>
+                        <div class="biblioteca-musica">
+                            {% for pista in grupo.pistas %}
+                                <article class="pista-musica">
+                                    <h4>{{ pista.nombre }}</h4>
+                                    <small>{{ pista.formato }} · {{ pista.archivo }}</small>
+                                    <audio controls preload="none" src="{{ pista.url }}"></audio>
+                                    <form method="post" action="/produccion/{{ proyecto_id }}/musica-biblioteca">
+                                        <input type="hidden" name="ruta_biblioteca" value="{{ pista.ruta }}">
+                                        <button type="submit">Usar esta pista</button>
+                                    </form>
+                                </article>
+                            {% endfor %}
+                        </div>
                     {% endfor %}
                 </div>
-            {% endfor %}
+            </dialog>
         {% else %}
             <div class="estado">
                 No se ha encontrado la biblioteca musical guardada en OneDrive.
@@ -448,5 +537,37 @@
         {% endif %}
     </section>
 </main>
+
+<script>
+    (() => {
+        const dialog = document.getElementById('biblioteca-musica-dialog');
+        const abrir = document.getElementById('abrir-biblioteca-musica');
+        if (!dialog || !abrir) return;
+
+        const cerrar = () => {
+            if (typeof dialog.close === 'function') {
+                dialog.close();
+            } else {
+                dialog.removeAttribute('open');
+            }
+        };
+
+        abrir.addEventListener('click', () => {
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            } else {
+                dialog.setAttribute('open', '');
+            }
+        });
+
+        dialog.querySelectorAll('[data-cerrar-musica]').forEach((boton) => {
+            boton.addEventListener('click', cerrar);
+        });
+
+        dialog.addEventListener('click', (evento) => {
+            if (evento.target === dialog) cerrar();
+        });
+    })();
+</script>
 </body>
 </html>
