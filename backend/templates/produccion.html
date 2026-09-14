@@ -85,6 +85,25 @@
         }
 
         audio, video { width: 100%; margin: 12px 0; }
+        .biblioteca-musica {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin: 14px 0 22px;
+        }
+        .pista-musica {
+            padding: 14px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            background: #fffaf0;
+        }
+        .pista-musica h4 { margin: 0 0 4px; }
+        .pista-musica small { color: #655544; }
+        .pista-musica form { margin: 0; }
+        .pista-musica button {
+            width: 100%;
+            font-size: 14px;
+        }
         video { max-height: 70vh; background: black; }
 
         pre {
@@ -263,6 +282,34 @@
         <h2>2. Música</h2>
         <p>Prompt preparado para generar la música:</p>
         <pre>{{ resultado.musica }}</pre>
+
+        {% if musicas_base %}
+            <h3>Biblioteca musical guardada</h3>
+            <p class="resumen">
+                Escucha las pistas y pulsa «Usar esta pista». Se copiará al proyecto
+                sin generar música nueva.
+            </p>
+            {% for grupo in musicas_base %}
+                <h4>{{ grupo.nombre }}</h4>
+                <div class="biblioteca-musica">
+                    {% for pista in grupo.pistas %}
+                        <article class="pista-musica">
+                            <h4>{{ pista.nombre }}</h4>
+                            <small>{{ pista.formato }} · {{ pista.archivo }}</small>
+                            <audio controls preload="none" src="{{ pista.url }}"></audio>
+                            <form method="post" action="/produccion/{{ proyecto_id }}/musica-biblioteca">
+                                <input type="hidden" name="ruta_biblioteca" value="{{ pista.ruta }}">
+                                <button type="submit">Usar esta pista</button>
+                            </form>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="estado">
+                No se ha encontrado la biblioteca musical guardada en OneDrive.
+            </div>
+        {% endif %}
 
         <form
             method="post"

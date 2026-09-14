@@ -28,7 +28,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from openai import OpenAI
@@ -47,6 +47,7 @@ from backend.indice_temas import (
 )
 from backend.imagenes import generar_imagen
 from backend.produccion import (
+    EXTENSIONES_MUSICA,
     MAXIMO_BYTES_MUSICA,
     aprobar_borrador,
     aprobar_imagenes,
@@ -90,6 +91,22 @@ DIRECTORIO_PROYECTOS = "backend/proyectos"
 DIRECTORIO_PROYECTOS_APROBADOS = "backend/data/proyectos_aprobados"
 MAXIMO_BYTES_FOTOGRAFIA = 20 * 1024 * 1024
 TIEMPO_MAXIMO_DESCARGA = 30
+DIRECTORIO_MUSICA_BASE = os.getenv("MUSICA_BASE_DIR", "").strip().strip("\\\"'")
+if not DIRECTORIO_MUSICA_BASE:
+    DIRECTORIO_MUSICA_BASE = os.path.join(
+        os.path.expanduser("~"),
+        "OneDrive",
+        "CENTRO_DE_PRODUCCION",
+        "01_REELS",
+        "MUSICA_BASE",
+    )
+MIME_MUSICA = {
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".m4a": "audio/mp4",
+    ".aac": "audio/aac",
+    ".ogg": "audio/ogg",
+}
 
 os.makedirs(DIRECTORIO_PROYECTOS, exist_ok=True)
 
@@ -2650,6 +2667,101 @@ def redirigir_produccion(proyecto_id: str) -> RedirectResponse:
     )
 
 
+def obtener_ruta_musica_base(ruta_relativa: str) -> str:
+    ruta_relativa = str(ruta_relativa or "").strip()
+
+    if (
+        not ruta_relativa
+        or ruta_relativa.startswith(("/", "\\"))
+        or os.path.isabs(ruta_relativa)
+    ):
+        raise ValueError("La pista musical solicitada no es válida.")
+
+    ruta_normalizada = ruta_relativa.replace("/", os.sep).replace("\\", os.sep)
+    raiz = os.path.realpath(DIRECTORIO_MUSICA_BASE)
+    ruta = os.path.realpath(os.path.join(raiz, ruta_normalizada))
+
+    try:
+        esta_dentro = os.path.commonpath((raiz, ruta)) == raiz
+    except ValueError:
+        esta_dentro = False
+
+    if not esta_dentro:
+        raise ValueError("La pista musical solicitada no es válida.")
+
+    if not os.path.isfile(ruta):
+        raise FileNotFoundError("La pista musical ya no está disponible en la biblioteca.")
+
+    if os.path.splitext(ruta)[1].lower() not in EXTENSIONES_MUSICA:
+        raise ValueError("El archivo seleccionado no es una pista musical válida.")
+
+    return ruta
+
+
+def listar_musicas_base() -> list[dict]:
+    raiz = os.path.realpath(DIRECTORIO_MUSICA_BASE)
+    if not os.path.isdir(raiz):
+        return []
+
+    grupos = {}
+    for directorio, _, archivos in os.walk(raiz):
+        for nombre_archivo in sorted(archivos, key=str.casefold):
+            extension = os.path.splitext(nombre_archivo)[1].lower()
+            if extension not in EXTENSIONES_MUSICA:
+                continue
+
+            ruta = os.path.join(directorio, nombre_archivo)
+            relativa = os.path.relpath(ruta, raiz).replace(os.sep, "/")
+            carpeta = relativa.split("/", 1)[0] if "/" in relativa else "Biblioteca"
+            grupos.setdefault(carpeta, []).append(
+                {
+                    "nombre": os.path.splitext(nombre_archivo)[0].replace("_", " "),
+                    "archivo": nombre_archivo,
+                    "formato": extension[1:].upper(),
+                    "ruta": relativa,
+                    "url": (
+                        "/api/musicas-base/"
+                        + quote(relativa, safe="/")
+                    ),
+                }
+            )
+
+    return [
+        {
+            "nombre": nombre,
+            "pistas": sorted(
+                pistas,
+                key=lambda pista: (
+                    pista["nombre"].casefold(),
+                    pista["formato"],
+                ),
+            ),
+        }
+        for nombre, pistas in sorted(grupos.items(), key=lambda item: item[0].casefold())
+    ]
+
+
+@app.get("/api/musicas-base")
+async def api_musicas_base():
+    return {"grupos": listar_musicas_base()}
+
+
+@app.get("/api/musicas-base/{ruta:path}")
+async def servir_musica_base(ruta: str):
+    try:
+        ruta_musica = obtener_ruta_musica_base(ruta)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    extension = os.path.splitext(ruta_musica)[1].lower()
+    return FileResponse(
+        ruta_musica,
+        media_type=MIME_MUSICA.get(extension, "application/octet-stream"),
+    )
+
+
 def cargar_contexto_produccion(proyecto_id: str) -> dict:
     tema, resultado = cargar_proyecto(proyecto_id)
     directorio = obtener_directorio_proyecto(proyecto_id)
@@ -2662,6 +2774,7 @@ def cargar_contexto_produccion(proyecto_id: str) -> dict:
         "tema": tema,
         "resultado": resultado,
         "produccion": resumen,
+        "musicas_base": listar_musicas_base(),
         "voz": obtener_estado_voz_interfaz(proyecto_id),
         "musica_url": (
             f"/proyectos/{proyecto_id}/{resumen['musica_url']}?v={marca_tiempo}"
@@ -2756,6 +2869,37 @@ async def aprobar_sincronizacion_proyecto(proyecto_id: str):
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return redirigir_produccion(proyecto_id)
+
+
+@app.post("/produccion/{proyecto_id}/musica-biblioteca")
+async def seleccionar_musica_biblioteca(
+    proyecto_id: str,
+    ruta_biblioteca: str = Form(...),
+):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+        ruta_musica = obtener_ruta_musica_base(ruta_biblioteca)
+
+        with open(ruta_musica, "rb") as archivo:
+            contenido = archivo.read(MAXIMO_BYTES_MUSICA + 1)
+
+        estado = guardar_musica(
+            directorio,
+            os.path.basename(ruta_musica),
+            contenido,
+        )
+        guardar_estado_produccion(
+            directorio,
+            estado.get("estado", "musica_pendiente_aprobacion"),
+            musica_origen="biblioteca_musica_base",
+            musica_biblioteca=ruta_biblioteca,
+        )
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (ValueError, RuntimeError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     return redirigir_produccion(proyecto_id)
