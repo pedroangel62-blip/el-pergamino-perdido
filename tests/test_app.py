@@ -383,6 +383,11 @@ class AplicacionTests(unittest.TestCase):
             bloqueada.json()["detail"],
         )
         self.assertEqual(autorizada.status_code, 200)
+        self.assertIn("Tiempo transcurrido:", autorizada.text)
+        self.assertIn(
+            "Próxima comprobación automática en",
+            autorizada.text,
+        )
         crear.assert_called_once()
         self.assertTrue(crear.call_args.args[-1])
 
