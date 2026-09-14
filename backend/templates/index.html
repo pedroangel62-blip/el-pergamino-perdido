@@ -789,6 +789,18 @@
             {% set imagen_url = imagenes.get(numero) %}
             {% set candidatas_escena = candidatas.get(numero, []) %}
             {% set seleccion_escena = selecciones.get(numero) %}
+            {% if imagen_generando != numero %}
+                <script>
+                    try {
+                        sessionStorage.removeItem(
+                            "pergamino-generacion-{{ resultado._proyecto_id }}-{{ numero }}"
+                        );
+                    } catch (error) {
+                        // El navegador puede bloquear sessionStorage.
+                    }
+                </script>
+            {% endif %}
+
             {% set tipo_normalizado =
                 escena.tipo|default('')|lower|replace('_', ' ')|replace('-', ' ')
             %}
