@@ -483,6 +483,69 @@ class AplicacionTests(unittest.TestCase):
         self.assertIn("PRODUCCIÓN FINAL", respuesta.text)
         self.assertIn("Tema de prueba", respuesta.text)
 
+
+    def test_biblioteca_musical_se_muestra_y_se_puede_seleccionar(self):
+        self.crear_proyecto()
+        directorio_anterior = main.DIRECTORIO_MUSICA_BASE
+
+        with tempfile.TemporaryDirectory() as biblioteca:
+            try:
+                main.DIRECTORIO_MUSICA_BASE = biblioteca
+                carpeta = os.path.join(biblioteca, "MP3_MONTAJE")
+                os.makedirs(carpeta)
+                ruta_pista = os.path.join(carpeta, "Misterio_Prueba.mp3")
+                with open(ruta_pista, "wb") as archivo:
+                    archivo.write(b"pista de prueba")
+
+                pagina = self.cliente.get("/produccion/pergamino-prueba")
+                self.assertEqual(pagina.status_code, 200)
+                self.assertIn("Misterio Prueba", pagina.text)
+                self.assertIn("/api/musicas-base/MP3_MONTAJE/Misterio_Prueba.mp3", pagina.text)
+
+                catalogo = self.cliente.get("/api/musicas-base")
+                self.assertEqual(catalogo.status_code, 200)
+                self.assertEqual(
+                    catalogo.json()["grupos"][0]["pistas"][0]["formato"],
+                    "MP3",
+                )
+
+                preescucha = self.cliente.get(
+                    "/api/musicas-base/MP3_MONTAJE/Misterio_Prueba.mp3"
+                )
+                self.assertEqual(preescucha.status_code, 200)
+                self.assertEqual(preescucha.content, b"pista de prueba")
+                self.assertEqual(
+                    preescucha.headers["content-type"],
+                    "audio/mpeg",
+                )
+
+                with patch.object(
+                    main,
+                    "guardar_musica",
+                    return_value={"estado": "musica_pendiente_aprobacion"},
+                ) as guardar:
+                    respuesta = self.cliente.post(
+                        "/produccion/pergamino-prueba/musica-biblioteca",
+                        data={
+                            "ruta_biblioteca": (
+                                "MP3_MONTAJE/Misterio_Prueba.mp3"
+                            ),
+                        },
+                        follow_redirects=False,
+                    )
+
+                self.assertEqual(respuesta.status_code, 303)
+                guardar.assert_called_once_with(
+                    os.path.join(
+                        self.directorio_temporal.name,
+                        "pergamino-prueba",
+                    ),
+                    "Misterio_Prueba.mp3",
+                    b"pista de prueba",
+                )
+            finally:
+                main.DIRECTORIO_MUSICA_BASE = directorio_anterior
+
     def test_pagina_recupera_un_montaje_interrumpido(self):
         self.crear_proyecto()
         directorio = os.path.join(
