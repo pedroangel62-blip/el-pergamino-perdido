@@ -165,6 +165,45 @@
             }
             .biblioteca-lanzador button { width: 100%; }
         }
+        .montaje-progreso {
+            margin: 12px 0;
+            padding: 16px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            background: #fffaf0;
+        }
+        .montaje-progreso-cabecera {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .montaje-progreso-cabecera strong:last-child {
+            color: var(--verde);
+            white-space: nowrap;
+        }
+        .barra-montaje {
+            height: 14px;
+            margin: 12px 0 10px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #e6dac7;
+        }
+        .barra-montaje span {
+            display: block;
+            height: 100%;
+            min-width: 4px;
+            border-radius: inherit;
+            background: var(--verde);
+            transition: width 0.4s ease;
+        }
+        .montaje-progreso p {
+            margin: 6px 0 0;
+        }
+        .montaje-tiempo {
+            color: var(--verde);
+            font-variant-numeric: tabular-nums;
+        }
         video { max-height: 70vh; background: black; }
 
         pre {
@@ -445,11 +484,45 @@
         {% endif %}
 
         {% if produccion.estado == 'generando_borrador' %}
-            <div class="estado">
-                FFmpeg está montando el vídeo 1080×1920 a 30 fps. Esta página se actualizará automáticamente.
+            <div class="montaje-progreso" role="status" aria-live="polite">
+                <div class="montaje-progreso-cabecera">
+                    <strong>{{ produccion.montaje_fase|default('Montaje en curso', true) }}</strong>
+                    <strong><span id="montaje-porcentaje">{{ produccion.montaje_porcentaje|default(0, true) }}</span>%</strong>
+                </div>
+                <div class="barra-montaje" aria-hidden="true">
+                    <span style="width: {{ produccion.montaje_porcentaje|default(0, true) }}%;"></span>
+                </div>
+                <p id="montaje-detalle">
+                    {{ produccion.montaje_detalle|default('FFmpeg está preparando el vídeo 1080×1920 a 30 fps.', true) }}
+                </p>
+                <p>
+                    Tiempo transcurrido:
+                    <strong class="montaje-tiempo" id="montaje-tiempo">calculando…</strong>
+                </p>
+                <p class="resumen">
+                    No cierres esta página. Se actualizará automáticamente cada 5 segundos.
+                </p>
             </div>
             <script>
-                window.setTimeout(function () { window.location.reload(); }, 10000);
+                (() => {
+                    const inicio = {{ produccion.montaje_iniciado|default('', true)|tojson }};
+                    const reloj = document.getElementById('montaje-tiempo');
+
+                    const actualizarReloj = () => {
+                        if (!reloj || !inicio) return;
+                        const transcurrido = Math.max(
+                            0,
+                            Math.floor((Date.now() - Date.parse(inicio)) / 1000)
+                        );
+                        const minutos = Math.floor(transcurrido / 60);
+                        const segundos = String(transcurrido % 60).padStart(2, '0');
+                        reloj.textContent = minutos + ':' + segundos;
+                    };
+
+                    actualizarReloj();
+                    window.setInterval(actualizarReloj, 1000);
+                    window.setTimeout(() => window.location.reload(), 5000);
+                })();
             </script>
         {% elif produccion.preparacion_verificada %}
             <form method="post" action="/produccion/{{ proyecto_id }}/generar-borrador">
