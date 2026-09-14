@@ -224,6 +224,11 @@ class AplicacionTests(unittest.TestCase):
             patch.object(main, "exigir_voz_aprobada"),
             patch.object(
                 main,
+                "obtener_estado_voz_interfaz",
+                return_value={"aprobada": True},
+            ),
+            patch.object(
+                main,
                 "obtener_cliente_openai",
                 side_effect=AssertionError("No debe llamarse a OpenAI"),
             ),
