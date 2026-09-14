@@ -860,7 +860,7 @@ Prompt IA: {{ escena.prompt }}</pre>
                             id="archivo-{{ numero }}"
                             type="file"
                             name="archivo"
-                            accept="image/png,image/jpeg,image/webp,image/gif"
+                            accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
                             required
                         >
 
@@ -917,6 +917,7 @@ Prompt IA: {{ escena.prompt }}</pre>
                                         alt="Candidata {{ loop.index }} para la Imagen {{ numero }}"
                                         loading="lazy"
                                         referrerpolicy="no-referrer"
+                                        onerror="this.closest('.candidata').remove();"
                                     >
 
                                     <div class="candidata-enlaces">
