@@ -11,7 +11,7 @@ Aplicación web para preparar Reels documentales de El Pergamino Perdido con con
 5. El usuario escucha y aprueba la voz; hasta entonces las imágenes permanecen bloqueadas.
 6. Se buscan fotografías reales antes de ofrecer una recreación con IA.
 7. Las ocho imágenes definitivas se confirman antes del montaje.
-8. La aplicación sincroniza las ocho imágenes del caso con las frases y marcas reales de la voz, con portada fija de 3 segundos y sin subtítulos.
+8. La aplicación sincroniza las ocho imágenes del caso con las frases y marcas reales de la voz, sin fijar la duración de la portada y sin subtítulos.
 9. El usuario carga y aprueba la música antes de mezclarla con la voz.
 10. FFmpeg añade la Imagen 9 maestra durante 3 segundos: zoom suave, voz ya terminada y fundido final de la música.
 11. FFmpeg genera un borrador vertical 1080×1920 a 30 fps sin subtítulos y verifica fotogramas, transiciones, zoom, márgenes, duración y pista de audio.
@@ -96,7 +96,7 @@ La pantalla `Producción final` se desbloquea cuando la voz y las ocho imágenes
 - revisar el vídeo borrador;
 - autorizar la creación del vídeo final.
 
-Las voces nuevas guardan `voz-alineacion.json` a partir de la misma respuesta de ElevenLabs que contiene el audio; no se realiza una segunda generación. Cada imagen incluye una `frase_entrada` literal y única del guion. La Imagen 2 entra obligatoriamente en el segundo 3 y las Imágenes 3 a 8 usan el tiempo real de su frase según ElevenLabs. Una sincronización estimada o sin correspondencia semántica bloquea la aprobación y el montaje.
+Las voces nuevas guardan `voz-alineacion.json` a partir de la misma respuesta de ElevenLabs que contiene el audio; no se realiza una segunda generación. Cada imagen incluye una `frase_entrada` literal y única del guion. La Imagen 1 comienza al inicio de la voz y las Imágenes 2 a 8 entran en el tiempo real de sus frases según ElevenLabs. Una sincronización estimada o sin correspondencia semántica bloquea la aprobación y el montaje.
 
 Antes del render, cada marca temporal se convierte en su fotograma real más próximo a 30 fps. Los cortes se calculan desde posiciones absolutas para que el redondeo no acumule deriva. FFprobe comprueba el número exacto de fotogramas de cada uno de los nueve clips, del vídeo concatenado y del borrador final; cualquier discrepancia bloquea el montaje. El resultado queda guardado en `verificacion_timeline.json`.
 
