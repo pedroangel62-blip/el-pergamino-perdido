@@ -552,6 +552,43 @@ def recuperar_proyecto_aprobado(proyecto_id: str) -> str:
     return proyecto_id
 
 
+MAXIMO_CANDIDATAS_GUARDADAS = 40
+
+
+def fusionar_candidatas(
+    candidatas_anteriores: list[dict],
+    candidatas_nuevas: list[dict],
+    limite: int = MAXIMO_CANDIDATAS_GUARDADAS,
+) -> list[dict]:
+    """Conserva resultados anteriores y evita perder una selección válida."""
+    combinadas = []
+    urls_vistas = set()
+
+    for candidata in [
+        *candidatas_nuevas,
+        *candidatas_anteriores,
+    ]:
+        if not isinstance(candidata, dict):
+            continue
+
+        claves = [
+            str(candidata.get("imagen_url", "")).strip(),
+            str(candidata.get("miniatura_url", "")).strip(),
+        ]
+        claves = [clave for clave in claves if clave]
+
+        if not claves or any(clave in urls_vistas for clave in claves):
+            continue
+
+        urls_vistas.update(claves)
+        combinadas.append(candidata)
+
+        if len(combinadas) >= limite:
+            break
+
+    return combinadas
+
+
 def guardar_candidatas(
     proyecto_id: str,
     numero: int,
@@ -562,12 +599,51 @@ def guardar_candidatas(
         numero
     )
 
+    candidatas_anteriores = []
+    historial_busquedas = []
+
+    if os.path.isfile(ruta):
+        try:
+            with open(
+                ruta,
+                "r",
+                encoding="utf-8"
+            ) as archivo:
+                anteriores = json.load(archivo)
+
+            if isinstance(anteriores, dict):
+                guardadas = anteriores.get("candidatas", [])
+                historial_busquedas = anteriores.get(
+                    "busquedas",
+                    []
+                )
+                if isinstance(guardadas, list):
+                    candidatas_anteriores = guardadas
+                if not isinstance(historial_busquedas, list):
+                    historial_busquedas = []
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    actualizado = datetime.now().astimezone().isoformat(
+        timespec="seconds"
+    )
+    candidatas_combinadas = fusionar_candidatas(
+        candidatas_anteriores,
+        candidatas,
+    )
+    historial_busquedas.append(
+        {
+            "actualizado": actualizado,
+            "nuevas": len(candidatas),
+            "conservadas": len(candidatas_combinadas),
+        }
+    )
+
     datos = {
         "numero_imagen": numero,
-        "actualizado": datetime.now().astimezone().isoformat(
-            timespec="seconds"
-        ),
-        "candidatas": candidatas
+        "actualizado": actualizado,
+        "busquedas": historial_busquedas[-20:],
+        "candidatas": candidatas_combinadas,
     }
 
     with open(ruta, "w", encoding="utf-8") as archivo:
@@ -1895,7 +1971,7 @@ async def buscar_fotografias(
         resultados_busqueda = await run_in_threadpool(
             buscar_imagenes_reales,
             consultas,
-            6
+            10
         )
     except Exception as error:
         raise HTTPException(
