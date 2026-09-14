@@ -1734,7 +1734,8 @@ async def iniciar_generacion_voz(
     request: Request,
     background_tasks: BackgroundTasks,
     resultado_json: str = Form(...),
-    tema: str = Form("")
+    tema: str = Form(""),
+    confirmar_recreacion_ia: str = Form("")
 ):
     try:
         resultado_formulario = json.loads(
@@ -2487,37 +2488,12 @@ async def iniciar_generacion_imagen(
         ) from error
 
     escena = plan_visual[numero - 1]
+    confirmar_recreacion_ia = (
+        str(confirmar_recreacion_ia).strip().casefold() == "si"
+    )
     permitir_recreacion_ia = False
 
     if requiere_fotografia_real(escena):
-        try:
-            candidatas = cargar_candidatas_imagen(
-                proyecto_id,
-                numero
-            )
-        except FileNotFoundError as error:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Antes de generar una recreación IA deben buscarse "
-                    "y revisarse fotografías reales."
-                )
-            ) from error
-        except ValueError as error:
-            raise HTTPException(
-                status_code=400,
-                detail=str(error)
-            ) from error
-
-        if not candidatas:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "No hay fotografías candidatas revisadas para "
-                    "autorizar una recreación IA."
-                )
-            )
-
         selecciones = obtener_selecciones_guardadas(
             proyecto_id
         )
@@ -2531,9 +2507,40 @@ async def iniciar_generacion_imagen(
                 )
             )
 
-        permitir_recreacion_ia = True
+        if confirmar_recreacion_ia:
+            permitir_recreacion_ia = True
+        else:
+            try:
+                candidatas = cargar_candidatas_imagen(
+                    proyecto_id,
+                    numero
+                )
+            except FileNotFoundError as error:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Antes de generar una recreación IA deben buscarse "
+                        "y revisarse fotografías reales."
+                    )
+                ) from error
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=400,
+                    detail=str(error)
+                ) from error
 
-    ruta = obtener_ruta_imagen(
+            if not candidatas:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "No hay fotografías candidatas revisadas para "
+                        "autorizar una recreación IA."
+                    )
+                )
+
+            permitir_recreacion_ia = True
+
+    ruta = obtener_ruta_imagen(    ruta = obtener_ruta_imagen(
         proyecto_id,
         numero
     )
