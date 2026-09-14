@@ -519,7 +519,7 @@ class AplicacionTests(unittest.TestCase):
                 )
                 self.assertNotIn(
                     "Maestro_Prueba",
-                    JSON.stringify(catalogo.json()),
+                    json.dumps(catalogo.json(), ensure_ascii=False),
                 )
 
                 preescucha = self.cliente.get(
