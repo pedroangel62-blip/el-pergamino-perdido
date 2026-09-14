@@ -1078,6 +1078,12 @@ Prompt IA: {{ escena.prompt }}</pre>
                                         hidden
                                     >{{ resultado_json }}</textarea>
 
+                                    <input
+                                        type="hidden"
+                                        name="confirmar_recreacion_ia"
+                                        value="si"
+                                    >
+
                                     <button
                                         class="boton-generar-ia"
                                         type="submit"
@@ -1089,6 +1095,54 @@ Prompt IA: {{ escena.prompt }}</pre>
                             </details>
                         {% endif %}
                     {% endif %}
+
+                    {% if not candidatas_escena and not seleccion_escena and not imagen_generando %}
+                        <details class="alternativa-ia">
+                            <summary>
+                                No hay una fotografía adecuada: generar
+                                recreación IA
+                            </summary>
+
+                            <p>
+                                Para esta escena no hay una fotografía real
+                                claramente utilizable. Mostrar esta opción
+                                no genera nada ni consume créditos. El botón
+                                de confirmación siguiente sí iniciará una
+                                recreación con IA.
+                            </p>
+
+                            <form
+                                method="post"
+                                action="/generar-imagen/{{ numero }}#imagen-{{ numero }}"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="tema"
+                                    value="{{ tema or '' }}"
+                                >
+
+                                <textarea
+                                    name="resultado_json"
+                                    hidden
+                                >{{ resultado_json }}</textarea>
+
+                                <input
+                                    type="hidden"
+                                    name="confirmar_recreacion_ia"
+                                    value="si"
+                                >
+
+                                <button
+                                    class="boton-generar-ia"
+                                    type="submit"
+                                >
+                                    Confirmar y generar recreación IA de
+                                    la Imagen {{ numero }}
+                                </button>
+                            </form>
+                        </details>
+                    {% endif %}
+
 
                 {% elif imagen_generando == numero %}
 

@@ -310,6 +310,83 @@ class AplicacionTests(unittest.TestCase):
             )
         )
 
+    def test_recreacion_ia_explicita_sin_fotografias_candidatas(self):
+        proyecto_id = "pergamino-recreacion-explicita"
+        self.crear_proyecto(proyecto_id)
+
+        ruta_proyecto = os.path.join(
+            self.directorio_temporal.name,
+            proyecto_id,
+            "proyecto.json",
+        )
+        with open(ruta_proyecto, "r", encoding="utf-8") as archivo:
+            proyecto = json.load(archivo)
+
+        proyecto["resultado"]["_proyecto_id"] = proyecto_id
+        proyecto["resultado"]["plan_visual"][0]["tipo"] = (
+            "FOTOGRAFÍA REAL"
+        )
+
+        with open(ruta_proyecto, "w", encoding="utf-8") as archivo:
+            json.dump(proyecto, archivo)
+
+        with patch.object(
+            main,
+            "obtener_estado_voz_interfaz",
+            return_value={"estado": "aprobada"},
+        ):
+            pagina = self.cliente.get(
+                f"/proyecto/{proyecto_id}"
+            )
+        self.assertEqual(pagina.status_code, 200)
+        self.assertIn(
+            "No hay una fotografía adecuada: generar",
+            pagina.text,
+        )
+        self.assertIn(
+            'name="confirmar_recreacion_ia"',
+            pagina.text,
+        )
+
+        datos = {
+            "tema": "Tema de prueba",
+            "resultado_json": json.dumps(
+                proyecto["resultado"],
+                ensure_ascii=False,
+            ),
+        }
+
+        with (
+            patch.object(main, "exigir_voz_aprobada"),
+            patch.object(
+                main,
+                "obtener_estado_voz_interfaz",
+                return_value={"estado": "aprobada"},
+            ),
+            patch.object(main, "crear_imagen") as crear,
+        ):
+            bloqueada = self.cliente.post(
+                "/generar-imagen/1",
+                data=datos,
+            )
+            autorizada = self.cliente.post(
+                "/generar-imagen/1",
+                data={
+                    **datos,
+                    "confirmar_recreacion_ia": "si",
+                },
+            )
+
+        self.assertEqual(bloqueada.status_code, 400)
+        self.assertIn(
+            "Antes de generar una recreación IA",
+            bloqueada.json()["detail"],
+        )
+        self.assertEqual(autorizada.status_code, 200)
+        crear.assert_called_once()
+        self.assertTrue(crear.call_args.args[-1])
+
+
     def test_pagina_produccion_responde(self):
         self.crear_proyecto()
         respuesta = self.cliente.get("/produccion/pergamino-prueba")
