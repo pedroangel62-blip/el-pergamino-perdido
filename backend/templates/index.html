@@ -843,8 +843,13 @@ Prompt IA: {{ escena.prompt }}</pre>
 
                     {% if seleccion_escena %}
                         <div class="confirmacion-seleccion">
-                            Fotografía real seleccionada y guardada como
-                            Imagen {{ numero }}.
+                            {% if seleccion_escena.get('fotografia', {}).get('origen') == 'imagen_externa' %}
+                                Imagen externa subida y guardada como
+                                Imagen {{ numero }}.
+                            {% else %}
+                                Fotografía real seleccionada y guardada como
+                                Imagen {{ numero }}.
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endif %}
@@ -1295,6 +1300,52 @@ Prompt IA: {{ escena.prompt }}</pre>
                     </div>
 
                 {% else %}
+
+                    <form
+                        class="form-subir-fotografia"
+                        method="post"
+                        action="/subir-fotografia/{{ numero }}#imagen-{{ numero }}"
+                        enctype="multipart/form-data"
+                    >
+                        <input
+                            type="hidden"
+                            name="tema"
+                            value="{{ tema or '' }}"
+                        >
+
+                        <textarea
+                            name="resultado_json"
+                            hidden
+                        >{{ resultado_json }}</textarea>
+
+                        <label for="archivo-{{ numero }}">
+                            {% if imagen_url %}
+                                Reemplazar con una imagen externa
+                            {% else %}
+                                Subir una imagen creada fuera de la aplicación
+                            {% endif %}
+                        </label>
+
+                        <input
+                            id="archivo-{{ numero }}"
+                            type="file"
+                            name="archivo"
+                            accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                            required
+                        >
+
+                        <button
+                            class="boton-secundario"
+                            type="submit"
+                        >
+                            Subir esta imagen
+                        </button>
+
+                        <small>
+                            Se guardará localmente y no se enviará a OpenAI.
+                            No consume créditos de OpenAI. Límite: 20 MB.
+                        </small>
+                    </form>
 
                     <form
                         method="post"
