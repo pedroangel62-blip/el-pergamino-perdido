@@ -181,44 +181,129 @@ def crear_slug(texto: str) -> str:
 
 
 def listar_proyectos_aprobados() -> list[dict]:
-    proyectos = []
+    proyectos_por_id = {}
     directorio = DIRECTORIO_PROYECTOS_APROBADOS
 
-    if not os.path.isdir(directorio):
-        return proyectos
+    if os.path.isdir(directorio):
+        for nombre in sorted(os.listdir(directorio)):
+            if not nombre.endswith(".json"):
+                continue
 
-    for nombre in sorted(os.listdir(directorio)):
-        if not nombre.endswith(".json"):
-            continue
+            ruta = os.path.join(directorio, nombre)
+            try:
+                with open(ruta, "r", encoding="utf-8") as archivo:
+                    definicion = json.load(archivo)
+            except (OSError, json.JSONDecodeError):
+                continue
 
-        ruta = os.path.join(directorio, nombre)
-        try:
-            with open(ruta, "r", encoding="utf-8") as archivo:
-                definicion = json.load(archivo)
-        except (OSError, json.JSONDecodeError):
-            continue
+            proyecto_id = str(
+                definicion.get("proyecto_id", "")
+            ).strip()
+            tema = str(definicion.get("tema", "")).strip()
+            if not proyecto_id or not tema:
+                continue
 
-        proyecto_id = str(definicion.get("proyecto_id", "")).strip()
-        tema = str(definicion.get("tema", "")).strip()
-        if not proyecto_id or not tema:
-            continue
+            ruta_proyecto = os.path.join(
+                DIRECTORIO_PROYECTOS,
+                proyecto_id,
+                "proyecto.json",
+            )
+            existente = os.path.isfile(ruta_proyecto)
+            proyectos_por_id[proyecto_id] = {
+                "proyecto_id": proyecto_id,
+                "tema": tema,
+                "numero": str(
+                    definicion.get("numero", "")
+                ).strip(),
+                "existente": existente,
+                "_modificado": (
+                    os.path.getmtime(ruta_proyecto)
+                    if existente
+                    else 0
+                ),
+            }
 
-        proyectos.append({
-            "proyecto_id": proyecto_id,
-            "tema": tema,
-            "numero": str(definicion.get("numero", "")).strip(),
-            "existente": os.path.isfile(
-                os.path.join(
-                    DIRECTORIO_PROYECTOS,
-                    proyecto_id,
-                    "proyecto.json",
-                )
-            ),
-        })
+    # Los proyectos generados localmente también deben poder reabrirse.
+    # El actualizador conserva backend/proyectos, aunque no esté en GitHub.
+    if os.path.isdir(DIRECTORIO_PROYECTOS):
+        for nombre in sorted(os.listdir(DIRECTORIO_PROYECTOS)):
+            ruta_proyecto = os.path.join(
+                DIRECTORIO_PROYECTOS,
+                nombre,
+                "proyecto.json",
+            )
+            if not os.path.isfile(ruta_proyecto):
+                continue
+
+            try:
+                with open(
+                    ruta_proyecto,
+                    "r",
+                    encoding="utf-8",
+                ) as archivo:
+                    datos = json.load(archivo)
+            except (OSError, json.JSONDecodeError):
+                continue
+
+            if not isinstance(datos, dict):
+                continue
+
+            proyecto_id = str(
+                datos.get("proyecto_id", "")
+            ).strip()
+            tema = str(datos.get("tema", "")).strip()
+            resultado = datos.get("resultado")
+            plan_visual = (
+                resultado.get("plan_visual")
+                if isinstance(resultado, dict)
+                else None
+            )
+
+            if (
+                not proyecto_id
+                or proyecto_id != nombre
+                or not tema
+                or not isinstance(plan_visual, list)
+                or len(plan_visual) != TOTAL_IMAGENES
+            ):
+                continue
+
+            try:
+                validar_proyecto_id(proyecto_id)
+            except ValueError:
+                continue
+
+            modificado = os.path.getmtime(ruta_proyecto)
+            proyecto_existente = proyectos_por_id.get(proyecto_id)
+
+            if proyecto_existente:
+                proyecto_existente["existente"] = True
+                proyecto_existente["_modificado"] = modificado
+                continue
+
+            proyectos_por_id[proyecto_id] = {
+                "proyecto_id": proyecto_id,
+                "tema": tema,
+                "numero": str(
+                    datos.get("numero", "")
+                ).strip(),
+                "existente": True,
+                "_modificado": modificado,
+            }
+
+    proyectos = list(proyectos_por_id.values())
+    proyectos.sort(
+        key=lambda proyecto: (
+            0 if proyecto["existente"] else 1,
+            -proyecto.get("_modificado", 0),
+            proyecto["tema"].lower(),
+        )
+    )
+
+    for proyecto in proyectos:
+        proyecto.pop("_modificado", None)
 
     return proyectos
-
-
 def validar_proyecto_id(proyecto_id: str) -> str:
     if not isinstance(proyecto_id, str):
         raise ValueError(
@@ -487,13 +572,20 @@ def recuperar_proyecto_aprobado(proyecto_id: str) -> str:
         DIRECTORIO_PROYECTOS_APROBADOS,
         f"{proyecto_id}.json",
     )
+    directorio = obtener_directorio_proyecto(proyecto_id)
+    ruta_proyecto = os.path.join(directorio, "proyecto.json")
+
+    # Si ya existe localmente, basta con validarlo y abrirlo.
+    # Esto permite continuar proyectos guardados que todavía no tienen
+    # una definición separada dentro de proyectos_aprobados.
     if not os.path.isfile(ruta_definicion):
+        if os.path.isfile(ruta_proyecto):
+            cargar_proyecto(proyecto_id)
+            return proyecto_id
         raise FileNotFoundError(
             "No existe un proyecto editorial aprobado con ese identificador."
         )
 
-    directorio = obtener_directorio_proyecto(proyecto_id)
-    ruta_proyecto = os.path.join(directorio, "proyecto.json")
     if os.path.isfile(ruta_proyecto):
         cargar_proyecto(proyecto_id)
         copiar_imagenes_aprobadas(proyecto_id)
@@ -1554,25 +1646,11 @@ TEMA
         else None
     )
 
-    resultado_json = json.dumps(
-        resultado,
-        ensure_ascii=False
-    )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "tema": tema,
-            "resultado": resultado,
-            "resultado_json": resultado_json,
-            "imagenes": {},
-            "candidatas": {},
-            "selecciones": {},
-            "imagen_generando": None,
-            "voz": None,
-            "voz_generando": False
-        }
+    # Redirigir al proyecto creado fija un enlace recuperable y evita
+    # perderlo al actualizar o cerrar la aplicación.
+    return RedirectResponse(
+        url=f"/proyecto/{proyecto_id}",
+        status_code=303,
     )
 
 
