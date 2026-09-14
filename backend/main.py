@@ -1044,7 +1044,8 @@ def crear_candidata_fotografia_local(
     proyecto_id: str,
     numero: int,
     nombre_archivo: str,
-    formato: str
+    formato: str,
+    origen: str = "fotografia_real",
 ) -> dict:
     ruta = obtener_ruta_imagen(proyecto_id, numero)
     marca_tiempo = int(os.path.getmtime(ruta))
@@ -1052,15 +1053,22 @@ def crear_candidata_fotografia_local(
         f"/proyectos/{proyecto_id}/imagenes/"
         f"imagen{numero}.png?v={marca_tiempo}"
     )
+    es_imagen_externa = origen == "imagen_externa"
+    etiqueta = (
+        "Imagen externa subida desde tu equipo"
+        if es_imagen_externa
+        else "Fotografía subida desde tu equipo"
+    )
 
     return {
         "imagen_url": url,
         "miniatura_url": url,
         "descripcion": (
-            "Fotografía subida desde tu equipo"
+            f"{etiqueta}"
             f" ({nombre_archivo or 'archivo local'}; {formato})."
         ),
         "origen_local": True,
+        "origen": origen,
     }
 
 
@@ -2198,14 +2206,9 @@ async def subir_fotografia(
             detail=f"No existe la imagen {numero} en el plan visual."
         )
 
-    if not requiere_fotografia_real(plan_visual[numero - 1]):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Esta escena no está configurada para usar "
-                "una fotografía real."
-            )
-        )
+    es_fotografia_real = requiere_fotografia_real(
+        plan_visual[numero - 1]
+    )
 
     try:
         proyecto_id = obtener_proyecto_id(resultado)
@@ -2257,7 +2260,10 @@ async def subir_fotografia(
             proyecto_id,
             numero,
             nombre_archivo,
-            formato
+            formato,
+            "fotografia_real"
+            if es_fotografia_real
+            else "imagen_externa",
         )
         guardar_candidatas(
             proyecto_id,
