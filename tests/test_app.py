@@ -281,9 +281,10 @@ class AplicacionTests(unittest.TestCase):
 
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn(
-            "Fotografía subida desde tu equipo",
+            "Fotografía real seleccionada y guardada",
             respuesta.text,
         )
+        self.assertIn("imagen1.png", respuesta.text)
         ruta_imagen = os.path.join(
             self.directorio_temporal.name,
             proyecto_id,
