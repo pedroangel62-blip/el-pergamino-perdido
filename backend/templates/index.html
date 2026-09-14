@@ -855,7 +855,7 @@ Prompt IA: {{ escena.prompt }}</pre>
                         Controles bloqueados hasta aprobar la voz.
                     </div>
 
-                {% elif requiere_foto_real %}
+                {% elif requiere_foto_real and imagen_generando != numero %}
 
                     <div class="aviso-real">
                         Esta escena requiere una fotografía real.
