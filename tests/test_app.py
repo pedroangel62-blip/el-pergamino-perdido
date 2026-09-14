@@ -659,8 +659,7 @@ class AplicacionTests(unittest.TestCase):
                 "verificar_preparacion_montaje",
                 return_value={"preparado": True, "bloqueos": []},
             ),
-            patch.object(main, "iniciar_generacion_borrador") as iniciar,
-            patch.object(main, "generar_borrador_seguro") as generar,
+            patch.object(main, "iniciar_montaje_en_hilo") as iniciar_montaje,
         ):
             respuesta = self.cliente.post(
                 "/produccion/pergamino-prueba/generar-borrador",
@@ -668,9 +667,10 @@ class AplicacionTests(unittest.TestCase):
             )
 
         self.assertEqual(respuesta.status_code, 303)
-        iniciar.assert_called_once()
-        generar.assert_called_once()
-        self.assertEqual(iniciar.call_args.args, generar.call_args.args)
+        iniciar_montaje.assert_called_once_with(
+            "pergamino-prueba",
+            os.path.join(self.directorio_temporal.name, "pergamino-prueba"),
+        )
 
     def test_aprobacion_final_y_paquete_requieren_acciones_separadas(self):
         self.crear_proyecto()

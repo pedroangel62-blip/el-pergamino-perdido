@@ -129,6 +129,24 @@ def cargar_estado(directorio_proyecto: str) -> dict:
     }
 
 
+def actualizar_progreso_montaje(
+    directorio_proyecto: str,
+    porcentaje: int,
+    fase: str,
+    detalle: str,
+) -> dict:
+    """Guarda el progreso visible del montaje sin cambiar sus aprobaciones."""
+    porcentaje_seguro = max(0, min(100, int(porcentaje)))
+    return guardar_estado(
+        directorio_proyecto,
+        "generando_borrador",
+        montaje_porcentaje=porcentaje_seguro,
+        montaje_fase=fase,
+        montaje_detalle=detalle,
+        montaje_actualizado=ahora_iso(),
+    )
+
+
 def obtener_ruta_montaje_en_curso(directorio_proyecto: str) -> str:
     return os.path.join(directorio_proyecto, ARCHIVO_MONTAJE_EN_CURSO)
 
@@ -225,12 +243,13 @@ def iniciar_generacion_borrador(directorio_proyecto: str) -> dict:
 
     limpiar_temporales_montaje(directorio_proyecto)
     ruta_marcador = obtener_ruta_montaje_en_curso(directorio_proyecto)
+    inicio_montaje = ahora_iso()
     guardar_json_atomico(
         ruta_marcador,
         {
             "pid": os.getpid(),
             "inicio_proceso": _inicio_proceso(os.getpid()),
-            "iniciado": ahora_iso(),
+            "iniciado": inicio_montaje,
         },
     )
     try:
@@ -241,6 +260,10 @@ def iniciar_generacion_borrador(directorio_proyecto: str) -> dict:
             borrador_aprobado=False,
             montaje_interrumpido=False,
             temporales_montaje_eliminados=[],
+            montaje_porcentaje=0,
+            montaje_fase="Preparación",
+            montaje_detalle="Validando recursos y preparando el montaje.",
+            montaje_iniciado=inicio_montaje,
         )
     except Exception:
         if os.path.isfile(ruta_marcador):
@@ -2003,6 +2026,12 @@ def generar_borrador(
             "El control previo ha bloqueado el montaje: "
             + " ".join(verificacion_previa["bloqueos"])
         )
+    actualizar_progreso_montaje(
+        directorio_proyecto,
+        5,
+        "Preparación",
+        "Controles previos superados. Cargando sincronización e imágenes.",
+    )
     sincronizacion = cargar_sincronizacion(directorio_proyecto)
     datos_sincronizacion = cargar_json(
         os.path.join(directorio_proyecto, ARCHIVO_SINCRONIZACION)
@@ -2060,6 +2089,12 @@ def generar_borrador(
         raise ValueError("La música cargada todavía no está aprobada.")
 
     salida = os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
+    actualizar_progreso_montaje(
+        directorio_proyecto,
+        10,
+        "Preparando imágenes",
+        f"0 de {TOTAL_IMAGENES} imágenes procesadas.",
+    )
 
     with tempfile.TemporaryDirectory(
         prefix="montaje-",
@@ -2067,11 +2102,14 @@ def generar_borrador(
     ) as temporal:
         clips = []
 
-        for imagen, segmento, corte in zip(
-            imagenes,
-            sincronizacion,
-            plan_fotogramas[:TOTAL_IMAGENES],
-            strict=True,
+        for indice, (imagen, segmento, corte) in enumerate(
+            zip(
+                imagenes,
+                sincronizacion,
+                plan_fotogramas[:TOTAL_IMAGENES],
+                strict=True,
+            ),
+            start=1,
         ):
             clip = os.path.join(temporal, f"clip-{segmento['numero']:02}.mp4")
             _crear_clip(
@@ -2084,6 +2122,12 @@ def generar_borrador(
                 fotogramas=int(corte["fotogramas"]),
             )
             clips.append(clip)
+            actualizar_progreso_montaje(
+                directorio_proyecto,
+                10 + round(indice * 45 / TOTAL_IMAGENES),
+                "Creando clips",
+                f"{indice} de {TOTAL_IMAGENES} imágenes procesadas.",
+            )
 
         clip_cierre = os.path.join(temporal, "clip-09-sello.mp4")
         _crear_clip_cierre(
@@ -2094,6 +2138,12 @@ def generar_borrador(
             fps,
         )
         clips.append(clip_cierre)
+        actualizar_progreso_montaje(
+            directorio_proyecto,
+            60,
+            "Preparando cierre",
+            "Imagen 9 preparada. Validando transiciones y fotogramas.",
+        )
         clips_verificados = validar_clips_fotograma_a_fotograma(
             plan_fotogramas,
             clips,
@@ -2103,6 +2153,12 @@ def generar_borrador(
             clips,
             fps,
         )
+        actualizar_progreso_montaje(
+            directorio_proyecto,
+            68,
+            "Validando clips",
+            "Transiciones y movimiento de cámara verificados.",
+        )
 
         lista = os.path.join(temporal, "clips.txt")
         with open(lista, "w", encoding="utf-8") as archivo:
@@ -2111,6 +2167,12 @@ def generar_borrador(
                 archivo.write(f"file '{ruta_segura}'\n")
 
         video_base = os.path.join(temporal, "video-base.mp4")
+        actualizar_progreso_montaje(
+            directorio_proyecto,
+            72,
+            "Uniendo clips",
+            "Creando la pista de vídeo continua.",
+        )
         ejecutar(
             [
                 "ffmpeg",
@@ -2134,6 +2196,12 @@ def generar_borrador(
             )
 
         temporal_salida = os.path.join(temporal, ARCHIVO_BORRADOR)
+        actualizar_progreso_montaje(
+            directorio_proyecto,
+            80,
+            "Mezclando audio",
+            "Vídeo base creado. Añadiendo voz y música.",
+        )
         ajuste_audio = _mezclar_video_audio(
             video_base,
             voz,
@@ -2156,6 +2224,12 @@ def generar_borrador(
             inicio_cierre_video,
             duracion_total,
             verificacion["audio_max_db"],
+        )
+        actualizar_progreso_montaje(
+            directorio_proyecto,
+            95,
+            "Comprobación final",
+            "Audio, resolución, fotogramas y sincronización verificados.",
         )
         os.replace(temporal_salida, salida)
 
@@ -2236,6 +2310,9 @@ def generar_borrador(
         sello_cierre=ARCHIVO_SELLO_CIERRE,
         resolucion=f"{ancho}x{alto}",
         fps=fps,
+        montaje_porcentaje=100,
+        montaje_fase="Terminado",
+        montaje_detalle="Vídeo borrador listo para revisión.",
         error="",
     )
 

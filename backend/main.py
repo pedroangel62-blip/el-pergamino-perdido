@@ -11,6 +11,7 @@ import socket
 import tempfile
 import time
 import unicodedata
+from threading import Lock, Thread
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urljoin, urlparse
 from urllib.request import (
@@ -108,6 +109,40 @@ MIME_MUSICA = {
     ".ogg": "audio/ogg",
 }
 CARPETA_MUSICA_MONTAJE = "MP3_MONTAJE"
+
+_MONTAJES_ACTIVOS: set[str] = set()
+_MONTAJES_ACTIVOS_LOCK = Lock()
+
+
+def iniciar_montaje_en_hilo(
+    proyecto_id: str,
+    directorio_proyecto: str,
+) -> None:
+    """Inicia el montaje fuera de la petición HTTP para evitar timeouts 502."""
+    with _MONTAJES_ACTIVOS_LOCK:
+        if proyecto_id in _MONTAJES_ACTIVOS:
+            raise ValueError("El vídeo borrador ya se está generando.")
+        iniciar_generacion_borrador(directorio_proyecto)
+        _MONTAJES_ACTIVOS.add(proyecto_id)
+
+    def ejecutar_montaje() -> None:
+        try:
+            generar_borrador_seguro(directorio_proyecto)
+        finally:
+            with _MONTAJES_ACTIVOS_LOCK:
+                _MONTAJES_ACTIVOS.discard(proyecto_id)
+
+    try:
+        Thread(
+            target=ejecutar_montaje,
+            name=f"montaje-{proyecto_id}",
+            daemon=True,
+        ).start()
+    except Exception:
+        with _MONTAJES_ACTIVOS_LOCK:
+            _MONTAJES_ACTIVOS.discard(proyecto_id)
+        raise
+
 
 os.makedirs(DIRECTORIO_PROYECTOS, exist_ok=True)
 
@@ -2993,7 +3028,6 @@ async def verificar_preparacion_proyecto(proyecto_id: str):
 @app.post("/produccion/{proyecto_id}/generar-borrador")
 async def iniciar_borrador_proyecto(
     proyecto_id: str,
-    background_tasks: BackgroundTasks,
 ):
     try:
         _, resultado = cargar_proyecto(proyecto_id)
@@ -3027,11 +3061,7 @@ async def iniciar_borrador_proyecto(
                 + " ".join(verificacion["bloqueos"])
             )
 
-        iniciar_generacion_borrador(directorio)
-        background_tasks.add_task(
-            generar_borrador_seguro,
-            directorio,
-        )
+        iniciar_montaje_en_hilo(proyecto_id, directorio)
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
