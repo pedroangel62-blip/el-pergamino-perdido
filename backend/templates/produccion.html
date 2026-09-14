@@ -550,7 +550,7 @@
             {% if produccion.control_visual_verificado %}
                 <div class="estado correcto">
                     Control automático superado: vídeo 9:16 sin subtítulos,
-                    8 transiciones verificadas y zoom del cierre detectado.
+                    8 fundidos cruzados y zooms verificados; zoom del cierre detectado.
                     Margen mínimo de la Imagen 9:
                     {{ produccion.verificacion_visual.cierre.margen_seguro_por_lado_porcentaje }} % por lado.
                 </div>
@@ -568,7 +568,7 @@
 
             {% if produccion.estado == 'borrador_pendiente_aprobacion' %}
                 <div class="estado">
-                    Revisa imágenes, voz, música y transiciones antes de aprobar.
+                    Revisa imágenes, voz, música, fundidos y movimiento de cámara antes de aprobar.
                     El control automático no sustituye esta aprobación humana.
                 </div>
                 <form method="post" action="/produccion/{{ proyecto_id }}/aprobar-borrador">
