@@ -28,7 +28,10 @@ $FilesToUpdate = @(
     "scripts\Abrir-El-Pergamino.cmd",
     "scripts\Detener-El-Pergamino.cmd",
     "scripts\actualizar-pergamino.ps1",
-    "scripts\Actualizar-El-Pergamino.cmd"
+    "scripts\Actualizar-El-Pergamino.cmd",
+    "scripts\Abrir-El-Pergamino.vbs",
+    "scripts\Actualizar-El-Pergamino.vbs",
+    "scripts\Detener-El-Pergamino.vbs"
 )
 
 function Stop-PergaminoProcess {
