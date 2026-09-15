@@ -2,6 +2,10 @@ $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $PythonPath = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+$PythonWindowlessPath = Join-Path $ProjectRoot ".venv\Scripts\pythonw.exe"
+if (Test-Path -LiteralPath $PythonWindowlessPath -PathType Leaf) {
+    $PythonPath = $PythonWindowlessPath
+}
 $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "el-pergamino-perdido"
 $ServerLog = Join-Path $TempRoot "server.log"
 $ServerErrorLog = Join-Path $TempRoot "server-error.log"
@@ -146,7 +150,7 @@ if ($null -eq $serverConnection) {
         -FilePath $PythonPath `
         -ArgumentList @("-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8765") `
         -WorkingDirectory $ProjectRoot `
-        -WindowStyle Minimized `
+        -WindowStyle Hidden `
         -RedirectStandardOutput $ServerLog `
         -RedirectStandardError $ServerErrorLog `
         -PassThru
