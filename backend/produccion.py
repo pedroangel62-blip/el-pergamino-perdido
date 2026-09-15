@@ -14,9 +14,9 @@ import zipfile
 
 TOTAL_IMAGENES = 8
 CIERRE_SEGUNDOS = 3.0
-ZOOM_MAXIMO_IMAGEN = 1.05
-ZOOM_MAXIMO_CIERRE = 1.04
-ESCALA_SEGURA_CIERRE = 0.88
+ZOOM_MAXIMO_IMAGEN = 1.15
+ZOOM_MAXIMO_CIERRE = 1.10
+ESCALA_SEGURA_CIERRE = 0.83
 ANCHO_VIDEO = 1080
 ALTO_VIDEO = 1920
 FPS_VIDEO = 30
@@ -1617,29 +1617,27 @@ def _crear_clip(
     duracion = fotogramas / fps
     zoom_inicio = 1.0 if acercar else ZOOM_MAXIMO_IMAGEN
     zoom_final = ZOOM_MAXIMO_IMAGEN if acercar else 1.0
-    incremento_zoom = abs(zoom_final - zoom_inicio) / max(
-        1,
-        fotogramas - 1,
+    pasos_zoom = max(1, fotogramas - 1)
+    diferencia_zoom = zoom_final - zoom_inicio
+    expresion_zoom = (
+        f"({zoom_inicio:.6f}+({diferencia_zoom:.6f})*n/{pasos_zoom})"
     )
-    if acercar:
-        expresion_zoom = (
-            f"min({zoom_inicio:.3f}+on*{incremento_zoom:.8f},"
-            f"{zoom_final:.3f})"
-        )
-    else:
-        expresion_zoom = (
-            f"max({zoom_inicio:.3f}-on*{incremento_zoom:.8f},"
-            f"{zoom_final:.3f})"
-        )
+    # scale+crop evalúa el tamaño en cada fotograma. Es un Ken Burns
+    # progresivo y estable; zoompan reiniciaba/interpolaba el movimiento
+    # de forma visible y producía vibración en algunas imágenes.
+    escala_zoom_ancho = f"trunc(iw*{expresion_zoom}/2)*2"
+    escala_zoom_alto = f"trunc(ih*{expresion_zoom}/2)*2"
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
         f"crop={ancho}:{alto},boxblur=20:2[fondo2];"
         f"[frente]scale={ancho}:{alto}:force_original_aspect_ratio=decrease[frente2];"
-        "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1,"
-        f"zoompan=z='{expresion_zoom}':"
-        "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
-        f"s={ancho}x{alto}:fps={fps},format=yuv420p[video]"
+        "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1[completo];"
+        f"[completo]scale=w='{escala_zoom_ancho}':"
+        f"h='{escala_zoom_alto}':eval=frame,"
+        f"crop=w={ancho}:h={alto}:"
+        "x='(in_w-out_w)/2':y='(in_h-out_h)/2',"
+        f"fps={fps},setsar=1,format=yuv420p[video]"
     )
     ejecutar(
         [
@@ -1681,10 +1679,13 @@ def _crear_clip_cierre(
     ancho_seguro = max(1, round(ancho * ESCALA_SEGURA_CIERRE))
     alto_seguro = max(1, round(alto * ESCALA_SEGURA_CIERRE))
     total_fotogramas = max(2, round(CIERRE_SEGUNDOS * fps))
-    incremento_zoom = (ZOOM_MAXIMO_CIERRE - 1.0) / max(
-        1,
-        total_fotogramas - 1,
+    pasos_zoom = max(1, total_fotogramas - 1)
+    diferencia_zoom = ZOOM_MAXIMO_CIERRE - 1.0
+    expresion_zoom = (
+        f"(1.000000+({diferencia_zoom:.6f})*n/{pasos_zoom})"
     )
+    escala_zoom_ancho = f"trunc(iw*{expresion_zoom}/2)*2"
+    escala_zoom_alto = f"trunc(ih*{expresion_zoom}/2)*2"
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
@@ -1692,11 +1693,11 @@ def _crear_clip_cierre(
         f"[frente]scale={ancho_seguro}:{alto_seguro}:"
         "force_original_aspect_ratio=decrease[frente2];"
         "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1[completo];"
-        "[completo]zoompan="
-        f"z='min(1+on*{incremento_zoom:.8f},{ZOOM_MAXIMO_CIERRE:.3f})':"
-        "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
-        f"s={ancho}x{alto}:fps={fps},"
-        "format=yuv420p[video]"
+        f"[completo]scale=w='{escala_zoom_ancho}':"
+        f"h='{escala_zoom_alto}':eval=frame,"
+        f"crop=w={ancho}:h={alto}:"
+        "x='(in_w-out_w)/2':y='(in_h-out_h)/2',"
+        f"fps={fps},setsar=1,format=yuv420p[video]"
     )
     ejecutar(
         [

@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 
 from backend.produccion import (
     ARCHIVO_MANIFIESTO,
@@ -17,6 +18,7 @@ from backend.produccion import (
     ARCHIVO_VERIFICACION_TIMELINE,
     ARCHIVO_VERIFICACION_VISUAL,
     CIERRE_SEGUNDOS,
+    _crear_clip,
     _crear_clip_cierre,
     aprobar_borrador,
     aprobar_imagenes,
@@ -576,6 +578,40 @@ class MontajeTests(unittest.TestCase):
                 )
             )
             self.assertTrue(os.path.isfile(voz))
+
+    def test_zoom_es_progresivo_y_no_usa_zoompan(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            imagen = os.path.join(directorio, "imagen.png")
+            salida = os.path.join(directorio, "clip.mp4")
+            with open(imagen, "wb") as archivo:
+                archivo.write(PNG_UN_PIXEL)
+
+            comandos = []
+            with patch(
+                "backend.produccion.ejecutar",
+                side_effect=lambda comando, tiempo_maximo=600: comandos.append(
+                    comando
+                ),
+            ):
+                _crear_clip(
+                    imagen,
+                    duracion=2.0,
+                    salida=salida,
+                    ancho=180,
+                    alto=320,
+                    fps=30,
+                    fotogramas=60,
+                    acercar=True,
+                )
+
+            filtro = comandos[0][
+                comandos[0].index("-filter_complex") + 1
+            ]
+            self.assertNotIn("zoompan", filtro)
+            self.assertIn("eval=frame", filtro)
+            self.assertIn("trunc(iw*", filtro)
+            self.assertIn("crop=w=180:h=320", filtro)
+            self.assertIn("1.150000", filtro)
 
     def test_clip_cierre_dura_exactamente_tres_segundos(self):
         with tempfile.TemporaryDirectory() as directorio:
