@@ -31,6 +31,42 @@ $FilesToUpdate = @(
     "scripts\Actualizar-El-Pergamino.cmd"
 )
 
+function Stop-PergaminoProcess {
+    param([System.Diagnostics.Process]$Process)
+
+    try {
+        Stop-Process -Id $Process.Id -Force -ErrorAction Stop
+        return $true
+    } catch {
+        $message = $_.Exception.Message
+        if ($message -notmatch "(?i)access is denied|acceso denegado|denegad") {
+            throw
+        }
+
+        Write-Warning "Windows ha rechazado el cierre del proceso $($Process.Id) por permisos. Se solicitará permiso de administrador..."
+        try {
+            $command = "Stop-Process -Id $($Process.Id) -Force -ErrorAction Stop"
+            Start-Process \`
+                -FilePath "powershell.exe" \`
+                -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command) \`
+                -Verb RunAs \`
+                -Wait \`
+                -ErrorAction Stop | Out-Null
+        } catch {
+            Write-Warning "No se pudo solicitar el cierre elevado del proceso $($Process.Id): $($_.Exception.Message)"
+            return $false
+        }
+
+        Start-Sleep -Milliseconds 500
+        $stillRunning = Get-Process -Id $Process.Id -ErrorAction SilentlyContinue
+        if ($null -ne $stillRunning) {
+            Write-Warning "El proceso $($Process.Id) sigue activo. Se reutilizará si continúa escuchando en el puerto."
+            return $false
+        }
+        return $true
+    }
+}
+
 if (-not (Test-Path -LiteralPath $ProjectRoot -PathType Container)) {
     throw "No encuentro la carpeta del proyecto: $ProjectRoot"
 }
@@ -70,7 +106,9 @@ foreach ($connection in $serverConnections) {
         Write-Warning "No detengo el proceso del puerto 8765 porque no es Python: $($process.ProcessName)"
         continue
     }
-    Stop-Process -Id $process.Id -Force
+    if (-not (Stop-PergaminoProcess $process)) {
+        throw "No se pudo detener el servidor (PID $($process.Id)). Ejecuta el actualizador como administrador para completar el reinicio."
+    }
     Write-Host "Servidor detenido para cargar la versión nueva (PID $($process.Id))."
 }
 

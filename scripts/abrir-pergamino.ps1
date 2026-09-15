@@ -49,6 +49,42 @@ function Test-PublicPanel {
     }
 }
 
+function Stop-PergaminoProcess {
+    param([System.Diagnostics.Process]$Process)
+
+    try {
+        Stop-Process -Id $Process.Id -Force -ErrorAction Stop
+        return $true
+    } catch {
+        $message = $_.Exception.Message
+        if ($message -notmatch "(?i)access is denied|acceso denegado|denegad") {
+            throw
+        }
+
+        Write-Warning "Windows ha rechazado el cierre del proceso $($Process.Id) por permisos. Se solicitará permiso de administrador..."
+        try {
+            $command = "Stop-Process -Id $($Process.Id) -Force -ErrorAction Stop"
+            Start-Process \`
+                -FilePath "powershell.exe" \`
+                -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command) \`
+                -Verb RunAs \`
+                -Wait \`
+                -ErrorAction Stop | Out-Null
+        } catch {
+            Write-Warning "No se pudo solicitar el cierre elevado del proceso $($Process.Id): $($_.Exception.Message)"
+            return $false
+        }
+
+        Start-Sleep -Milliseconds 500
+        $stillRunning = Get-Process -Id $Process.Id -ErrorAction SilentlyContinue
+        if ($null -ne $stillRunning) {
+            Write-Warning "El proceso $($Process.Id) sigue activo. Se reutilizará si continúa escuchando en el puerto."
+            return $false
+        }
+        return $true
+    }
+}
+
 if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
     throw "No encuentro Python del entorno virtual en $PythonPath"
 }
@@ -128,6 +164,7 @@ $serverPids = @(
     Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty OwningProcess -Unique
 )
+$reuseExistingServer = $false
 foreach ($serverPid in $serverPids) {
     $existingServer = Get-Process -Id ([int]$serverPid) -ErrorAction SilentlyContinue
     if ($null -eq $existingServer) {
@@ -136,8 +173,13 @@ foreach ($serverPid in $serverPids) {
     if (@("python", "pythonw") -notcontains $existingServer.ProcessName.ToLowerInvariant()) {
         throw "El puerto 8765 está ocupado por un proceso que no pertenece a Python: $($existingServer.ProcessName)"
     }
-    Stop-Process -Id $existingServer.Id -Force
-    Write-Host "Servidor anterior detenido para cargar la versión actual (PID $($existingServer.Id))."
+    if (Stop-PergaminoProcess $existingServer) {
+        Write-Host "Servidor anterior detenido para cargar la versión actual (PID $($existingServer.Id))."
+    } else {
+        $reuseExistingServer = $true
+        $serverPid = [int]$existingServer.Id
+        Write-Warning "No se pudo detener el servidor anterior. Se reutilizará el proceso que ya está escuchando."
+    }
 }
 if ($serverPids.Count -gt 0) {
     Start-Sleep -Milliseconds 500
@@ -187,6 +229,9 @@ if ($serverConnection.Count -eq 0) {
         throw "El servidor no empezó a escuchar en el puerto 8765. Revisa $ServerErrorLog"
     }
     Write-Host "Servidor iniciado en segundo plano (PID $serverPid)."
+} elseif ($reuseExistingServer) {
+    $serverPid = [int]$serverConnection[0].OwningProcess
+    Write-Host "Se reutiliza el servidor existente en segundo plano (PID $serverPid)."
 } else {
     throw "No se pudo liberar el puerto 8765 para cargar la versión actual."
 }
