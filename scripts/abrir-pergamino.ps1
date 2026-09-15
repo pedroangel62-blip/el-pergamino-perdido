@@ -143,18 +143,50 @@ if ($serverPids.Count -gt 0) {
     Start-Sleep -Milliseconds 500
 }
 
-$serverConnection = Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue
+$serverConnection = @(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue)
 $serverProcess = $null
-if ($null -eq $serverConnection) {
+$serverPid = $null
+if ($serverConnection.Count -eq 0) {
+    # start /b desacopla el proceso del console host del lanzador. Esto evita
+    # que cerrar la ventana negra envíe CTRL+C al servidor Uvicorn.
+    $serverCommandLine = @(
+        "/d",
+        "/c",
+        "start",
+        '""',
+        "/b",
+        "`"$PythonPath`"",
+        "-m",
+        "uvicorn",
+        "backend.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8765",
+        ">",
+        "`"$ServerLog`"",
+        "2>",
+        "`"$ServerErrorLog`""
+    ) -join " "
     $serverProcess = Start-Process `
-        -FilePath $PythonPath `
-        -ArgumentList @("-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8765") `
+        -FilePath "cmd.exe" `
+        -ArgumentList $serverCommandLine `
         -WorkingDirectory $ProjectRoot `
         -WindowStyle Hidden `
-        -RedirectStandardOutput $ServerLog `
-        -RedirectStandardError $ServerErrorLog `
         -PassThru
-    Write-Host "Servidor iniciado en segundo plano (PID $($serverProcess.Id))."
+
+    for ($attempt = 0; $attempt -lt 20 -and $null -eq $serverPid; $attempt++) {
+        Start-Sleep -Milliseconds 500
+        $serverConnection = @(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue)
+        if ($serverConnection.Count -gt 0) {
+            $serverPid = [int]$serverConnection[0].OwningProcess
+        }
+    }
+
+    if ($null -eq $serverPid) {
+        throw "El servidor no empezó a escuchar en el puerto 8765. Revisa $ServerErrorLog"
+    }
+    Write-Host "Servidor iniciado en segundo plano (PID $serverPid)."
 } else {
     throw "No se pudo liberar el puerto 8765 para cargar la versión actual."
 }
@@ -228,7 +260,7 @@ if ($isTailscale) {
 }
 
 $pidData = @{
-    server_pid = if ($null -ne $serverProcess) { $serverProcess.Id } else { $null }
+    server_pid = $serverPid
     tunnel_pid = if ($null -ne $tunnelProcess) { $tunnelProcess.Id } else { $null }
     tunnel_mode = $tunnelMode
 }
