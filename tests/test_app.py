@@ -484,6 +484,36 @@ class AplicacionTests(unittest.TestCase):
         self.assertIn("Tema de prueba", respuesta.text)
 
 
+    def test_video_borrador_admite_descarga_por_rangos(self):
+        self.crear_proyecto()
+        ruta_video = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-prueba",
+            "video_borrador.mp4",
+        )
+        contenido = b"0123456789"
+        with open(ruta_video, "wb") as archivo:
+            archivo.write(contenido)
+
+        ruta = "/proyectos/pergamino-prueba/video_borrador.mp4"
+        completo = self.cliente.get(ruta)
+        self.assertEqual(completo.status_code, 200)
+        self.assertEqual(completo.content, contenido)
+        self.assertEqual(completo.headers["content-type"], "video/mp4")
+        self.assertEqual(completo.headers["accept-ranges"], "bytes")
+
+        parcial = self.cliente.get(
+            ruta,
+            headers={"Range": "bytes=2-6"},
+        )
+        self.assertEqual(parcial.status_code, 206)
+        self.assertEqual(parcial.content, b"23456")
+        self.assertEqual(
+            parcial.headers["content-range"],
+            "bytes 2-6/10",
+        )
+
+
     def test_biblioteca_musical_se_muestra_y_se_puede_seleccionar(self):
         self.crear_proyecto()
         directorio_anterior = main.DIRECTORIO_MUSICA_BASE
