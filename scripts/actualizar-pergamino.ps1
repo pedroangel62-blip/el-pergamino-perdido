@@ -49,12 +49,7 @@ function Stop-PergaminoProcess {
         Write-Warning "Windows ha rechazado el cierre del proceso $($Process.Id) por permisos. Se solicitará permiso de administrador..."
         try {
             $command = "Stop-Process -Id $($Process.Id) -Force -ErrorAction Stop"
-            Start-Process \`
-                -FilePath "powershell.exe" \`
-                -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command) \`
-                -Verb RunAs \`
-                -Wait \`
-                -ErrorAction Stop | Out-Null
+            Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command) -Verb RunAs -Wait -ErrorAction Stop | Out-Null
         } catch {
             Write-Warning "No se pudo solicitar el cierre elevado del proceso $($Process.Id): $($_.Exception.Message)"
             return $false
