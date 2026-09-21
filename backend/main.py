@@ -29,7 +29,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from openai import OpenAI
@@ -188,6 +188,135 @@ def detalle_error_openai(error: Exception) -> str:
         f"Modelo configurado: {obtener_modelo_openai()}. "
         f"Detalle: {detalle[:500]}"
     )
+
+VIDEO_BLOQUE_BYTES = 1024 * 1024
+
+
+def iterar_rango_video(ruta: str, inicio: int, final: int):
+    restante = final - inicio + 1
+    with open(ruta, "rb") as archivo:
+        archivo.seek(inicio)
+        while restante > 0:
+            bloque = archivo.read(min(VIDEO_BLOQUE_BYTES, restante))
+            if not bloque:
+                break
+            restante -= len(bloque)
+            yield bloque
+
+
+def respuesta_video_http(request: Request, ruta: str) -> Response:
+    tamano = os.path.getsize(ruta)
+    cabeceras_base = {
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+    }
+    rango = request.headers.get("range", "").strip()
+
+    if not rango:
+        return FileResponse(
+            ruta,
+            media_type="video/mp4",
+            headers=cabeceras_base,
+        )
+
+    if not rango.lower().startswith("bytes=") or "," in rango:
+        return Response(
+            status_code=416,
+            headers={"Content-Range": f"bytes */{tamano}"},
+        )
+
+    especificacion = rango[6:].strip()
+    try:
+        inicio_texto, final_texto = especificacion.split("-", 1)
+        if not inicio_texto:
+            longitud = int(final_texto)
+            if longitud <= 0:
+                raise ValueError
+            inicio = max(tamano - longitud, 0)
+            final = tamano - 1
+        else:
+            inicio = int(inicio_texto)
+            final = (
+                int(final_texto)
+                if final_texto
+                else tamano - 1
+            )
+            if inicio < 0 or inicio >= tamano:
+                raise ValueError
+            final = min(final, tamano - 1)
+            if final < inicio:
+                raise ValueError
+    except (TypeError, ValueError):
+        return Response(
+            status_code=416,
+            headers={"Content-Range": f"bytes */{tamano}"},
+        )
+
+    longitud = final - inicio + 1
+    cabeceras = {
+        **cabeceras_base,
+        "Content-Range": f"bytes {inicio}-{final}/{tamano}",
+        "Content-Length": str(longitud),
+    }
+    if request.method == "HEAD":
+        return Response(
+            status_code=206,
+            media_type="video/mp4",
+            headers=cabeceras,
+        )
+
+    return StreamingResponse(
+        iterar_rango_video(ruta, inicio, final),
+        status_code=206,
+        media_type="video/mp4",
+        headers=cabeceras,
+    )
+
+
+def obtener_ruta_video_proyecto(proyecto_id: str, nombre: str) -> str:
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+    ruta = os.path.join(directorio, nombre)
+    if not os.path.isfile(ruta):
+        raise HTTPException(
+            status_code=404,
+            detail="El vídeo solicitado no existe.",
+        )
+    return ruta
+
+
+@app.api_route(
+    "/proyectos/{proyecto_id}/video_borrador.mp4",
+    methods=["GET", "HEAD"],
+)
+async def servir_video_borrador(
+    proyecto_id: str,
+    request: Request,
+):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_borrador.mp4",
+    )
+    return respuesta_video_http(request, ruta)
+
+
+@app.api_route(
+    "/proyectos/{proyecto_id}/video_final.mp4",
+    methods=["GET", "HEAD"],
+)
+async def servir_video_final(
+    proyecto_id: str,
+    request: Request,
+):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_final.mp4",
+    )
+    return respuesta_video_http(request, ruta)
+
 
 app.mount(
     "/proyectos",
