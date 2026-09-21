@@ -3037,6 +3037,11 @@ def cargar_contexto_produccion(proyecto_id: str) -> dict:
             if resumen.get("borrador_disponible")
             else None
         ),
+        "borrador_descarga_url": (
+            f"/descargas/proyectos/{proyecto_id}/video_borrador?v={marca_tiempo}"
+            if resumen.get("borrador_disponible")
+            else None
+        ),
         "final_url": (
             f"/media/proyectos/{proyecto_id}/video_final.mp4?v={marca_tiempo}"
             if resumen.get("final_disponible")
