@@ -212,11 +212,25 @@ def respuesta_video_http(request: Request, ruta: str) -> Response:
     }
     rango = request.headers.get("range", "").strip()
 
-    if not rango:
-        return FileResponse(
-            ruta,
+    cabeceras_completas = {
+        **cabeceras_base,
+        "Content-Length": str(tamano),
+    }
+
+    if request.method == "HEAD":
+        return Response(
+            status_code=200,
             media_type="video/mp4",
-            headers=cabeceras_base,
+            headers=cabeceras_completas,
+        )
+
+    if not rango:
+        # Enviar también el cuerpo completo por bloques evita que un proxy
+        # intermedio espere a que FileResponse termine de preparar el fichero.
+        return StreamingResponse(
+            iterar_rango_video(ruta, 0, tamano - 1),
+            media_type="video/mp4",
+            headers=cabeceras_completas,
         )
 
     if not rango.lower().startswith("bytes=") or "," in rango:
