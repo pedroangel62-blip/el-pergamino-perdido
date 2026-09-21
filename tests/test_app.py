@@ -513,6 +513,20 @@ class AplicacionTests(unittest.TestCase):
             "bytes 2-6/10",
         )
 
+        descarga = self.cliente.get(
+            "/descargas/proyectos/pergamino-prueba/video_borrador"
+        )
+        self.assertEqual(descarga.status_code, 200)
+        self.assertEqual(descarga.content, contenido)
+        self.assertEqual(
+            descarga.headers["content-type"],
+            "application/octet-stream",
+        )
+        self.assertIn(
+            'attachment; filename="video_borrador.mp4"',
+            descarga.headers["content-disposition"],
+        )
+
 
     def test_biblioteca_musical_se_muestra_y_se_puede_seleccionar(self):
         self.crear_proyecto()
