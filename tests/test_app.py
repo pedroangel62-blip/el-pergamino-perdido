@@ -495,7 +495,7 @@ class AplicacionTests(unittest.TestCase):
         with open(ruta_video, "wb") as archivo:
             archivo.write(contenido)
 
-        ruta = "/proyectos/pergamino-prueba/video_borrador.mp4"
+        ruta = "/media/proyectos/pergamino-prueba/video_borrador.mp4"
         completo = self.cliente.get(ruta)
         self.assertEqual(completo.status_code, 200)
         self.assertEqual(completo.content, contenido)
