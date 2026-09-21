@@ -545,7 +545,12 @@
         {% endif %}
 
         {% if borrador_url %}
-            <video controls preload="metadata" src="{{ borrador_url }}"></video>
+            <div class="estado correcto">
+                Vídeo borrador listo para revisión. La generación ha terminado;
+                ya puedes reproducirlo y revisar fundidos y zooms.
+            </div>
+            <video id="video-borrador" controls preload="metadata" src="{{ borrador_url }}"></video>
+            <p id="video-borrador-estado" class="resumen">Cargando el vídeo borrador…</p>
 
             {% if produccion.control_visual_verificado %}
                 <div class="estado correcto">
@@ -612,6 +617,26 @@
 </main>
 
 <script>
+    (() => {
+        const video = document.getElementById('video-borrador');
+        const estadoVideo = document.getElementById('video-borrador-estado');
+        if (!video || !estadoVideo) return;
+
+        video.addEventListener('loadedmetadata', () => {
+            const duracion = Number.isFinite(video.duration)
+                ? Math.round(video.duration)
+                : null;
+            estadoVideo.textContent = duracion
+                ? 'Vídeo cargado · duración aproximada: ' + duracion + ' segundos.'
+                : 'Vídeo cargado y listo para reproducir.';
+        });
+        video.addEventListener('error', () => {
+            estadoVideo.textContent =
+                'El navegador no pudo cargar el vídeo nuevo. Pulsa Ctrl+F5 y vuelve a intentarlo.';
+            estadoVideo.classList.add('estado', 'error');
+        });
+    })();
+
     (() => {
         const dialog = document.getElementById('biblioteca-musica-dialog');
         const abrir = document.getElementById('abrir-biblioteca-musica');

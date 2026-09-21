@@ -7,7 +7,7 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 ps1Path = fso.BuildPath(scriptDir, "actualizar-pergamino.ps1")
 
-commandLine = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File " & Chr(34) & ps1Path & Chr(34)
+commandLine = "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File " & Chr(34) & ps1Path & Chr(34)
 exitCode = shell.Run(commandLine, 0, True)
 
 If exitCode <> 0 Then
