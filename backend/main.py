@@ -204,12 +204,20 @@ def iterar_rango_video(ruta: str, inicio: int, final: int):
             yield bloque
 
 
-def respuesta_video_http(request: Request, ruta: str) -> Response:
+def respuesta_video_http(
+    request: Request,
+    ruta: str,
+    *,
+    media_type: str = "video/mp4",
+    content_disposition: str | None = None,
+) -> Response:
     tamano = os.path.getsize(ruta)
     cabeceras_base = {
         "Accept-Ranges": "bytes",
         "Cache-Control": "no-store",
     }
+    if content_disposition:
+        cabeceras_base["Content-Disposition"] = content_disposition
     rango = request.headers.get("range", "").strip()
 
     cabeceras_completas = {
@@ -220,7 +228,7 @@ def respuesta_video_http(request: Request, ruta: str) -> Response:
     if request.method == "HEAD":
         return Response(
             status_code=200,
-            media_type="video/mp4",
+            media_type=media_type,
             headers=cabeceras_completas,
         )
 
@@ -229,7 +237,7 @@ def respuesta_video_http(request: Request, ruta: str) -> Response:
         # intermedio espere a que FileResponse termine de preparar el fichero.
         return StreamingResponse(
             iterar_rango_video(ruta, 0, tamano - 1),
-            media_type="video/mp4",
+            media_type=media_type,
             headers=cabeceras_completas,
         )
 
@@ -275,14 +283,14 @@ def respuesta_video_http(request: Request, ruta: str) -> Response:
     if request.method == "HEAD":
         return Response(
             status_code=206,
-            media_type="video/mp4",
+            media_type=media_type,
             headers=cabeceras,
         )
 
     return StreamingResponse(
         iterar_rango_video(ruta, inicio, final),
         status_code=206,
-        media_type="video/mp4",
+        media_type=media_type,
         headers=cabeceras,
     )
 
@@ -360,6 +368,26 @@ async def servir_video_final_media(
         "video_final.mp4",
     )
     return respuesta_video_http(request, ruta)
+
+
+@app.api_route(
+    "/descargas/proyectos/{proyecto_id}/video_borrador",
+    methods=["GET", "HEAD"],
+)
+async def descargar_video_borrador(
+    proyecto_id: str,
+    request: Request,
+):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_borrador.mp4",
+    )
+    return respuesta_video_http(
+        request,
+        ruta,
+        media_type="application/octet-stream",
+        content_disposition='attachment; filename="video_borrador.mp4"',
+    )
 
 
 app.mount(
