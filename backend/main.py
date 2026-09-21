@@ -318,6 +318,36 @@ async def servir_video_final(
     return respuesta_video_http(request, ruta)
 
 
+@app.api_route(
+    "/media/proyectos/{proyecto_id}/video_borrador.mp4",
+    methods=["GET", "HEAD"],
+)
+async def servir_video_borrador_media(
+    proyecto_id: str,
+    request: Request,
+):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_borrador.mp4",
+    )
+    return respuesta_video_http(request, ruta)
+
+
+@app.api_route(
+    "/media/proyectos/{proyecto_id}/video_final.mp4",
+    methods=["GET", "HEAD"],
+)
+async def servir_video_final_media(
+    proyecto_id: str,
+    request: Request,
+):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_final.mp4",
+    )
+    return respuesta_video_http(request, ruta)
+
+
 app.mount(
     "/proyectos",
     StaticFiles(directory=DIRECTORIO_PROYECTOS),
@@ -2961,12 +2991,12 @@ def cargar_contexto_produccion(proyecto_id: str) -> dict:
             else None
         ),
         "borrador_url": (
-            f"/proyectos/{proyecto_id}/video_borrador.mp4?v={marca_tiempo}"
+            f"/media/proyectos/{proyecto_id}/video_borrador.mp4?v={marca_tiempo}"
             if resumen.get("borrador_disponible")
             else None
         ),
         "final_url": (
-            f"/proyectos/{proyecto_id}/video_final.mp4?v={marca_tiempo}"
+            f"/media/proyectos/{proyecto_id}/video_final.mp4?v={marca_tiempo}"
             if resumen.get("final_disponible")
             else None
         ),
