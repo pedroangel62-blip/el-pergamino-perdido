@@ -115,7 +115,7 @@ CARPETA_MUSICA_MONTAJE = "MP3_MONTAJE"
 
 def _opciones_proceso_montaje() -> dict[str, object]:
     opciones: dict[str, object] = {
-        "cwd": os.getcwd(),
+        "cwd": os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
@@ -222,7 +222,7 @@ def detalle_error_openai(error: Exception) -> str:
     )
 
 VIDEO_BLOQUE_BYTES = 1024 * 1024
-VIDEO_TRANSFER_CHUNK_BYTES = 1024 * 1024
+VIDEO_TRANSFER_CHUNK_BYTES = 256 * 1024
 
 
 def iterar_rango_video(ruta: str, inicio: int, final: int):
@@ -404,6 +404,37 @@ async def fragmento_video_borrador(
         "video_borrador.mp4",
     )
     return leer_fragmento_video(ruta, offset, length)
+
+
+@app.get(
+    "/api/proyectos/{proyecto_id}/montaje",
+)
+async def estado_montaje_proyecto(proyecto_id: str):
+    try:
+        directorio = obtener_directorio_proyecto(proyecto_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+    recuperar_montaje_interrumpido(directorio)
+    estado = cargar_estado_produccion(directorio)
+    porcentaje = estado.get("montaje_porcentaje", 0) or 0
+    try:
+        porcentaje = max(0, min(100, int(porcentaje)))
+    except (TypeError, ValueError):
+        porcentaje = 0
+
+    return {
+        "estado": estado.get("estado", "pendiente"),
+        "porcentaje": porcentaje,
+        "fase": estado.get("montaje_fase", "Montaje en curso"),
+        "detalle": estado.get("montaje_detalle", ""),
+        "iniciado": estado.get("montaje_iniciado"),
+        "actualizado": estado.get("montaje_actualizado", estado.get("actualizado")),
+        "error": estado.get("error", ""),
+        "video_disponible": os.path.isfile(
+            os.path.join(directorio, "video_borrador.mp4")
+        ),
+    }
 
 
 @app.api_route(
