@@ -8,11 +8,12 @@ import os
 import re
 import secrets
 import shutil
+import subprocess
+import sys
 import socket
 import tempfile
 import time
 import unicodedata
-from threading import Lock, Thread
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urljoin, urlparse
 from urllib.request import (
@@ -57,13 +58,14 @@ from backend.produccion import (
     aprobar_sincronizacion,
     cargar_estado as cargar_estado_produccion,
     crear_paquete,
-    generar_borrador_seguro,
+    ARCHIVO_MONTAJE_EN_CURSO,
     guardar_estado as guardar_estado_produccion,
     guardar_musica,
     iniciar_generacion_borrador,
     obtener_imagenes as obtener_imagenes_produccion,
     obtener_resumen as obtener_resumen_produccion,
     preparar_sincronizacion,
+    registrar_proceso_montaje,
     recuperar_montaje_interrumpido,
     validar_anclas_plan_visual,
     verificar_preparacion_montaje,
@@ -115,35 +117,68 @@ _MONTAJES_ACTIVOS: set[str] = set()
 _MONTAJES_ACTIVOS_LOCK = Lock()
 
 
+def _opciones_proceso_montaje() -> dict[str, object]:
+    opciones: dict[str, object] = {
+        "cwd": os.getcwd(),
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "close_fds": True,
+    }
+    if os.name == "nt":
+        opciones["creationflags"] = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            | getattr(subprocess, "DETACHED_PROCESS", 0)
+        )
+    else:
+        opciones["start_new_session"] = True
+    return opciones
+
+
 def iniciar_montaje_en_hilo(
     proyecto_id: str,
     directorio_proyecto: str,
 ) -> None:
-    """Inicia el montaje fuera de la petición HTTP para evitar timeouts 502."""
-    with _MONTAJES_ACTIVOS_LOCK:
-        if proyecto_id in _MONTAJES_ACTIVOS:
-            raise ValueError("El vídeo borrador ya se está generando.")
-        iniciar_generacion_borrador(directorio_proyecto)
-        _MONTAJES_ACTIVOS.add(proyecto_id)
+    """Inicia el montaje en un proceso independiente para evitar
+    que un reinicio del servidor mate FFmpeg a mitad del render.
+    """
+    iniciar_generacion_borrador(directorio_proyecto)
 
-    def ejecutar_montaje() -> None:
-        try:
-            generar_borrador_seguro(directorio_proyecto)
-        finally:
-            with _MONTAJES_ACTIVOS_LOCK:
-                _MONTAJES_ACTIVOS.discard(proyecto_id)
-
+    proceso = None
     try:
-        Thread(
-            target=ejecutar_montaje,
-            name=f"montaje-{proyecto_id}",
-            daemon=True,
-        ).start()
-    except Exception:
-        with _MONTAJES_ACTIVOS_LOCK:
-            _MONTAJES_ACTIVOS.discard(proyecto_id)
-        raise
-
+        proceso = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "backend.montaje_worker",
+                directorio_proyecto,
+            ],
+            **_opciones_proceso_montaje(),
+        )
+        registrar_proceso_montaje(directorio_proyecto, proceso.pid)
+    except Exception as error:
+        if proceso is not None and proceso.poll() is None:
+            try:
+                proceso.terminate()
+            except OSError:
+                pass
+        ruta_marcador = os.path.join(
+            directorio_proyecto,
+            ARCHIVO_MONTAJE_EN_CURSO,
+        )
+        try:
+            os.remove(ruta_marcador)
+        except FileNotFoundError:
+            pass
+        guardar_estado_produccion(
+            directorio_proyecto,
+            "error",
+            error=f"No se pudo iniciar el proceso de montaje: {error}",
+            borrador_aprobado=False,
+        )
+        raise ValueError(
+            f"No se pudo iniciar el proceso de montaje: {error}"
+        ) from error
 
 os.makedirs(DIRECTORIO_PROYECTOS, exist_ok=True)
 
