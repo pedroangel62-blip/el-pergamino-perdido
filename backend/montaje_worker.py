@@ -1,5 +1,6 @@
 """Worker persistente para renderizar el vídeo fuera del servidor web."""
 
+import os
 import sys
 
 from backend.produccion import (
@@ -17,7 +18,7 @@ def main() -> int:
     try:
         registrar_proceso_montaje(
             directorio_proyecto,
-            __import__("os").getpid(),
+            os.getpid(),
         )
         generar_borrador_seguro(directorio_proyecto)
     except Exception as error:
