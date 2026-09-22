@@ -485,6 +485,42 @@ class AplicacionTests(unittest.TestCase):
         self.assertIn("Tema de prueba", respuesta.text)
 
 
+    def test_montaje_se_lanza_en_proceso_independiente(self):
+        self.crear_proyecto()
+        directorio = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-prueba",
+        )
+        proceso = SimpleNamespace(
+            pid=4242,
+            poll=lambda: None,
+            terminate=lambda: None,
+        )
+
+        with (
+            patch.object(main, "iniciar_generacion_borrador"),
+            patch.object(main, "registrar_proceso_montaje") as registrar,
+            patch.object(
+                main.subprocess,
+                "Popen",
+                return_value=proceso,
+            ) as lanzar,
+        ):
+            main.iniciar_montaje_en_hilo(
+                "pergamino-prueba",
+                directorio,
+            )
+
+        comando = lanzar.call_args.args[0]
+        self.assertEqual(comando[0], main.sys.executable)
+        self.assertEqual(
+            comando[1:3],
+            ["-m", "backend.montaje_worker"],
+        )
+        self.assertEqual(comando[3], directorio)
+        registrar.assert_called_once_with(directorio, 4242)
+
+
     def test_video_borrador_admite_descarga_por_rangos(self):
         self.crear_proyecto()
         ruta_video = os.path.join(
@@ -683,7 +719,6 @@ class AplicacionTests(unittest.TestCase):
                 return_value=verificacion,
             ),
             patch.object(main, "iniciar_generacion_borrador") as iniciar,
-            patch.object(main, "generar_borrador_seguro") as generar,
         ):
             respuesta = self.cliente.post(
                 "/produccion/pergamino-prueba/generar-borrador",
@@ -693,7 +728,6 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 400)
         self.assertIn("control previo", respuesta.json()["detail"].lower())
         iniciar.assert_not_called()
-        generar.assert_not_called()
 
     def test_render_solo_se_encola_despues_de_todas_las_aprobaciones(self):
         self.crear_proyecto()

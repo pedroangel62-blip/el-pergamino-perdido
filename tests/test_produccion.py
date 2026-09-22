@@ -38,6 +38,7 @@ from backend.produccion import (
     obtener_duracion,
     preparar_sincronizacion,
     recuperar_montaje_interrumpido,
+    registrar_proceso_montaje,
     validar_anclas_plan_visual,
     verificar_preparacion_montaje,
 )
@@ -520,6 +521,30 @@ class PublicacionTests(unittest.TestCase):
     "FFmpeg no está instalado",
 )
 class MontajeTests(unittest.TestCase):
+    def test_marcador_se_asocia_al_worker(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_MONTAJE_EN_CURSO),
+                {"pid": os.getpid(), "iniciado": "ahora"},
+            )
+
+            marcador = registrar_proceso_montaje(
+                directorio,
+                os.getpid(),
+            )
+
+            self.assertEqual(marcador["pid"], os.getpid())
+            self.assertEqual(
+                marcador["tipo_proceso"],
+                "montaje_worker",
+            )
+            self.assertTrue(
+                os.path.isfile(
+                    os.path.join(directorio, ARCHIVO_MONTAJE_EN_CURSO)
+                )
+            )
+
+
     def test_montaje_activo_no_se_recupera_como_interrumpido(self):
         with tempfile.TemporaryDirectory() as directorio:
             temporal_activo = os.path.join(directorio, "montaje-activo")

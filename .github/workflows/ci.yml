@@ -43,6 +43,7 @@ jobs:
         run: |
           python -m py_compile \
             backend/main.py \
+            backend/montaje_worker.py \
             backend/imagenes.py \
             backend/busqueda_imagenes.py \
             backend/voz.py \

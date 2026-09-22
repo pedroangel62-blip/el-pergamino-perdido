@@ -272,6 +272,26 @@ def iniciar_generacion_borrador(directorio_proyecto: str) -> dict:
         raise
 
 
+def registrar_proceso_montaje(
+    directorio_proyecto: str,
+    pid: int,
+) -> dict:
+    """Asocia el marcador persistente al proceso worker de FFmpeg."""
+    ruta_marcador = obtener_ruta_montaje_en_curso(directorio_proyecto)
+    marcador = cargar_json(ruta_marcador) or {}
+    if not marcador:
+        raise RuntimeError(
+            "No existe el marcador del montaje que se va a ejecutar."
+        )
+
+    pid_seguro = int(pid)
+    marcador["pid"] = pid_seguro
+    marcador["inicio_proceso"] = _inicio_proceso(pid_seguro)
+    marcador["tipo_proceso"] = "montaje_worker"
+    guardar_json_atomico(ruta_marcador, marcador)
+    return marcador
+
+
 def invalidar_salidas(directorio_proyecto: str) -> None:
     for nombre in (
         ARCHIVO_BORRADOR,
