@@ -1,4 +1,5 @@
 from datetime import datetime
+import base64
 from dotenv import load_dotenv
 from html import escape as escape_html
 import ipaddress
@@ -190,6 +191,7 @@ def detalle_error_openai(error: Exception) -> str:
     )
 
 VIDEO_BLOQUE_BYTES = 1024 * 1024
+VIDEO_TRANSFER_CHUNK_BYTES = 1024 * 1024
 
 
 def iterar_rango_video(ruta: str, inicio: int, final: int):
@@ -308,6 +310,69 @@ def obtener_ruta_video_proyecto(proyecto_id: str, nombre: str) -> str:
             detail="El vídeo solicitado no existe.",
         )
     return ruta
+
+
+def leer_fragmento_video(
+    ruta: str,
+    inicio: int,
+    longitud: int,
+) -> dict:
+    tamano = os.path.getsize(ruta)
+    if inicio < 0 or longitud <= 0 or longitud > VIDEO_TRANSFER_CHUNK_BYTES:
+        raise HTTPException(
+            status_code=416,
+            detail="El fragmento solicitado no es válido.",
+        )
+    if inicio >= tamano:
+        raise HTTPException(
+            status_code=416,
+            detail="El fragmento solicitado queda fuera del vídeo.",
+        )
+
+    with open(ruta, "rb") as archivo:
+        archivo.seek(inicio)
+        contenido = archivo.read(longitud)
+
+    return {
+        "inicio": inicio,
+        "longitud": len(contenido),
+        "tamano_total": tamano,
+        "datos_base64": base64.b64encode(contenido).decode("ascii"),
+    }
+
+
+@app.get(
+    "/api/proyectos/{proyecto_id}/video_borrador/info",
+)
+async def informacion_video_borrador(proyecto_id: str):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_borrador.mp4",
+    )
+    return {
+        "nombre": "video_borrador.mp4",
+        "tipo": "video/mp4",
+        "tamano_total": os.path.getsize(ruta),
+        "tamano_bloque": VIDEO_TRANSFER_CHUNK_BYTES,
+        "url_fragmentos": (
+            f"/api/proyectos/{proyecto_id}/video_borrador/chunk"
+        ),
+    }
+
+
+@app.get(
+    "/api/proyectos/{proyecto_id}/video_borrador/chunk",
+)
+async def fragmento_video_borrador(
+    proyecto_id: str,
+    offset: int = 0,
+    length: int = VIDEO_TRANSFER_CHUNK_BYTES,
+):
+    ruta = obtener_ruta_video_proyecto(
+        proyecto_id,
+        "video_borrador.mp4",
+    )
+    return leer_fragmento_video(ruta, offset, length)
 
 
 @app.api_route(
@@ -3039,6 +3104,11 @@ def cargar_contexto_produccion(proyecto_id: str) -> dict:
         ),
         "borrador_descarga_url": (
             f"/descargas/proyectos/{proyecto_id}/video_borrador?v={marca_tiempo}"
+            if resumen.get("borrador_disponible")
+            else None
+        ),
+        "borrador_info_url": (
+            f"/api/proyectos/{proyecto_id}/video_borrador/info?v={marca_tiempo}"
             if resumen.get("borrador_disponible")
             else None
         ),

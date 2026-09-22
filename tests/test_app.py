@@ -1,4 +1,5 @@
 import json
+import base64
 import os
 import tempfile
 import unittest
@@ -525,6 +526,26 @@ class AplicacionTests(unittest.TestCase):
         self.assertIn(
             'attachment; filename="video_borrador.mp4"',
             descarga.headers["content-disposition"],
+        )
+
+        info = self.cliente.get(
+            "/api/proyectos/pergamino-prueba/video_borrador/info"
+        )
+        self.assertEqual(info.status_code, 200)
+        self.assertEqual(info.json()["tamano_total"], 10)
+        self.assertEqual(info.json()["tamano_bloque"], 1024 * 1024)
+
+        fragmento = self.cliente.get(
+            "/api/proyectos/pergamino-prueba/video_borrador/chunk",
+            params={"offset": 2, "length": 4},
+        )
+        self.assertEqual(fragmento.status_code, 200)
+        datos_fragmento = fragmento.json()
+        self.assertEqual(datos_fragmento["inicio"], 2)
+        self.assertEqual(datos_fragmento["longitud"], 4)
+        self.assertEqual(
+            base64.b64decode(datos_fragmento["datos_base64"]),
+            b"2345",
         )
 
 
