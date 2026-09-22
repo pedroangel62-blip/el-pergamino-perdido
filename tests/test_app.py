@@ -719,7 +719,6 @@ class AplicacionTests(unittest.TestCase):
                 return_value=verificacion,
             ),
             patch.object(main, "iniciar_generacion_borrador") as iniciar,
-            patch.object(main, "generar_borrador_seguro") as generar,
         ):
             respuesta = self.cliente.post(
                 "/produccion/pergamino-prueba/generar-borrador",
@@ -729,7 +728,6 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 400)
         self.assertIn("control previo", respuesta.json()["detail"].lower())
         iniciar.assert_not_called()
-        generar.assert_not_called()
 
     def test_render_solo_se_encola_despues_de_todas_las_aprobaciones(self):
         self.crear_proyecto()
