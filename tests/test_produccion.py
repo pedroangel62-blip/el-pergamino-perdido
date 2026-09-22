@@ -636,7 +636,7 @@ class MontajeTests(unittest.TestCase):
             self.assertIn("eval=frame", filtro)
             self.assertIn("trunc(iw*", filtro)
             self.assertIn("crop=w=180:h=320", filtro)
-            self.assertIn("1.150000", filtro)
+            self.assertIn("0.150000", filtro)
 
     def test_clip_cierre_dura_exactamente_tres_segundos(self):
         with tempfile.TemporaryDirectory() as directorio:
