@@ -588,7 +588,7 @@ class AplicacionTests(unittest.TestCase):
         )
         self.assertEqual(info.status_code, 200)
         self.assertEqual(info.json()["tamano_total"], 10)
-        self.assertEqual(info.json()["tamano_bloque"], 1024 * 1024)
+        self.assertEqual(info.json()["tamano_bloque"], 256 * 1024)
 
         fragmento = self.cliente.get(
             "/api/proyectos/pergamino-prueba/video_borrador/chunk",
@@ -601,6 +601,46 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(
             base64.b64decode(datos_fragmento["datos_base64"]),
             b"2345",
+        )
+
+    def test_endpoint_de_progreso_expone_el_estado_actual(self):
+        self.crear_proyecto()
+        directorio = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-prueba",
+        )
+        with open(
+            os.path.join(directorio, "produccion.json"),
+            "w",
+            encoding="utf-8",
+        ) as archivo:
+            json.dump(
+                {
+                    "estado": "generando_borrador",
+                    "montaje_porcentaje": 42,
+                    "montaje_fase": "Creando clips",
+                    "montaje_detalle": "4 de 8 imágenes procesadas.",
+                },
+                archivo,
+            )
+        with open(
+            os.path.join(directorio, "montaje_en_curso.json"),
+            "w",
+            encoding="utf-8",
+        ) as archivo:
+            json.dump({"pid": os.getpid()}, archivo)
+
+        respuesta = self.cliente.get(
+            "/api/proyectos/pergamino-prueba/montaje"
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json()["estado"], "generando_borrador")
+        self.assertEqual(respuesta.json()["porcentaje"], 42)
+        self.assertEqual(respuesta.json()["fase"], "Creando clips")
+        self.assertEqual(
+            respuesta.json()["detalle"],
+            "4 de 8 imágenes procesadas.",
         )
 
 
