@@ -484,13 +484,19 @@
         {% endif %}
 
         {% if produccion.estado == 'generando_borrador' %}
-            <div class="montaje-progreso" role="status" aria-live="polite">
+            <div
+                id="montaje-progreso"
+                class="montaje-progreso"
+                role="status"
+                aria-live="polite"
+                data-progreso-url="/api/proyectos/{{ proyecto_id }}/montaje"
+            >
                 <div class="montaje-progreso-cabecera">
-                    <strong>{{ produccion.montaje_fase|default('Montaje en curso', true) }}</strong>
+                    <strong id="montaje-fase">{{ produccion.montaje_fase|default('Montaje en curso', true) }}</strong>
                     <strong><span id="montaje-porcentaje">{{ produccion.montaje_porcentaje|default(0, true) }}</span>%</strong>
                 </div>
                 <div class="barra-montaje" aria-hidden="true">
-                    <span style="width: {{ produccion.montaje_porcentaje|default(0, true) }}%;"></span>
+                    <span id="montaje-barra" style="width: {{ produccion.montaje_porcentaje|default(0, true) }}%;"></span>
                 </div>
                 <p id="montaje-detalle">
                     {{ produccion.montaje_detalle|default('FFmpeg está preparando el vídeo 1080×1920 a 30 fps.', true) }}
@@ -500,13 +506,20 @@
                     <strong class="montaje-tiempo" id="montaje-tiempo">calculando…</strong>
                 </p>
                 <p class="resumen">
-                    No cierres esta página. Se actualizará automáticamente cada 5 segundos.
+                    El montaje sigue ejecutándose en segundo plano. Esta tarjeta se actualiza cada 2 segundos.
                 </p>
             </div>
             <script>
                 (() => {
-                    const inicio = {{ produccion.montaje_iniciado|default('', true)|tojson }};
+                    const panel = document.getElementById('montaje-progreso');
+                    if (!panel) return;
+                    const fase = document.getElementById('montaje-fase');
+                    const porcentaje = document.getElementById('montaje-porcentaje');
+                    const barra = document.getElementById('montaje-barra');
+                    const detalle = document.getElementById('montaje-detalle');
                     const reloj = document.getElementById('montaje-tiempo');
+                    const url = panel.dataset.progresoUrl;
+                    const inicio = {{ produccion.montaje_iniciado|default('', true)|tojson }};
 
                     const actualizarReloj = () => {
                         if (!reloj || !inicio) return;
@@ -519,9 +532,33 @@
                         reloj.textContent = minutos + ':' + segundos;
                     };
 
+                    const consultarProgreso = async () => {
+                        try {
+                            const respuesta = await fetch(url, { cache: 'no-store' });
+                            if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+                            const datos = await respuesta.json();
+                            const valor = Math.max(0, Math.min(100, Number(datos.porcentaje) || 0));
+                            if (fase) fase.textContent = datos.fase || 'Montaje en curso';
+                            if (porcentaje) porcentaje.textContent = valor;
+                            if (barra) barra.style.width = valor + '%';
+                            if (detalle) detalle.textContent = datos.detalle || 'FFmpeg está trabajando…';
+
+                            if (datos.estado === 'generando_borrador') {
+                                window.setTimeout(consultarProgreso, 2000);
+                            } else {
+                                window.location.reload();
+                            }
+                        } catch (error) {
+                            if (detalle) {
+                                detalle.textContent = 'No se pudo consultar el progreso; reintentando…';
+                            }
+                            window.setTimeout(consultarProgreso, 5000);
+                        }
+                    };
+
                     actualizarReloj();
                     window.setInterval(actualizarReloj, 1000);
-                    window.setTimeout(() => window.location.reload(), 5000);
+                    consultarProgreso();
                 })();
             </script>
         {% elif produccion.preparacion_verificada %}
@@ -544,7 +581,7 @@
             </div>
         {% endif %}
 
-        {% if borrador_url %}
+        {% if borrador_url and produccion.estado != 'generando_borrador' %}
             <div class="estado correcto">
                 Vídeo borrador listo para revisión. La generación ha terminado;
                 ya puedes reproducirlo y revisar fundidos y zooms.
