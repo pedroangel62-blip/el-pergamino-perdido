@@ -113,10 +113,6 @@ MIME_MUSICA = {
 }
 CARPETA_MUSICA_MONTAJE = "MP3_MONTAJE"
 
-_MONTAJES_ACTIVOS: set[str] = set()
-_MONTAJES_ACTIVOS_LOCK = Lock()
-
-
 def _opciones_proceso_montaje() -> dict[str, object]:
     opciones: dict[str, object] = {
         "cwd": os.getcwd(),
