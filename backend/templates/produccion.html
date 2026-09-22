@@ -549,8 +549,19 @@
                 Vídeo borrador listo para revisión. La generación ha terminado;
                 ya puedes reproducirlo y revisar fundidos y zooms.
             </div>
-            <a class="descarga" href="{{ borrador_descarga_url }}" download>Descargar vídeo borrador</a>
-            <video id="video-borrador" controls preload="metadata" src="{{ borrador_url }}"></video>
+            <a
+                class="descarga"
+                href="#"
+                id="descargar-video-borrador"
+                data-info-url="{{ borrador_info_url }}"
+                download="video_borrador.mp4"
+            >Descargar vídeo borrador</a>
+            <video
+                id="video-borrador"
+                controls
+                preload="metadata"
+                data-info-url="{{ borrador_info_url }}"
+            ></video>
             <p id="video-borrador-estado" class="resumen">Cargando el vídeo borrador…</p>
 
             {% if produccion.control_visual_verificado %}
@@ -621,20 +632,126 @@
     (() => {
         const video = document.getElementById('video-borrador');
         const estadoVideo = document.getElementById('video-borrador-estado');
-        if (!video || !estadoVideo) return;
+        const descarga = document.getElementById('descargar-video-borrador');
+        if (!video || !estadoVideo || !descarga) return;
+
+        const infoUrl = video.dataset.infoUrl;
+        let blobUrl = null;
+        let preparado = false;
+
+        const mostrarEstado = (mensaje, error = false) => {
+            estadoVideo.textContent = mensaje;
+            estadoVideo.classList.toggle('estado', error);
+            estadoVideo.classList.toggle('error', error);
+        };
+
+        const decodificarBase64 = (texto) => {
+            const binario = atob(texto);
+            const bytes = new Uint8Array(binario.length);
+            for (let indice = 0; indice < binario.length; indice += 1) {
+                bytes[indice] = binario.charCodeAt(indice);
+            }
+            return bytes;
+        };
+
+        const cargarPorBloques = async () => {
+            if (!infoUrl) {
+                throw new Error('No se ha encontrado la información del vídeo.');
+            }
+
+            mostrarEstado('Preparando la transferencia del vídeo…');
+            const respuestaInfo = await fetch(infoUrl, { cache: 'no-store' });
+            if (!respuestaInfo.ok) {
+                throw new Error('El servidor no pudo informar del vídeo (' + respuestaInfo.status + ').');
+            }
+
+            const info = await respuestaInfo.json();
+            const total = Number(info.tamano_total);
+            const tamanoBloque = Number(info.tamano_bloque);
+            if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(tamanoBloque)) {
+                throw new Error('La información del vídeo está incompleta.');
+            }
+
+            const bloques = [];
+            let recibidos = 0;
+            for (let offset = 0; offset < total; offset += tamanoBloque) {
+                const longitud = Math.min(tamanoBloque, total - offset);
+                const url = info.url_fragmentos
+                    + '?offset=' + offset
+                    + '&length=' + longitud
+                    + '&v=' + Date.now();
+                const respuesta = await fetch(url, { cache: 'no-store' });
+                if (!respuesta.ok) {
+                    throw new Error('Falló el bloque ' + (offset + 1) + ' (' + respuesta.status + ').');
+                }
+
+                const fragmento = await respuesta.json();
+                if (
+                    Number(fragmento.inicio) !== offset
+                    || Number(fragmento.longitud) <= 0
+                    || Number(fragmento.tamano_total) !== total
+                ) {
+                    throw new Error('El servidor devolvió un bloque de vídeo inválido.');
+                }
+
+                const bytes = decodificarBase64(fragmento.datos_base64);
+                bloques.push(bytes);
+                recibidos += bytes.byteLength;
+                mostrarEstado(
+                    'Cargando vídeo… '
+                    + Math.round((recibidos / total) * 100)
+                    + '% ('
+                    + (recibidos / 1048576).toFixed(1)
+                    + ' / '
+                    + (total / 1048576).toFixed(1)
+                    + ' MB)'
+                );
+            }
+
+            const blob = new Blob(bloques, { type: info.tipo || 'video/mp4' });
+            blobUrl = URL.createObjectURL(blob);
+            video.src = blobUrl;
+            video.load();
+            descarga.href = blobUrl;
+            descarga.download = info.nombre || 'video_borrador.mp4';
+            preparado = true;
+            mostrarEstado('Vídeo preparado en el navegador. Ya puedes reproducirlo o descargarlo.');
+        };
+
+        descarga.addEventListener('click', (evento) => {
+            if (!preparado) {
+                evento.preventDefault();
+                mostrarEstado('El vídeo todavía se está cargando; espera a que llegue al 100%.');
+            }
+        });
 
         video.addEventListener('loadedmetadata', () => {
             const duracion = Number.isFinite(video.duration)
                 ? Math.round(video.duration)
                 : null;
-            estadoVideo.textContent = duracion
-                ? 'Vídeo cargado · duración aproximada: ' + duracion + ' segundos.'
-                : 'Vídeo cargado y listo para reproducir.';
+            mostrarEstado(
+                duracion
+                    ? 'Vídeo cargado · duración aproximada: ' + duracion + ' segundos.'
+                    : 'Vídeo cargado y listo para reproducir.'
+            );
         });
+
         video.addEventListener('error', () => {
-            estadoVideo.textContent =
-                'El navegador no pudo cargar el vídeo nuevo. Pulsa Ctrl+F5 y vuelve a intentarlo.';
-            estadoVideo.classList.add('estado', 'error');
+            mostrarEstado(
+                'El vídeo se recibió, pero el navegador no pudo interpretarlo.',
+                true
+            );
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+        });
+
+        cargarPorBloques().catch((error) => {
+            mostrarEstado(
+                'No se pudo cargar el vídeo por bloques: ' + error.message,
+                true
+            );
         });
     })();
 
