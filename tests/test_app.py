@@ -20,7 +20,6 @@ class AplicacionTests(unittest.TestCase):
         self.cliente = TestClient(main.app)
 
     def tearDown(self):
-        self.cliente.close()
         main.DIRECTORIO_PROYECTOS = self.directorio_anterior
         self.directorio_temporal.cleanup()
 
