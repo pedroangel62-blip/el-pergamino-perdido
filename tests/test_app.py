@@ -485,6 +485,42 @@ class AplicacionTests(unittest.TestCase):
         self.assertIn("Tema de prueba", respuesta.text)
 
 
+    def test_montaje_se_lanza_en_proceso_independiente(self):
+        self.crear_proyecto()
+        directorio = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-prueba",
+        )
+        proceso = SimpleNamespace(
+            pid=4242,
+            poll=lambda: None,
+            terminate=lambda: None,
+        )
+
+        with (
+            patch.object(main, "iniciar_generacion_borrador"),
+            patch.object(main, "registrar_proceso_montaje") as registrar,
+            patch.object(
+                main.subprocess,
+                "Popen",
+                return_value=proceso,
+            ) as lanzar,
+        ):
+            main.iniciar_montaje_en_hilo(
+                "pergamino-prueba",
+                directorio,
+            )
+
+        comando = lanzar.call_args.args[0]
+        self.assertEqual(comando[0], main.sys.executable)
+        self.assertEqual(
+            comando[1:3],
+            ["-m", "backend.montaje_worker"],
+        )
+        self.assertEqual(comando[3], directorio)
+        registrar.assert_called_once_with(directorio, 4242)
+
+
     def test_video_borrador_admite_descarga_por_rangos(self):
         self.crear_proyecto()
         ruta_video = os.path.join(
