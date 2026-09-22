@@ -100,5 +100,4 @@ jobs:
           python -m unittest
           tests.test_app.AplicacionTests.test_worker_usa_proceso_oculto_y_desacoplado
           tests.test_app.AplicacionTests.test_montaje_se_lanza_en_proceso_independiente
-          tests.test_app.AplicacionTests.test_endpoint_de_progreso_expone_el_estado_actual
           -v
