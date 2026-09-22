@@ -1,6 +1,7 @@
 import json
 import base64
 import os
+import subprocess
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -483,6 +484,24 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn("PRODUCCIÓN FINAL", respuesta.text)
         self.assertIn("Tema de prueba", respuesta.text)
+
+
+    def test_worker_usa_proceso_oculto_y_desacoplado(self):
+        opciones = main._opciones_proceso_montaje()
+
+        if os.name == "nt":
+            self.assertNotEqual(
+                int(opciones["creationflags"])
+                & subprocess.CREATE_NO_WINDOW,
+                0,
+            )
+            self.assertNotEqual(
+                int(opciones["creationflags"])
+                & subprocess.DETACHED_PROCESS,
+                0,
+            )
+        else:
+            self.assertTrue(opciones["start_new_session"])
 
 
     def test_montaje_se_lanza_en_proceso_independiente(self):
