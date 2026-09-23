@@ -598,6 +598,7 @@
                 controls
                 preload="metadata"
                 data-info-url="{{ borrador_info_url }}"
+                data-media-url="{{ borrador_url }}"
             ></video>
             <p id="video-borrador-estado" class="resumen">Cargando el vídeo borrador…</p>
 
@@ -673,6 +674,7 @@
         if (!video || !estadoVideo || !descarga) return;
 
         const infoUrl = video.dataset.infoUrl;
+        const mediaUrl = video.dataset.mediaUrl;
         let blobUrl = null;
         let preparado = false;
 
@@ -689,6 +691,30 @@
                 bytes[indice] = binario.charCodeAt(indice);
             }
             return bytes;
+        };
+
+        const cargarDirectamente = async () => {
+            if (!mediaUrl) {
+                throw new Error('No se ha encontrado la ruta directa del vídeo.');
+            }
+            mostrarEstado('La transferencia por bloques falló; probando descarga directa…');
+            const respuesta = await fetch(mediaUrl + (mediaUrl.includes('?') ? '&' : '?') + 'v=' + Date.now(), {
+                cache: 'no-store',
+            });
+            if (!respuesta.ok) {
+                throw new Error('La descarga directa también falló (' + respuesta.status + ').');
+            }
+            const datos = await respuesta.blob();
+            if (!datos.size) {
+                throw new Error('La descarga directa devolvió un vídeo vacío.');
+            }
+            blobUrl = URL.createObjectURL(datos);
+            video.src = blobUrl;
+            video.load();
+            descarga.href = blobUrl;
+            descarga.download = 'video_borrador.mp4';
+            preparado = true;
+            mostrarEstado('Vídeo preparado mediante descarga directa. Ya puedes reproducirlo o descargarlo.');
         };
 
         const cargarPorBloques = async () => {
@@ -784,11 +810,15 @@
             if (blobUrl) URL.revokeObjectURL(blobUrl);
         });
 
-        cargarPorBloques().catch((error) => {
-            mostrarEstado(
-                'No se pudo cargar el vídeo por bloques: ' + error.message,
-                true
-            );
+        cargarPorBloques().catch(async (error) => {
+            try {
+                await cargarDirectamente();
+            } catch (fallbackError) {
+                mostrarEstado(
+                    'No se pudo cargar el vídeo: ' + fallbackError.message,
+                    true
+                );
+            }
         });
     })();
 
