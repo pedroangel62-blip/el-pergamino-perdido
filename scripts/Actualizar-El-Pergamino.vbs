@@ -10,6 +10,8 @@ ps1Path = fso.BuildPath(scriptDir, "actualizar-pergamino.ps1")
 commandLine = "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File " & Chr(34) & ps1Path & Chr(34)
 exitCode = shell.Run(commandLine, 0, True)
 
-If exitCode <> 0 Then
-    MsgBox "No se pudo actualizar El Pergamino Perdido. Codigo: " & exitCode, 16, "El Pergamino Perdido"
+If exitCode = 0 Then
+    MsgBox "Actualización terminada correctamente. Ya puedes abrir El Pergamino Perdido.", 64, "El Pergamino Perdido"
+Else
+    MsgBox "No se pudo actualizar El Pergamino Perdido. Código: " & exitCode, 16, "El Pergamino Perdido"
 End If
