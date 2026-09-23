@@ -588,7 +588,7 @@
             </div>
             <a
                 class="descarga"
-                href="#"
+                href="{{ borrador_descarga_url }}"
                 id="descargar-video-borrador"
                 data-info-url="{{ borrador_info_url }}"
                 download="video_borrador.mp4"
@@ -599,6 +599,8 @@
                 preload="metadata"
                 data-info-url="{{ borrador_info_url }}"
                 data-media-url="{{ borrador_url }}"
+                data-download-url="{{ borrador_descarga_url }}"
+                src="{{ borrador_url }}"
             ></video>
             <p id="video-borrador-estado" class="resumen">Cargando el vídeo borrador…</p>
 
@@ -675,6 +677,7 @@
 
         const infoUrl = video.dataset.infoUrl;
         const mediaUrl = video.dataset.mediaUrl;
+        const downloadUrl = video.dataset.downloadUrl;
         let blobUrl = null;
         let preparado = false;
 
@@ -683,6 +686,18 @@
             estadoVideo.classList.toggle('estado', error);
             estadoVideo.classList.toggle('error', error);
         };
+
+        // El navegador gestiona directamente los rangos HTTP del MP4.
+        // Evitamos fetch/base64 porque algunos proxies privados cortan esa respuesta.
+        if (mediaUrl) {
+            video.src = mediaUrl;
+            video.load();
+            descarga.href = downloadUrl || mediaUrl;
+            descarga.download = 'video_borrador.mp4';
+            preparado = true;
+            mostrarEstado('Vídeo servido directamente. Ya puedes reproducirlo o descargarlo.');
+            return;
+        }
 
         const decodificarBase64 = (texto) => {
             const binario = atob(texto);
