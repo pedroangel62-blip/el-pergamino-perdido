@@ -94,6 +94,7 @@ foreach ($relativePath in $FilesToUpdate) {
     Write-Host "Actualizado: $relativePath"
 }
 
+$servidorNoDetenido = $false
 $serverConnections = @(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue)
 foreach ($connection in $serverConnections) {
     $process = Get-Process -Id $connection.OwningProcess -ErrorAction SilentlyContinue
@@ -105,10 +106,15 @@ foreach ($connection in $serverConnections) {
         continue
     }
     if (-not (Stop-PergaminoProcess $process)) {
-        throw "No se pudo detener el servidor (PID $($process.Id)). Ejecuta el actualizador como administrador para completar el reinicio."
+        $servidorNoDetenido = $true
+        Write-Warning "No se pudo detener el servidor antiguo (PID $($process.Id)). La actualización de archivos continúa; el lanzador abrirá la versión actual en otro puerto."
+        continue
     }
     Write-Host "Servidor detenido para cargar la versión nueva (PID $($process.Id))."
 }
 
 Remove-Item -LiteralPath $TempRoot -Recurse -Force
+if ($servidorNoDetenido) {
+    Write-Warning "El servidor antiguo permanece activo. Ejecuta Abrir-El-Pergamino.vbs: la versión actual se iniciará en un puerto alternativo y se conectará al mismo dominio público."
+}
 Write-Host "Actualización terminada. Se ha conservado el archivo .env y los datos locales."
