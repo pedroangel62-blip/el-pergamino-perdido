@@ -13,6 +13,8 @@ $TunnelLog = Join-Path $TempRoot "cloudflared.log"
 $TunnelErrorLog = Join-Path $TempRoot "cloudflared-error.log"
 $PidFile = Join-Path $TempRoot "processes.json"
 $EnvFile = Join-Path $ProjectRoot ".env"
+$DefaultServerPort = 8765
+$ServerPort = $DefaultServerPort
 
 function Get-DotEnvValue {
     param([string]$Name)
@@ -156,87 +158,105 @@ New-Item -ItemType Directory -Path $TempRoot -Force | Out-Null
 Remove-Item -LiteralPath $ServerLog, $ServerErrorLog, $TunnelLog, $TunnelErrorLog -Force -ErrorAction SilentlyContinue
 
 $serverPids = @(
-    Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue |
+    Get-NetTCPConnection -LocalPort $DefaultServerPort -State Listen -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty OwningProcess -Unique
 )
-$reuseExistingServer = $false
 foreach ($serverPid in $serverPids) {
     $existingServer = Get-Process -Id ([int]$serverPid) -ErrorAction SilentlyContinue
     if ($null -eq $existingServer) {
         continue
     }
     if (@("python", "pythonw") -notcontains $existingServer.ProcessName.ToLowerInvariant()) {
-        throw "El puerto 8765 está ocupado por un proceso que no pertenece a Python: $($existingServer.ProcessName)"
+        throw "El puerto $DefaultServerPort está ocupado por un proceso que no pertenece a Python: $($existingServer.ProcessName)"
     }
     if (Stop-PergaminoProcess $existingServer) {
         Write-Host "Servidor anterior detenido para cargar la versión actual (PID $($existingServer.Id))."
     } else {
-        $reuseExistingServer = $true
-        $serverPid = [int]$existingServer.Id
-        Write-Warning "No se pudo detener el servidor anterior. Se reutilizará el proceso que ya está escuchando."
+        Write-Warning "No se pudo detener el servidor antiguo (PID $($existingServer.Id)). Se buscará un puerto alternativo para la versión actual."
     }
 }
 if ($serverPids.Count -gt 0) {
     Start-Sleep -Milliseconds 500
 }
 
-$serverConnection = @(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue)
-$serverProcess = $null
-$serverPid = $null
-if ($serverConnection.Count -eq 0) {
-    # start /b desacopla el proceso del console host del lanzador. Esto evita
-    # que cerrar la ventana negra envíe CTRL+C al servidor Uvicorn.
-    $serverCommandLine = @(
-        "/d",
-        "/c",
-        "start",
-        '""',
-        "/b",
-        "`"$PythonPath`"",
-        "-m",
-        "uvicorn",
-        "backend.main:app",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8765",
-        ">",
-        "`"$ServerLog`"",
-        "2>",
-        "`"$ServerErrorLog`""
-    ) -join " "
-    $serverProcess = Start-Process `
-        -FilePath "cmd.exe" `
-        -ArgumentList $serverCommandLine `
-        -WorkingDirectory $ProjectRoot `
-        -WindowStyle Hidden `
-        -PassThru
-
-    for ($attempt = 0; $attempt -lt 20 -and $null -eq $serverPid; $attempt++) {
-        Start-Sleep -Milliseconds 500
-        $serverConnection = @(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue)
-        if ($serverConnection.Count -gt 0) {
-            $serverPid = [int]$serverConnection[0].OwningProcess
+$defaultServerConnection = @(
+    Get-NetTCPConnection -LocalPort $DefaultServerPort -State Listen -ErrorAction SilentlyContinue
+)
+if ($defaultServerConnection.Count -gt 0) {
+    $ServerPort = $null
+    for ($candidatePort = 8766; $candidatePort -le 8785; $candidatePort++) {
+        $candidateConnections = @(
+            Get-NetTCPConnection -LocalPort $candidatePort -State Listen -ErrorAction SilentlyContinue
+        )
+        if ($candidateConnections.Count -eq 0) {
+            $ServerPort = $candidatePort
+            break
         }
     }
-
-    if ($null -eq $serverPid) {
-        throw "El servidor no empezó a escuchar en el puerto 8765. Revisa $ServerErrorLog"
+    if ($null -eq $ServerPort) {
+        throw "El puerto $DefaultServerPort sigue ocupado y no hay un puerto alternativo libre entre 8766 y 8785."
     }
-    Write-Host "Servidor iniciado en segundo plano (PID $serverPid)."
-} elseif ($reuseExistingServer) {
-    $serverPid = [int]$serverConnection[0].OwningProcess
-    Write-Host "Se reutiliza el servidor existente en segundo plano (PID $serverPid)."
-} else {
-    throw "No se pudo liberar el puerto 8765 para cargar la versión actual."
+    Write-Warning "El puerto $DefaultServerPort sigue ocupado. La versión actual se iniciará en el puerto $ServerPort."
 }
+
+$serverConnection = @(
+    Get-NetTCPConnection -LocalPort $ServerPort -State Listen -ErrorAction SilentlyContinue
+)
+if ($serverConnection.Count -gt 0) {
+    throw "El puerto $ServerPort ya está ocupado; no se puede iniciar la versión actual."
+}
+
+$serverProcess = $null
+$serverPid = $null
+# start /b desacopla el proceso del console host del lanzador. Esto evita
+# que cerrar la ventana negra envíe CTRL+C al servidor Uvicorn.
+$serverCommandLine = @(
+    "/d",
+    "/c",
+    "start",
+    '""',
+    "/b",
+    "`"$PythonPath`"",
+    "-m",
+    "uvicorn",
+    "backend.main:app",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "$ServerPort",
+    ">",
+    "`"$ServerLog`"",
+    "2>",
+    "`"$ServerErrorLog`""
+) -join " "
+$serverProcess = Start-Process `
+    -FilePath "cmd.exe" `
+    -ArgumentList $serverCommandLine `
+    -WorkingDirectory $ProjectRoot `
+    -WindowStyle Hidden `
+    -PassThru
+
+for ($attempt = 0; $attempt -lt 20 -and $null -eq $serverPid; $attempt++) {
+    Start-Sleep -Milliseconds 500
+    $serverConnection = @(
+        Get-NetTCPConnection -LocalPort $ServerPort -State Listen -ErrorAction SilentlyContinue
+    )
+    if ($serverConnection.Count -gt 0) {
+        $serverPid = [int]$serverConnection[0].OwningProcess
+    }
+}
+
+if ($null -eq $serverPid) {
+    throw "El servidor no empezó a escuchar en el puerto $ServerPort. Revisa $ServerErrorLog"
+}
+Write-Host "Servidor iniciado en segundo plano (PID $serverPid, puerto $ServerPort)."
 
 $tunnelProcess = $null
 $publicPanelReady = $false
 $tunnelMode = ""
 if ($isTailscale) {
     Write-Host "Activando o reutilizando Tailscale Funnel..."
-    & $TailscalePath funnel --bg "http://127.0.0.1:8765"
+    & $TailscalePath funnel --bg "http://127.0.0.1:$ServerPort"
     $funnelExitCode = $LASTEXITCODE
     if ($funnelExitCode -ne 0) {
         throw "Tailscale no pudo activar Funnel. Inicia sesión y aprueba Funnel cuando lo solicite."
@@ -301,6 +321,7 @@ if ($isTailscale) {
 
 $pidData = @{
     server_pid = $serverPid
+    server_port = $ServerPort
     tunnel_pid = if ($null -ne $tunnelProcess) { $tunnelProcess.Id } else { $null }
     tunnel_mode = $tunnelMode
 }
