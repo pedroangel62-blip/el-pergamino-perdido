@@ -538,6 +538,24 @@ async def descargar_video_borrador(
     )
 
 
+@app.post(
+    "/api/proyectos/{proyecto_id}/video_borrador/copiar-descargas",
+)
+async def copiar_video_borrador_a_descargas(proyecto_id: str):
+    """Copia el vídeo al almacenamiento local del usuario sin descargarlo por HTTP."""
+    ruta_origen = obtener_ruta_video_proyecto(proyecto_id, "video_borrador.mp4")
+    carpeta_descargas = Path.home() / "Downloads"
+    carpeta_descargas.mkdir(parents=True, exist_ok=True)
+    ruta_destino = carpeta_descargas / "video_borrador.mp4"
+    shutil.copy2(ruta_origen, ruta_destino)
+    return {
+        "ok": True,
+        "mensaje": "Vídeo copiado a la carpeta Descargas.",
+        "ruta": str(ruta_destino),
+        "tamano_bytes": ruta_destino.stat().st_size,
+    }
+
+
 app.mount(
     "/proyectos",
     StaticFiles(directory=DIRECTORIO_PROYECTOS),

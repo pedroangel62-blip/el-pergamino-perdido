@@ -593,6 +593,11 @@
                 data-info-url="{{ borrador_info_url }}"
                 download="video_borrador.mp4"
             >Descargar vídeo borrador</a>
+            <form method="post"
+                  action="/api/proyectos/{{ proyecto_id }}/video_borrador/copiar-descargas"
+                  target="_blank">
+                <button type="submit">Copiar vídeo a Descargas de Windows</button>
+            </form>
             <video
                 id="video-borrador"
                 controls
