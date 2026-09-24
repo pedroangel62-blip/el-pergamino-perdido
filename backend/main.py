@@ -328,6 +328,28 @@ def respuesta_video_http(
     )
 
 
+def respuesta_video_archivo(
+    ruta: str,
+    *,
+    media_type: str = "video/mp4",
+    nombre_descarga: str | None = None,
+) -> FileResponse:
+    """Entrega un archivo multimedia con FileResponse nativo.
+
+    Evita errores de conexión de proxies al usar generadores de streaming.
+    """
+    cabeceras = {
+        "Cache-Control": "no-store",
+        "Accept-Ranges": "bytes",
+    }
+    return FileResponse(
+        ruta,
+        media_type=media_type,
+        filename=nombre_descarga,
+        headers=cabeceras,
+    )
+
+
 def obtener_ruta_video_proyecto(proyecto_id: str, nombre: str) -> str:
     try:
         directorio = obtener_directorio_proyecto(proyecto_id)
@@ -449,7 +471,7 @@ async def servir_video_borrador(
         proyecto_id,
         "video_borrador.mp4",
     )
-    return respuesta_video_http(request, ruta)
+    return respuesta_video_archivo(ruta)
 
 
 @app.api_route(
@@ -464,7 +486,7 @@ async def servir_video_final(
         proyecto_id,
         "video_final.mp4",
     )
-    return respuesta_video_http(request, ruta)
+    return respuesta_video_archivo(ruta)
 
 
 @app.api_route(
@@ -479,7 +501,7 @@ async def servir_video_borrador_media(
         proyecto_id,
         "video_borrador.mp4",
     )
-    return respuesta_video_http(request, ruta)
+    return respuesta_video_archivo(ruta)
 
 
 @app.api_route(
@@ -509,11 +531,10 @@ async def descargar_video_borrador(
         proyecto_id,
         "video_borrador.mp4",
     )
-    return respuesta_video_http(
-        request,
+    return respuesta_video_archivo(
         ruta,
         media_type="application/octet-stream",
-        content_disposition='attachment; filename="video_borrador.mp4"',
+        nombre_descarga="video_borrador.mp4",
     )
 
 
