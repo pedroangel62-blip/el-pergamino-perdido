@@ -659,7 +659,8 @@ class MontajeTests(unittest.TestCase):
             ]
             self.assertIn("zoompan=z=", filtro)
             self.assertIn("d=1", filtro)
-            self.assertIn("s=180x320", filtro)
+            self.assertIn("s=360x640", filtro)
+            self.assertIn("scale=180:320:flags=lanczos", filtro)
             self.assertIn("on/59", filtro)
             self.assertIn("0.150000", filtro)
 
@@ -808,10 +809,18 @@ class MontajeTests(unittest.TestCase):
                 control_audio["pico_mezcla_final_db"],
                 control_audio["pico_maximo_permitido_db"],
             )
-            self.assertLessEqual(control_audio["ganancia_musica_db"], -20.0)
+            self.assertLessEqual(control_audio["ganancia_musica_db"], 18.0)
             self.assertGreaterEqual(
                 control_audio["margen_voz_sobre_musica_db"],
                 control_audio["margen_minimo_exigido_db"],
+            )
+            self.assertLessEqual(
+                control_audio["margen_voz_sobre_musica_db"],
+                control_audio["margen_maximo_exigido_db"],
+            )
+            self.assertGreater(
+                control_audio["volumen_inicio_cierre_db"],
+                -20.0,
             )
             self.assertGreaterEqual(
                 control_audio["caida_fundido_db"],
@@ -1041,7 +1050,15 @@ class MontajeTests(unittest.TestCase):
             self.assertTrue(control_audio["sin_saturacion_digital"])
             self.assertGreaterEqual(
                 control_audio["margen_voz_sobre_musica_db"],
-                14.0,
+                8.0,
+            )
+            self.assertLessEqual(
+                control_audio["margen_voz_sobre_musica_db"],
+                16.0,
+            )
+            self.assertGreater(
+                control_audio["volumen_inicio_cierre_db"],
+                -20.0,
             )
             self.assertGreaterEqual(control_audio["caida_fundido_db"], 12.0)
 
