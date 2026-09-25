@@ -48,7 +48,7 @@ def verificar():
     def comando(*args):
         resultado = subprocess.run([
             browser, "--session", "pergamino-ci", "--executable-path", chrome,
-            "--args=--autoplay-policy=no-user-gesture-required", *args,
+            "--args", "--autoplay-policy=no-user-gesture-required", *args,
         ], capture_output=True, text=True, timeout=40)
         if resultado.returncode:
             raise RuntimeError(resultado.stdout + resultado.stderr)

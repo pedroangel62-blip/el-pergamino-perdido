@@ -62,6 +62,11 @@ jobs:
       - name: Ejecutar pruebas
         run: python -m unittest discover -s tests -v
 
+      - name: Configurar Node para el navegador
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Instalar herramienta de navegador
         run: npm install --no-save --prefix "$RUNNER_TEMP/pergamino-browser" agent-browser@0.38.1
 
