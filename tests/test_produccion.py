@@ -629,7 +629,7 @@ class MontajeTests(unittest.TestCase):
             )
             self.assertTrue(os.path.isfile(voz))
 
-    def test_zoom_es_progresivo_y_no_usa_zoompan(self):
+    def test_zoom_es_progresivo_con_salida_estable(self):
         with tempfile.TemporaryDirectory() as directorio:
             imagen = os.path.join(directorio, "imagen.png")
             salida = os.path.join(directorio, "clip.mp4")
@@ -657,10 +657,10 @@ class MontajeTests(unittest.TestCase):
             filtro = comandos[0][
                 comandos[0].index("-filter_complex") + 1
             ]
-            self.assertNotIn("zoompan", filtro)
-            self.assertIn("eval=frame", filtro)
-            self.assertIn("trunc(iw*", filtro)
-            self.assertIn("crop=w=180:h=320", filtro)
+            self.assertIn("zoompan=z=", filtro)
+            self.assertIn("d=1", filtro)
+            self.assertIn("s=180x320", filtro)
+            self.assertIn("on/59", filtro)
             self.assertIn("0.150000", filtro)
 
     def test_clip_cierre_dura_exactamente_tres_segundos(self):
