@@ -17,6 +17,7 @@ TOTAL_IMAGENES = 8
 CIERRE_SEGUNDOS = 3.0
 ZOOM_MAXIMO_IMAGEN = 1.15
 ZOOM_MAXIMO_CIERRE = 1.10
+ZOOM_SUPERSAMPLE = 2
 ESCALA_SEGURA_CIERRE = 0.83
 ANCHO_VIDEO = 1080
 ALTO_VIDEO = 1920
@@ -24,8 +25,10 @@ FPS_VIDEO = 30
 TRANSICION_SEGUNDOS = 0.30
 PICO_OBJETIVO_VOZ_DB = -3.0
 GANANCIA_MAXIMA_VOZ_DB = 18.0
-GANANCIA_MAXIMA_MUSICA_DB = -20.0
-MARGEN_MINIMO_MUSICA_DB = 14.0
+GANANCIA_MAXIMA_MUSICA_DB = 18.0
+MARGEN_MINIMO_MUSICA_DB = 8.0
+MARGEN_MAXIMO_MUSICA_DB = 16.0
+PICO_MINIMO_MUSICA_AUDIBLE_DB = -28.0
 CAIDA_MINIMA_FUNDIDO_DB = 12.0
 LIMITE_AUDIO_LINEAL = 0.891
 PICO_MAXIMO_MEZCLA_DB = -0.1
@@ -1803,19 +1806,22 @@ def _crear_clip(
     expresion_zoom = (
         f"({zoom_inicio:.6f}+({diferencia_zoom:.6f})*on/{pasos_zoom})"
     )
-    # zoompan emite exactamente un fotograma por entrada. La salida tiene
-    # siempre las mismas dimensiones y el contador on evita reinicios del
-    # zoom; scale=eval=frame cambiaba el tamaño del frame en cada vuelta y
-    # provocaba un cierre nativo de FFmpeg en Windows (0xC0000005).
+    ancho_zoom = ancho * ZOOM_SUPERSAMPLE
+    alto_zoom = alto * ZOOM_SUPERSAMPLE
+    # El zoom se calcula a doble resolución y se reduce al final: el recorte
+    # interno puede avanzar medio píxel efectivo, evitando saltos visibles
+    # por el redondeo entero de zoompan. Se mantiene un fotograma por entrada.
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
         f"crop={ancho}:{alto},boxblur=20:2[fondo2];"
         f"[frente]scale={ancho}:{alto}:force_original_aspect_ratio=decrease[frente2];"
         "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1[completo];"
-        f"[completo]zoompan=z='{expresion_zoom}':"
+        f"[completo]scale={ancho_zoom}:{alto_zoom}:flags=lanczos[zoomsource];"
+        f"[zoomsource]zoompan=z='{expresion_zoom}':"
         "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d=1:s={ancho}x{alto}:fps={fps},"
+        f"d=1:s={ancho_zoom}x{alto_zoom}:fps={fps},"
+        f"scale={ancho}:{alto}:flags=lanczos,"
         "setsar=1,format=yuv420p[video]"
     )
     ejecutar(
@@ -1863,7 +1869,8 @@ def _crear_clip_cierre(
     expresion_zoom = (
         f"(1.000000+({diferencia_zoom:.6f})*on/{pasos_zoom})"
     )
-
+    ancho_zoom = ancho * ZOOM_SUPERSAMPLE
+    alto_zoom = alto * ZOOM_SUPERSAMPLE
     filtro = (
         "[0:v]split=2[fondo][frente];"
         f"[fondo]scale={ancho}:{alto}:force_original_aspect_ratio=increase,"
@@ -1871,9 +1878,11 @@ def _crear_clip_cierre(
         f"[frente]scale={ancho_seguro}:{alto_seguro}:"
         "force_original_aspect_ratio=decrease[frente2];"
         "[fondo2][frente2]overlay=(W-w)/2:(H-h)/2,setsar=1[completo];"
-        f"[completo]zoompan=z='{expresion_zoom}':"
+        f"[completo]scale={ancho_zoom}:{alto_zoom}:flags=lanczos[zoomsource];"
+        f"[zoomsource]zoompan=z='{expresion_zoom}':"
         "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d=1:s={ancho}x{alto}:fps={fps},"
+        f"d=1:s={ancho_zoom}x{alto_zoom}:fps={fps},"
+        f"scale={ancho}:{alto}:flags=lanczos,"
         "setsar=1,format=yuv420p[video]"
     )
     ejecutar(
@@ -1998,6 +2007,11 @@ def calcular_ajuste_audio(voz: str, musica: str) -> dict:
     if margen + 0.01 < MARGEN_MINIMO_MUSICA_DB:
         raise RuntimeError("La música no queda suficientemente debajo de la voz.")
 
+    if margen - 0.01 > MARGEN_MAXIMO_MUSICA_DB:
+        raise RuntimeError(
+            "La música queda demasiado baja con el ajuste máximo seguro."
+        )
+
     return {
         "pico_voz_original_db": round(pico_voz, 2),
         "ganancia_voz_db": round(ganancia_voz, 2),
@@ -2007,6 +2021,7 @@ def calcular_ajuste_audio(voz: str, musica: str) -> dict:
         "pico_musica_ajustado_db": round(pico_musica_ajustado, 2),
         "margen_voz_sobre_musica_db": round(margen, 2),
         "margen_minimo_exigido_db": MARGEN_MINIMO_MUSICA_DB,
+        "margen_maximo_exigido_db": MARGEN_MAXIMO_MUSICA_DB,
     }
 
 
@@ -2092,8 +2107,14 @@ def validar_control_audio_final(
         duracion=duracion_final,
     )
 
-    if not math.isfinite(volumen_inicio_cierre) or volumen_inicio_cierre <= -70:
-        raise RuntimeError("La música no se oye al comenzar la Imagen 9.")
+    if (
+        not math.isfinite(volumen_inicio_cierre)
+        or volumen_inicio_cierre < PICO_MINIMO_MUSICA_AUDIBLE_DB
+    ):
+        raise RuntimeError(
+            "La música queda inaudible al comenzar la Imagen 9 "
+            "después de la mezcla AAC."
+        )
 
     volumen_final_calculo = (
         volumen_final if math.isfinite(volumen_final) else -120.0
@@ -2116,6 +2137,7 @@ def validar_control_audio_final(
         "pico_maximo_permitido_db": PICO_MAXIMO_MEZCLA_DB,
         "pico_mezcla_final_db": round(pico_final_db, 2),
         "volumen_inicio_cierre_db": round(volumen_inicio_cierre, 2),
+        "pico_minimo_musica_audible_db": PICO_MINIMO_MUSICA_AUDIBLE_DB,
         "volumen_final_cierre_db": (
             round(volumen_final, 2)
             if math.isfinite(volumen_final)

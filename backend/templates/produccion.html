@@ -627,7 +627,9 @@
                     {{ produccion.verificacion_audio.margen_voz_sobre_musica_db }} dB
                     por debajo del pico de voz. El fundido final desciende
                     {{ produccion.verificacion_audio.caida_fundido_db }} dB
-                    durante la Imagen 9 y no se detecta saturación digital.
+                    durante la Imagen 9. Nivel de música medido sin voz:
+                    {{ produccion.verificacion_audio.volumen_inicio_cierre_db }} dBFS;
+                    no se detecta saturación digital.
                 </div>
             {% endif %}
 
