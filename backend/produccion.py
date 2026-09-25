@@ -2904,6 +2904,7 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
                     ruta == temporal
                     or nombre.startswith(".")
                     or nombre.lower().endswith(".srt")
+                    or nombre == ARCHIVO_BORRADOR
                     or nombre == ARCHIVO_MANIFIESTO
                     or _es_nombre_paquete_seguro(nombre)
                 ):
