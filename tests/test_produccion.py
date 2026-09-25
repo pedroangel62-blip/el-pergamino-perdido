@@ -11,6 +11,7 @@ import zipfile
 from unittest.mock import patch
 
 from backend.produccion import (
+    ARCHIVO_BORRADOR,
     ARCHIVO_MANIFIESTO,
     ARCHIVO_MONTAJE_EN_CURSO,
     ARCHIVO_VERIFICACION_AUDIO,
@@ -545,11 +546,14 @@ class PublicacionArchivoTests(unittest.TestCase):
 
 
 class PaqueteTests(unittest.TestCase):
-    def test_crea_zip_fuera_del_proyecto_y_no_recomprime_los_medios(self):
+    def test_omite_borrador_bloqueado_y_no_recomprime_los_medios(self):
         with tempfile.TemporaryDirectory() as directorio:
             video = os.path.join(directorio, "video_final.mp4")
             with open(video, "wb") as archivo:
                 archivo.write(b"video-final-de-prueba")
+            borrador = os.path.join(directorio, ARCHIVO_BORRADOR)
+            with open(borrador, "wb") as archivo:
+                archivo.write(b"borrador-bloqueado")
             with open(os.path.join(directorio, "voz.mp3"), "wb") as archivo:
                 archivo.write(b"voz-de-prueba")
 
@@ -579,15 +583,27 @@ class PaqueteTests(unittest.TestCase):
 
             directorios_temporales_paquete = []
             mkstemp_original = tempfile.mkstemp
+            abrir_original = open
 
             def registrar_temporal_paquete(*args, **kwargs):
                 if kwargs.get("prefix") == "pergamino-paquete-":
                     directorios_temporales_paquete.append(kwargs.get("dir"))
                 return mkstemp_original(*args, **kwargs)
 
-            with patch(
-                "backend.produccion.tempfile.mkstemp",
-                side_effect=registrar_temporal_paquete,
+            def abrir_con_borrador_bloqueado(ruta, *args, **kwargs):
+                if os.path.abspath(os.fspath(ruta)) == os.path.abspath(borrador):
+                    raise PermissionError("Borrador bloqueado por Windows/OneDrive")
+                return abrir_original(ruta, *args, **kwargs)
+
+            with (
+                patch(
+                    "backend.produccion.tempfile.mkstemp",
+                    side_effect=registrar_temporal_paquete,
+                ),
+                patch(
+                    "builtins.open",
+                    side_effect=abrir_con_borrador_bloqueado,
+                ),
             ):
                 estado = crear_paquete(
                     directorio,
@@ -607,6 +623,7 @@ class PaqueteTests(unittest.TestCase):
                 os.path.join(directorio, "proyecto_completo.zip")
             ) as archivo_zip:
                 self.assertIsNone(archivo_zip.testzip())
+                self.assertNotIn(ARCHIVO_BORRADOR, archivo_zip.namelist())
                 self.assertEqual(
                     archivo_zip.getinfo("video_final.mp4").compress_type,
                     zipfile.ZIP_STORED,
