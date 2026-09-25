@@ -6,6 +6,7 @@ from html import escape as escape_html
 import ipaddress
 import json
 import logging
+import ntpath
 import os
 import re
 import secrets
@@ -195,7 +196,7 @@ with open(
 ) as f:
     plantilla_generacion = f.read()
 
-VERSION_APLICACION = "2026.09.25.6"
+VERSION_APLICACION = "2026.09.25.7"
 app = FastAPI()
 
 
@@ -3114,6 +3115,24 @@ def redirigir_produccion(
     )
 
 
+def nombres_archivos_error(error: OSError) -> str:
+    """Muestra solo los nombres base; nunca revela rutas locales completas."""
+    nombres = []
+    for atributo in ("filename2", "filename"):
+        ruta = getattr(error, atributo, None)
+        if not ruta:
+            continue
+        try:
+            texto = os.fsdecode(os.fspath(ruta))
+        except (TypeError, ValueError):
+            continue
+        nombre = ntpath.basename(texto.replace("/", "\\")).strip()
+        nombre = "".join(caracter for caracter in nombre if caracter.isprintable())
+        if nombre and nombre not in nombres:
+            nombres.append(nombre[:120])
+    return ", ".join(nombres[:2])
+
+
 def obtener_ruta_musica_base(ruta_relativa: str) -> str:
     ruta_relativa = str(ruta_relativa or "").strip()
 
@@ -3263,8 +3282,9 @@ def cargar_contexto_produccion(proyecto_id: str) -> dict:
             else None
         ),
         "paquete_url": (
-            f"/proyectos/{proyecto_id}/proyecto_completo.zip?v={marca_tiempo}"
-            if resumen.get("paquete_disponible")
+            f"/proyectos/{proyecto_id}/{quote(resumen['paquete_archivo'], safe='.-_')}"
+            f"?v={marca_tiempo}"
+            if resumen.get("paquete_disponible") and resumen.get("paquete_archivo")
             else None
         ),
     }
@@ -3530,26 +3550,33 @@ async def crear_paquete_proyecto(proyecto_id: str):
             error,
         )
         return redirigir_produccion(proyecto_id, str(error))
-    except PermissionError:
+    except PermissionError as error:
         logging.getLogger(__name__).exception(
             "Windows/OneDrive bloqueó un archivo al crear el paquete del proyecto %s",
             proyecto_id,
         )
+        nombres = nombres_archivos_error(error)
+        archivo = f" Archivo implicado: {nombres}." if nombres else ""
         return redirigir_produccion(
             proyecto_id,
-            "Windows o OneDrive mantiene un archivo bloqueado. "
-            "No se ha confirmado el ZIP. Cierra el reproductor del vídeo, "
-            "espera a que OneDrive termine de sincronizar y vuelve a intentarlo.",
+            "No se pudo confirmar esta generación del ZIP: Windows o OneDrive "
+            "bloqueó un archivo." + archivo + " "
+            "Si el nombre es un MP4, cierra el reproductor; si es un ZIP, "
+            "espera a que OneDrive termine de sincronizar. El ZIP anterior "
+            "se conserva cuando el bloqueo impide sustituirlo.",
         )
-    except OSError:
+    except OSError as error:
         logging.getLogger(__name__).exception(
             "Error de acceso al crear el paquete del proyecto %s",
             proyecto_id,
         )
+        nombres = nombres_archivos_error(error)
+        archivo = f" Archivo implicado: {nombres}." if nombres else ""
         return redirigir_produccion(
             proyecto_id,
-            "Windows o OneDrive no pudo leer o escribir un archivo del proyecto. "
-            "Los originales se conservan; espera a que OneDrive termine y vuelve a intentarlo.",
+            "Windows o OneDrive no pudo leer o escribir un archivo del proyecto."
+            + archivo + " Los originales se conservan; espera a que OneDrive "
+            "termine y vuelve a intentarlo.",
         )
     except Exception:
         logging.getLogger(__name__).exception(
