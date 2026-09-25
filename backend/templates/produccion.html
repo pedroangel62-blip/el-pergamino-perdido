@@ -656,11 +656,16 @@
             <div class="estado correcto">Vídeo final aprobado.</div>
             <video controls preload="metadata" src="{{ final_url }}"></video>
 
-            <form method="post" action="/produccion/{{ proyecto_id }}/crear-paquete">
-                <button type="submit">
+            <form id="crear-paquete-form" method="post" action="/produccion/{{ proyecto_id }}/crear-paquete">
+                <button id="crear-paquete-boton" type="submit">
                     {% if paquete_url %}Regenerar paquete ZIP{% else %}Crear paquete completo{% endif %}
                 </button>
             </form>
+            <p id="crear-paquete-estado" class="estado" role="status" aria-live="polite" hidden></p>
+            <p class="resumen">
+                Este ZIP es una copia descargable del proyecto. No instala ni actualiza
+                la aplicación y tampoco publica el vídeo en redes.
+            </p>
         {% else %}
             <div class="estado">El vídeo final aparecerá después de aprobar el borrador.</div>
         {% endif %}
@@ -753,6 +758,21 @@
                 }
             });
         }
+    })();
+
+    (() => {
+        const formulario = document.getElementById('crear-paquete-form');
+        const boton = document.getElementById('crear-paquete-boton');
+        const estado = document.getElementById('crear-paquete-estado');
+        if (!formulario || !boton || !estado) return;
+
+        formulario.addEventListener('submit', () => {
+            boton.disabled = true;
+            boton.textContent = 'Creando y verificando el paquete…';
+            estado.hidden = false;
+            estado.textContent = 'El servidor está preparando y comprobando el ZIP. '
+                + 'Esta operación no publica el vídeo.';
+        });
     })();
 
     (() => {
