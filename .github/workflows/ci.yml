@@ -63,9 +63,13 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   compatibilidad-windows:
-    name: Compatibilidad Windows
+    name: Windows Python ${{ matrix.python }}
     runs-on: windows-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.14"]
 
     steps:
       - name: Descargar repositorio
@@ -74,7 +78,7 @@ jobs:
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
 
       - name: Instalar dependencias
         shell: pwsh
@@ -94,10 +98,22 @@ jobs:
             backend/produccion.py `
             backend/instagram.py
 
-      - name: Probar compatibilidad del worker
+      - name: Probar API, archivo bloqueado y progreso con proceso real
         shell: pwsh
         run: >-
           python -m unittest
-          tests.test_app.AplicacionTests.test_worker_usa_proceso_oculto_y_desacoplado
-          tests.test_app.AplicacionTests.test_montaje_se_lanza_en_proceso_independiente
+          tests.test_app
+          tests.test_entrega_video
           -v
+
+      - name: Comprobar diagnostico de solo lectura en Windows
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "pergamino-diagnostico"
+          $project = Join-Path $root "backend\proyectos\pergamino-prueba"
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          $video = Join-Path $project "video_borrador.mp4"
+          [System.IO.File]::WriteAllBytes($video, [byte[]](1, 2, 3))
+          $before = (Get-FileHash -LiteralPath $video).Hash
+          & .\scripts\diagnosticar-video.ps1 -ProjectRoot $root -ProyectoId "pergamino-prueba" -NoAbrir
+          if ((Get-FileHash -LiteralPath $video).Hash -ne $before) { throw "El diagnostico altero el video" }
