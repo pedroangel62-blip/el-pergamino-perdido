@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+import uuid
 
 
 TOTAL_IMAGENES = 8
@@ -128,6 +129,47 @@ def cargar_estado(directorio_proyecto: str) -> dict:
         "actualizado": ahora_iso(),
         "error": "",
     }
+
+
+def _es_nombre_borrador_seguro(nombre: object) -> bool:
+    """Acepta únicamente nombres de borrador, nunca una ruta arbitraria."""
+    if not isinstance(nombre, str) or not nombre:
+        return False
+    return (
+        os.path.basename(nombre) == nombre
+        and nombre.startswith("video_borrador")
+        and nombre.lower().endswith(".mp4")
+    )
+
+
+def obtener_archivo_borrador_actual(
+    directorio_proyecto: str,
+    estado: dict | None = None,
+) -> str | None:
+    """Devuelve el MP4 publicado que corresponde al borrador actual.
+
+    Los proyectos antiguos solo tienen el archivo de nombre fijo. Los montajes
+    nuevos guardan cada resultado con un nombre físico distinto para que un
+    MP4 bloqueado por el navegador o por OneDrive no impida regenerar otro.
+    Si el estado contiene explícitamente None, el borrador fue invalidado
+    y no se debe resucitar el archivo antiguo como resultado del fallback.
+    """
+    datos = cargar_estado(directorio_proyecto) if estado is None else estado
+    if "video_borrador" in datos:
+        nombre = datos.get("video_borrador")
+        if not _es_nombre_borrador_seguro(nombre):
+            return None
+        ruta = os.path.join(directorio_proyecto, nombre)
+        return ruta if os.path.isfile(ruta) else None
+
+    ruta_heredada = os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
+    return ruta_heredada if os.path.isfile(ruta_heredada) else None
+
+
+def _nombre_borrador_publicado() -> str:
+    """Crea un nombre único para publicar un montaje sin sobrescribir otro."""
+    marca_tiempo = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"video_borrador_{marca_tiempo}_{uuid.uuid4().hex[:12]}.mp4"
 
 
 def actualizar_progreso_montaje(
@@ -345,7 +387,7 @@ def registrar_proceso_montaje(
 
 
 def invalidar_salidas(directorio_proyecto: str) -> None:
-    for nombre in (
+    nombres_fijos = (
         ARCHIVO_BORRADOR,
         ARCHIVO_FINAL,
         ARCHIVO_PUBLICACION,
@@ -356,10 +398,40 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         ARCHIVO_VERIFICACION_PREVIA,
         ARCHIVO_MANIFIESTO,
         "subtitulos.srt",
-    ):
+    )
+    nombres = set(nombres_fijos)
+    try:
+        nombres.update(
+            nombre
+            for nombre in os.listdir(directorio_proyecto)
+            if _es_nombre_borrador_seguro(nombre)
+        )
+    except OSError:
+        # Las comprobaciones posteriores informarán de los recursos que falten.
+        pass
+
+    for nombre in nombres:
         ruta = os.path.join(directorio_proyecto, nombre)
-        if os.path.isfile(ruta):
+        if not os.path.isfile(ruta):
+            continue
+        try:
             os.remove(ruta)
+        except OSError:
+            # Un reproductor o OneDrive puede mantener un MP4 antiguo abierto.
+            # No debe impedir invalidar los demás recursos ni una regeneración.
+            if not _es_nombre_borrador_seguro(nombre):
+                raise
+
+    estado = cargar_json(obtener_ruta_estado(directorio_proyecto))
+    if isinstance(estado, dict) and (
+        "video_borrador" in estado or "video_final" in estado
+    ):
+        estado["video_borrador"] = None
+        estado["video_final"] = None
+        estado["video_final_sha256"] = None
+        estado["video_borrador_sha256"] = None
+        estado["actualizado"] = ahora_iso()
+        guardar_json_atomico(obtener_ruta_estado(directorio_proyecto), estado)
 
 
 def comprobar_ffmpeg() -> None:
@@ -2219,7 +2291,11 @@ def generar_borrador(
     if not estado.get("musica_aprobada"):
         raise ValueError("La música cargada todavía no está aprobada.")
 
-    salida = os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
+    # Nunca se vuelve a publicar sobre el nombre físico anterior: el vídeo
+    # abierto por el navegador/OneDrive puede seguir bloqueado en Windows.
+    # La interfaz mantiene sus URLs lógicas y el estado apunta al nuevo MP4.
+    nombre_salida = _nombre_borrador_publicado()
+    salida = os.path.join(directorio_proyecto, nombre_salida)
     actualizar_progreso_montaje(
         directorio_proyecto,
         10,
@@ -2470,7 +2546,7 @@ def generar_borrador(
     return guardar_estado(
         directorio_proyecto,
         "borrador_pendiente_aprobacion",
-        video_borrador=ARCHIVO_BORRADOR,
+        video_borrador=nombre_salida,
         video_final=None,
         borrador_aprobado=False,
         duracion_voz=duracion_voz,
@@ -2520,10 +2596,10 @@ def aprobar_borrador(directorio_proyecto: str) -> dict:
     if estado.get("estado") != "borrador_pendiente_aprobacion":
         raise ValueError("El vídeo borrador no está preparado para aprobarse.")
 
-    origen = os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
+    origen = obtener_archivo_borrador_actual(directorio_proyecto, estado)
     destino = os.path.join(directorio_proyecto, ARCHIVO_FINAL)
 
-    if not os.path.isfile(origen):
+    if not origen or not os.path.isfile(origen):
         raise FileNotFoundError("No se encuentra el vídeo borrador.")
 
     descriptor, temporal = tempfile.mkstemp(
@@ -2807,6 +2883,7 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
         )
     ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
+    ruta_borrador = obtener_archivo_borrador_actual(directorio_proyecto, estado)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
         os.path.isfile(os.path.join(imagenes, f"imagen{numero}.png"))
@@ -2864,8 +2941,8 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
                 else None
             ),
             "borrador_disponible": os.path.isfile(
-                os.path.join(directorio_proyecto, ARCHIVO_BORRADOR)
-            ),
+                ruta_borrador
+            ) if ruta_borrador else False,
             "final_disponible": os.path.isfile(
                 os.path.join(directorio_proyecto, ARCHIVO_FINAL)
             ),

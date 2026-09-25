@@ -64,6 +64,7 @@ from backend.produccion import (
     guardar_estado as guardar_estado_produccion,
     guardar_musica,
     iniciar_generacion_borrador,
+    obtener_archivo_borrador_actual,
     obtener_imagenes as obtener_imagenes_produccion,
     obtener_resumen as obtener_resumen_produccion,
     preparar_sincronizacion,
@@ -194,7 +195,7 @@ with open(
 ) as f:
     plantilla_generacion = f.read()
 
-VERSION_APLICACION = "2026.09.25.1"
+VERSION_APLICACION = "2026.09.25.2"
 app = FastAPI()
 
 
@@ -362,8 +363,11 @@ def obtener_ruta_video_proyecto(proyecto_id: str, nombre: str) -> str:
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
-    ruta = os.path.join(directorio, nombre)
-    if not os.path.isfile(ruta):
+    if nombre == "video_borrador.mp4":
+        ruta = obtener_archivo_borrador_actual(directorio)
+    else:
+        ruta = os.path.join(directorio, nombre)
+    if not ruta or not os.path.isfile(ruta):
         raise HTTPException(
             status_code=404,
             detail="El vídeo solicitado no existe.",
@@ -447,6 +451,7 @@ async def estado_montaje_proyecto(proyecto_id: str):
 
     recuperar_montaje_interrumpido(directorio)
     estado = cargar_estado_produccion(directorio)
+    ruta_borrador = obtener_archivo_borrador_actual(directorio, estado)
     porcentaje = estado.get("montaje_porcentaje", 0) or 0
     try:
         porcentaje = max(0, min(100, int(porcentaje)))
@@ -461,9 +466,7 @@ async def estado_montaje_proyecto(proyecto_id: str):
         "iniciado": estado.get("montaje_iniciado"),
         "actualizado": estado.get("montaje_actualizado", estado.get("actualizado")),
         "error": estado.get("error", ""),
-        "video_disponible": os.path.isfile(
-            os.path.join(directorio, "video_borrador.mp4")
-        ),
+        "video_disponible": bool(ruta_borrador and os.path.isfile(ruta_borrador)),
     }
 
 

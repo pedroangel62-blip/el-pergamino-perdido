@@ -603,6 +603,32 @@ class AplicacionTests(unittest.TestCase):
             b"2345",
         )
 
+    def test_video_borrador_usa_la_publicacion_nueva_si_el_nombre_antiguo_sigue_bloqueado(self):
+        self.crear_proyecto()
+        directorio = os.path.join(
+            self.directorio_temporal.name,
+            "pergamino-prueba",
+        )
+        with open(
+            os.path.join(directorio, "video_borrador.mp4"),
+            "wb",
+        ) as archivo:
+            archivo.write(b"borrador-antiguo-bloqueado")
+        nombre_nuevo = "video_borrador_20260925-120000_abcdef123456.mp4"
+        with open(os.path.join(directorio, nombre_nuevo), "wb") as archivo:
+            archivo.write(b"borrador-nuevo")
+        main.guardar_estado_produccion(
+            directorio,
+            "borrador_pendiente_aprobacion",
+            video_borrador=nombre_nuevo,
+        )
+
+        respuesta = self.cliente.get(
+            "/media/proyectos/pergamino-prueba/video_borrador.mp4"
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.content, b"borrador-nuevo")
+
     def test_endpoint_de_progreso_expone_el_estado_actual(self):
         self.crear_proyecto()
         directorio = os.path.join(

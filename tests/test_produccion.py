@@ -720,8 +720,15 @@ class MontajeTests(unittest.TestCase):
 
             self.assertEqual(len(segmentos), 8)
             self.assertEqual(estado["estado"], "borrador_pendiente_aprobacion")
-            borrador = os.path.join(directorio, "video_borrador.mp4")
+            self.assertRegex(
+                estado["video_borrador"],
+                r"^video_borrador_\d{8}-\d{6}_[0-9a-f]{12}\.mp4$",
+            )
+            borrador = os.path.join(directorio, estado["video_borrador"])
             self.assertTrue(os.path.isfile(borrador))
+            self.assertFalse(
+                os.path.isfile(os.path.join(directorio, "video_borrador.mp4"))
+            )
             sondeo = sondear_archivo(borrador)
             tipos = {stream["codec_type"] for stream in sondeo["streams"]}
             self.assertEqual(tipos, {"audio", "video"})
