@@ -541,6 +541,8 @@ class PublicacionArchivoTests(unittest.TestCase):
                 ],
                 [],
             )
+
+
 class PaqueteTests(unittest.TestCase):
     def test_crea_zip_fuera_del_proyecto_y_no_recomprime_los_medios(self):
         with tempfile.TemporaryDirectory() as directorio:
