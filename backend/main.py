@@ -543,18 +543,39 @@ async def descargar_video_borrador(
     "/api/proyectos/{proyecto_id}/video_borrador/copiar-descargas",
 )
 async def copiar_video_borrador_a_descargas(proyecto_id: str):
-    """Copia el vídeo al almacenamiento local del usuario sin descargarlo por HTTP."""
-    ruta_origen = obtener_ruta_video_proyecto(proyecto_id, "video_borrador.mp4")
-    carpeta_descargas = Path.home() / "Downloads"
-    carpeta_descargas.mkdir(parents=True, exist_ok=True)
-    ruta_destino = carpeta_descargas / "video_borrador.mp4"
-    shutil.copy2(ruta_origen, ruta_destino)
-    return {
-        "ok": True,
-        "mensaje": "Vídeo copiado a la carpeta Descargas.",
-        "ruta": str(ruta_destino),
-        "tamano_bytes": ruta_destino.stat().st_size,
-    }
+    """Copia el vídeo a Descargas usando la ruta real de Windows."""
+    try:
+        ruta_origen = obtener_ruta_video_proyecto(
+            proyecto_id,
+            "video_borrador.mp4",
+        )
+        carpeta_usuario = (
+            os.environ.get("USERPROFILE", "").strip()
+            or os.path.expanduser("~")
+        )
+        carpeta_descargas = os.path.join(carpeta_usuario, "Downloads")
+        os.makedirs(carpeta_descargas, exist_ok=True)
+        ruta_destino = os.path.join(
+            carpeta_descargas,
+            "video_borrador.mp4",
+        )
+        shutil.copy2(ruta_origen, ruta_destino)
+        return {
+            "ok": True,
+            "mensaje": "Vídeo copiado a la carpeta Descargas.",
+            "ruta": ruta_destino,
+            "tamano_bytes": os.path.getsize(ruta_destino),
+        }
+    except HTTPException:
+        raise
+    except OSError as error:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "No se pudo copiar el vídeo a Descargas de Windows: "
+                f"{error}"
+            ),
+        ) from error
 
 
 app.mount(
