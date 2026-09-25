@@ -424,7 +424,10 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         nombres.update(
             nombre
             for nombre in os.listdir(directorio_proyecto)
-            if _es_nombre_borrador_seguro(nombre)
+            if (
+                _es_nombre_borrador_seguro(nombre)
+                or _es_nombre_paquete_seguro(nombre)
+            )
         )
     except OSError:
         # Las comprobaciones posteriores informarán de los recursos que falten.
@@ -439,7 +442,10 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         except OSError:
             # Un reproductor o OneDrive puede mantener un MP4 antiguo abierto.
             # No debe impedir invalidar los demás recursos ni una regeneración.
-            if not _es_nombre_borrador_seguro(nombre):
+            if not (
+                _es_nombre_borrador_seguro(nombre)
+                or _es_nombre_paquete_seguro(nombre)
+            ):
                 raise
 
     estado = cargar_json(obtener_ruta_estado(directorio_proyecto))
@@ -450,8 +456,90 @@ def invalidar_salidas(directorio_proyecto: str) -> None:
         estado["video_final"] = None
         estado["video_final_sha256"] = None
         estado["video_borrador_sha256"] = None
+        estado["paquete"] = None
+        estado["paquete_sha256"] = None
+        estado["paquete_integridad_verificada"] = False
+        estado["paquete_total_archivos"] = None
+        estado["paquete_creado_en"] = None
         estado["actualizado"] = ahora_iso()
         guardar_json_atomico(obtener_ruta_estado(directorio_proyecto), estado)
+
+
+def _es_nombre_paquete_seguro(nombre: str) -> bool:
+    return bool(
+        re.fullmatch(
+            r"proyecto_completo(?:-\d{8}-\d{6}-[a-f0-9]{8})?\.zip",
+            str(nombre),
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def _destino_es_error(error: OSError, destino: str) -> bool:
+    esperado = os.path.normcase(os.path.abspath(destino))
+    for atributo in ("filename2", "filename"):
+        ruta = getattr(error, atributo, None)
+        if not ruta:
+            continue
+        try:
+            actual = os.path.normcase(os.path.abspath(os.fspath(ruta)))
+        except (TypeError, ValueError):
+            continue
+        if actual == esperado:
+            return True
+    return False
+
+
+def _reemplazar_o_mover(temporal: str, destino: str) -> None:
+    """Publica el ZIP; si cruza de volumen, copia y renombra en destino."""
+    try:
+        os.replace(temporal, destino)
+        return
+    except OSError as error:
+        if error.errno != errno.EXDEV:
+            raise
+
+    directorio = os.path.dirname(os.path.abspath(destino))
+    descriptor, temporal_destino = tempfile.mkstemp(
+        prefix=".paquete-publicar-",
+        suffix=".zip",
+        dir=directorio,
+    )
+    try:
+        with os.fdopen(descriptor, "wb") as salida:
+            with open(temporal, "rb") as origen:
+                shutil.copyfileobj(origen, salida, 1024 * 1024)
+        os.replace(temporal_destino, destino)
+        temporal_destino = ""
+        try:
+            os.remove(temporal)
+        except OSError:
+            pass
+    finally:
+        if temporal_destino and os.path.exists(temporal_destino):
+            os.remove(temporal_destino)
+
+
+def _publicar_paquete(temporal: str, directorio_proyecto: str, preferido: str) -> str:
+    """Usa el nombre actual y conserva el ZIP anterior si OneDrive lo bloquea."""
+    destino = os.path.join(directorio_proyecto, preferido)
+    try:
+        _reemplazar_o_mover(temporal, destino)
+        return preferido
+    except PermissionError as error:
+        if not os.path.isfile(destino) or not _destino_es_error(error, destino):
+            raise
+
+    alternativo = (
+        "proyecto_completo-"
+        + datetime.now().strftime("%Y%m%d-%H%M%S")
+        + "-"
+        + uuid.uuid4().hex[:8]
+        + ".zip"
+    )
+    destino_alternativo = os.path.join(directorio_proyecto, alternativo)
+    _reemplazar_o_mover(temporal, destino_alternativo)
+    return alternativo
 
 
 def comprobar_ffmpeg() -> None:
@@ -2743,6 +2831,9 @@ def crear_texto_publicacion(resultado: dict) -> str:
 
 def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     estado = cargar_estado(directorio_proyecto)
+    paquete_preferido = estado.get("paquete")
+    if not _es_nombre_paquete_seguro(paquete_preferido or ""):
+        paquete_preferido = ARCHIVO_PAQUETE
     video_final = os.path.join(directorio_proyecto, ARCHIVO_FINAL)
     # Un vídeo existente no implica que el proyecto sea heredado: el flujo
     # actual también crea video_final.mp4 al aprobar el borrador. Solo se
@@ -2794,7 +2885,6 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
         crear_texto_publicacion(resultado),
     )
 
-    paquete = os.path.join(directorio_proyecto, ARCHIVO_PAQUETE)
     # Construir fuera de OneDrive evita que su sincronizador inspeccione y
     # bloquee el ZIP mientras aún se está escribiendo.
     descriptor, temporal = tempfile.mkstemp(prefix="pergamino-paquete-", suffix=".zip")
@@ -2811,10 +2901,11 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
             for nombre in sorted(archivos):
                 ruta = os.path.join(raiz, nombre)
                 if (
-                    ruta in {paquete, temporal}
+                    ruta == temporal
                     or nombre.startswith(".")
                     or nombre.lower().endswith(".srt")
                     or nombre == ARCHIVO_MANIFIESTO
+                    or _es_nombre_paquete_seguro(nombre)
                 ):
                     continue
                 archivos_paquete.append(
@@ -2920,36 +3011,14 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
                         f"Falló la integridad de {entrada['ruta']}."
                     )
 
-        try:
-            os.replace(temporal, paquete)
-        except OSError as error:
-            # El temporal del sistema puede estar en otro volumen. En ese
-            # caso se copia al destino y se publica con un único reemplazo.
-            if error.errno != errno.EXDEV:
-                raise
-            descriptor_destino, temporal_destino = tempfile.mkstemp(
-                prefix=".paquete-publicar-",
-                suffix=".zip",
-                dir=directorio_proyecto,
-            )
-            try:
-                with os.fdopen(descriptor_destino, "wb") as destino:
-                    with open(temporal, "rb") as origen:
-                        shutil.copyfileobj(origen, destino, 1024 * 1024)
-                os.replace(temporal_destino, paquete)
-            except Exception:
-                try:
-                    os.remove(temporal_destino)
-                except OSError:
-                    pass
-                raise
-            try:
-                os.remove(temporal)
-            except OSError:
-                pass
         guardar_json_atomico(
             os.path.join(directorio_proyecto, ARCHIVO_MANIFIESTO),
             manifiesto,
+        )
+        nombre_paquete = _publicar_paquete(
+            temporal,
+            directorio_proyecto,
+            paquete_preferido,
         )
     except Exception:
         try:
@@ -2961,10 +3030,12 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     return guardar_estado(
         directorio_proyecto,
         "paquete_preparado",
-        paquete=ARCHIVO_PAQUETE,
+        paquete=nombre_paquete,
         publicacion=ARCHIVO_PUBLICACION,
         manifiesto=ARCHIVO_MANIFIESTO,
-        paquete_sha256=_hash_archivo(paquete),
+        paquete_sha256=_hash_archivo(
+            os.path.join(directorio_proyecto, nombre_paquete)
+        ),
         paquete_integridad_verificada=True,
         paquete_total_archivos=manifiesto["total_archivos"],
         paquete_creado_en=ahora_iso(),
@@ -3004,6 +3075,11 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
     ) or {}
     musica = obtener_ruta_musica(directorio_proyecto)
     ruta_borrador = obtener_archivo_borrador_actual(directorio_proyecto, estado)
+    nombre_paquete = estado.get("paquete") or ARCHIVO_PAQUETE
+    if not _es_nombre_paquete_seguro(nombre_paquete):
+        nombre_paquete = ARCHIVO_PAQUETE
+    ruta_paquete = os.path.join(directorio_proyecto, nombre_paquete)
+    paquete_disponible = os.path.isfile(ruta_paquete)
     imagenes = os.path.join(directorio_proyecto, "imagenes")
     total_imagenes = sum(
         os.path.isfile(os.path.join(imagenes, f"imagen{numero}.png"))
@@ -3066,9 +3142,8 @@ def obtener_resumen(directorio_proyecto: str) -> dict:
             "final_disponible": os.path.isfile(
                 os.path.join(directorio_proyecto, ARCHIVO_FINAL)
             ),
-            "paquete_disponible": os.path.isfile(
-                os.path.join(directorio_proyecto, ARCHIVO_PAQUETE)
-            ),
+            "paquete_disponible": paquete_disponible,
+            "paquete_archivo": nombre_paquete if paquete_disponible else None,
         }
     )
     return estado

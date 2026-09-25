@@ -36,6 +36,7 @@ from backend.produccion import (
     guardar_musica,
     iniciar_generacion_borrador,
     obtener_duracion,
+    obtener_resumen,
     preparar_sincronizacion,
     publicar_borrador,
     recuperar_montaje_interrumpido,
@@ -614,6 +615,87 @@ class PaqueteTests(unittest.TestCase):
                     archivo_zip.getinfo("publicacion.txt").compress_type,
                     zipfile.ZIP_DEFLATED,
                 )
+
+    def test_si_el_zip_anterior_esta_bloqueado_publica_otro_sin_perderlo(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            video = os.path.join(directorio, "video_final.mp4")
+            with open(video, "wb") as archivo:
+                archivo.write(b"video-final-de-prueba")
+            with open(os.path.join(directorio, "voz.mp3"), "wb") as archivo:
+                archivo.write(b"voz-de-prueba")
+
+            guardar_estado(
+                directorio,
+                "video_final_aprobado",
+                video_final_sha256=hashlib.sha256(
+                    b"video-final-de-prueba"
+                ).hexdigest(),
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_PREVIA),
+                {"preparado": True},
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_TIMELINE),
+                {"verificada": True},
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_VISUAL),
+                {"verificada_automaticamente": True, "sin_subtitulos": True},
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_AUDIO),
+                {"verificada": True},
+            )
+
+            paquete_anterior = os.path.join(directorio, "proyecto_completo.zip")
+            with open(paquete_anterior, "wb") as archivo:
+                archivo.write(b"ZIP anterior bloqueado")
+
+            reemplazar_original = os.replace
+
+            def reemplazar_con_bloqueo_unico(origen, destino):
+                if os.path.abspath(destino) == os.path.abspath(paquete_anterior):
+                    raise PermissionError(
+                        13,
+                        "El ZIP anterior está en uso",
+                        origen,
+                        None,
+                        destino,
+                    )
+                return reemplazar_original(origen, destino)
+
+            with patch(
+                "backend.produccion.os.replace",
+                side_effect=reemplazar_con_bloqueo_unico,
+            ):
+                estado = crear_paquete(
+                    directorio,
+                    {
+                        "publicacion": {
+                            "titulo": "Prueba",
+                            "descripcion": "",
+                            "hashtags": [],
+                            "comentario_fijado": "",
+                        }
+                    },
+                )
+
+            self.assertNotEqual(estado["paquete"], "proyecto_completo.zip")
+            self.assertRegex(
+                estado["paquete"],
+                r"^proyecto_completo-\d{8}-\d{6}-[a-f0-9]{8}\.zip$",
+            )
+            with open(paquete_anterior, "rb") as archivo:
+                self.assertEqual(archivo.read(), b"ZIP anterior bloqueado")
+            resumen = obtener_resumen(directorio)
+            self.assertTrue(resumen["paquete_disponible"])
+            self.assertEqual(resumen["paquete_archivo"], estado["paquete"])
+            with zipfile.ZipFile(
+                os.path.join(directorio, estado["paquete"])
+            ) as archivo_zip:
+                self.assertIsNone(archivo_zip.testzip())
+                self.assertNotIn("proyecto_completo.zip", archivo_zip.namelist())
 
 
 @unittest.skipUnless(

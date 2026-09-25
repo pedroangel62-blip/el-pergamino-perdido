@@ -880,7 +880,12 @@ class AplicacionTests(unittest.TestCase):
 
     def test_error_de_bloqueo_al_empaquetar_se_muestra_en_produccion(self):
         self.crear_proyecto()
-        with patch.object(main, "crear_paquete", side_effect=PermissionError("archivo bloqueado")):
+        error_bloqueo = PermissionError(
+            13,
+            "archivo bloqueado",
+            r"C:\\datos\\video_final.mp4",
+        )
+        with patch.object(main, "crear_paquete", side_effect=error_bloqueo):
             respuesta = self.cliente.post(
                 "/produccion/pergamino-prueba/crear-paquete",
                 follow_redirects=False,
@@ -889,7 +894,9 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 303)
         pagina = self.cliente.get(respuesta.headers["location"])
         self.assertEqual(pagina.status_code, 200)
-        self.assertIn("Windows o OneDrive mantiene un archivo bloqueado", pagina.text)
+        self.assertIn("Windows o OneDrive bloqueó un archivo", pagina.text)
+        self.assertIn("video_final.mp4", pagina.text)
+        self.assertNotIn(r"C:\\datos", pagina.text)
 
     def test_error_inesperado_al_empaquetar_no_devuelve_pagina_500(self):
         self.crear_proyecto()
