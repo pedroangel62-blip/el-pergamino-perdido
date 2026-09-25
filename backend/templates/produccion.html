@@ -648,6 +648,10 @@
     <section>
         <h2>4. Entrega final</h2>
 
+        {% if paquete_error %}
+            <div class="estado error" role="alert">{{ paquete_error }}</div>
+        {% endif %}
+
         {% if final_url %}
             <div class="estado correcto">Vídeo final aprobado.</div>
             <video controls preload="metadata" src="{{ final_url }}"></video>

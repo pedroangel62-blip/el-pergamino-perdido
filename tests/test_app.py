@@ -878,6 +878,36 @@ class AplicacionTests(unittest.TestCase):
         self.assertEqual(respuesta_paquete.status_code, 303)
         empaquetar.assert_called_once()
 
+    def test_error_de_bloqueo_al_empaquetar_se_muestra_en_produccion(self):
+        self.crear_proyecto()
+        with patch.object(main, "crear_paquete", side_effect=PermissionError("archivo bloqueado")):
+            respuesta = self.cliente.post(
+                "/produccion/pergamino-prueba/crear-paquete",
+                follow_redirects=False,
+            )
+
+        self.assertEqual(respuesta.status_code, 303)
+        pagina = self.cliente.get(respuesta.headers["location"])
+        self.assertEqual(pagina.status_code, 200)
+        self.assertIn("Windows o OneDrive mantiene un archivo bloqueado", pagina.text)
+
+    def test_error_inesperado_al_empaquetar_no_devuelve_pagina_500(self):
+        self.crear_proyecto()
+        with patch.object(
+            main,
+            "crear_paquete",
+            side_effect=RuntimeError("zip corrupto"),
+        ):
+            respuesta = self.cliente.post(
+                "/produccion/pergamino-prueba/crear-paquete",
+                follow_redirects=False,
+            )
+
+        self.assertEqual(respuesta.status_code, 303)
+        pagina = self.cliente.get(respuesta.headers["location"])
+        self.assertEqual(pagina.status_code, 200)
+        self.assertIn("error inesperado al verificar el ZIP", pagina.text)
+
 
 if __name__ == "__main__":
     unittest.main()

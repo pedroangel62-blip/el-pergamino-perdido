@@ -1,5 +1,6 @@
 from datetime import datetime
 from fractions import Fraction
+import errno
 import hashlib
 import json
 import math
@@ -48,6 +49,22 @@ ARCHIVO_MANIFIESTO = "manifiesto_integridad.json"
 ARCHIVO_ALINEACION_VOZ = "voz-alineacion.json"
 ARCHIVO_MONTAJE_EN_CURSO = "montaje_en_curso.json"
 ARCHIVO_SELLO_CIERRE = "sello-el-pergamino-perdido.jpeg"
+EXTENSIONES_PAQUETE_SIN_COMPRESION = {
+    ".aac",
+    ".avif",
+    ".gif",
+    ".jpeg",
+    ".jpg",
+    ".m4a",
+    ".m4v",
+    ".mp3",
+    ".mp4",
+    ".ogg",
+    ".opus",
+    ".png",
+    ".webm",
+    ".webp",
+}
 RUTA_SELLO_CIERRE = (
     Path(__file__).resolve().parent
     / "assets"
@@ -2778,11 +2795,9 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
     )
 
     paquete = os.path.join(directorio_proyecto, ARCHIVO_PAQUETE)
-    descriptor, temporal = tempfile.mkstemp(
-        prefix=".paquete-",
-        suffix=".zip",
-        dir=directorio_proyecto,
-    )
+    # Construir fuera de OneDrive evita que su sincronizador inspeccione y
+    # bloquee el ZIP mientras aún se está escribiendo.
+    descriptor, temporal = tempfile.mkstemp(prefix="pergamino-paquete-", suffix=".zip")
     os.close(descriptor)
 
     try:
@@ -2873,8 +2888,18 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
             compresslevel=6,
         ) as archivo_zip:
             for ruta, relativo in archivos_paquete:
-                archivo_zip.write(ruta, relativo)
-            archivo_zip.write(RUTA_SELLO_CIERRE, nombre_sello_paquete)
+                extension = os.path.splitext(relativo)[1].lower()
+                compresion = (
+                    zipfile.ZIP_STORED
+                    if extension in EXTENSIONES_PAQUETE_SIN_COMPRESION
+                    else zipfile.ZIP_DEFLATED
+                )
+                archivo_zip.write(ruta, relativo, compress_type=compresion)
+            archivo_zip.write(
+                RUTA_SELLO_CIERRE,
+                nombre_sello_paquete,
+                compress_type=zipfile.ZIP_STORED,
+            )
             archivo_zip.writestr(
                 ARCHIVO_MANIFIESTO,
                 json.dumps(manifiesto, ensure_ascii=False, indent=2),
@@ -2895,14 +2920,42 @@ def crear_paquete(directorio_proyecto: str, resultado: dict) -> dict:
                         f"Falló la integridad de {entrada['ruta']}."
                     )
 
-        os.replace(temporal, paquete)
+        try:
+            os.replace(temporal, paquete)
+        except OSError as error:
+            # El temporal del sistema puede estar en otro volumen. En ese
+            # caso se copia al destino y se publica con un único reemplazo.
+            if error.errno != errno.EXDEV:
+                raise
+            descriptor_destino, temporal_destino = tempfile.mkstemp(
+                prefix=".paquete-publicar-",
+                suffix=".zip",
+                dir=directorio_proyecto,
+            )
+            try:
+                with os.fdopen(descriptor_destino, "wb") as destino:
+                    with open(temporal, "rb") as origen:
+                        shutil.copyfileobj(origen, destino, 1024 * 1024)
+                os.replace(temporal_destino, paquete)
+            except Exception:
+                try:
+                    os.remove(temporal_destino)
+                except OSError:
+                    pass
+                raise
+            try:
+                os.remove(temporal)
+            except OSError:
+                pass
         guardar_json_atomico(
             os.path.join(directorio_proyecto, ARCHIVO_MANIFIESTO),
             manifiesto,
         )
     except Exception:
-        if os.path.exists(temporal):
+        try:
             os.remove(temporal)
+        except OSError:
+            pass
         raise
 
     return guardar_estado(
