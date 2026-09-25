@@ -27,6 +27,25 @@ existente, hay que volver a autorizar la cuenta una vez. La API oficial de
 Instagram no expone una operación para fijar comentarios, por lo que el
 programa no afirma que el comentario esté fijado cuando no puede comprobarlo.
 
+## Estado real de la publicación automática
+
+La publicación disponible hoy es una acción manual en la página de Instagram:
+hay que conectar la cuenta, elegir el Reel final, revisar el texto y pulsar
+**Publicar Reel**. No hay publicación programada ni publicación automática al
+terminar el montaje. TikTok y YouTube todavía no tienen integración en esta
+versión.
+
+**Crear paquete completo** prepara el ZIP del proyecto en el servidor. Cuando
+termina, hay que pulsar **Descargar proyecto completo** para bajarlo. El ZIP es
+un archivo de entrega; no instala ni actualiza la aplicación y no publica el
+vídeo. La aplicación se actualiza por separado desde el acceso directo de
+actualización.
+
+Para cumplir el objetivo de generar y publicar sin pasos repetidos faltan las
+integraciones oficiales y la programación de publicaciones para cada
+plataforma. La conexión y autorización de las cuentas y los permisos exigidos
+por cada plataforma también deben configurarse.
+
 ## Índice maestro
 
 El catálogo vive en `backend/data/indice_temas.json` e incluye:
