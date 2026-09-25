@@ -541,6 +541,79 @@ class PublicacionArchivoTests(unittest.TestCase):
                 ],
                 [],
             )
+class PaqueteTests(unittest.TestCase):
+    def test_crea_zip_fuera_del_proyecto_y_no_recomprime_los_medios(self):
+        with tempfile.TemporaryDirectory() as directorio:
+            video = os.path.join(directorio, "video_final.mp4")
+            with open(video, "wb") as archivo:
+                archivo.write(b"video-final-de-prueba")
+            with open(os.path.join(directorio, "voz.mp3"), "wb") as archivo:
+                archivo.write(b"voz-de-prueba")
+
+            guardar_estado(
+                directorio,
+                "video_final_aprobado",
+                video_final_sha256=hashlib.sha256(
+                    b"video-final-de-prueba"
+                ).hexdigest(),
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_PREVIA),
+                {"preparado": True},
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_TIMELINE),
+                {"verificada": True},
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_VISUAL),
+                {"verificada_automaticamente": True, "sin_subtitulos": True},
+            )
+            guardar_json_atomico(
+                os.path.join(directorio, ARCHIVO_VERIFICACION_AUDIO),
+                {"verificada": True},
+            )
+
+            directorios_temporales_paquete = []
+            mkstemp_original = tempfile.mkstemp
+
+            def registrar_temporal_paquete(*args, **kwargs):
+                if kwargs.get("prefix") == "pergamino-paquete-":
+                    directorios_temporales_paquete.append(kwargs.get("dir"))
+                return mkstemp_original(*args, **kwargs)
+
+            with patch(
+                "backend.produccion.tempfile.mkstemp",
+                side_effect=registrar_temporal_paquete,
+            ):
+                estado = crear_paquete(
+                    directorio,
+                    {
+                        "publicacion": {
+                            "titulo": "Prueba",
+                            "descripcion": "",
+                            "hashtags": [],
+                            "comentario_fijado": "",
+                        }
+                    },
+                )
+
+            self.assertEqual(estado["estado"], "paquete_preparado")
+            self.assertEqual(directorios_temporales_paquete, [None])
+            with zipfile.ZipFile(
+                os.path.join(directorio, "proyecto_completo.zip")
+            ) as archivo_zip:
+                self.assertIsNone(archivo_zip.testzip())
+                self.assertEqual(
+                    archivo_zip.getinfo("video_final.mp4").compress_type,
+                    zipfile.ZIP_STORED,
+                )
+                self.assertEqual(
+                    archivo_zip.getinfo("publicacion.txt").compress_type,
+                    zipfile.ZIP_DEFLATED,
+                )
+
+
 @unittest.skipUnless(
     shutil.which("ffmpeg") and shutil.which("ffprobe"),
     "FFmpeg no está instalado",

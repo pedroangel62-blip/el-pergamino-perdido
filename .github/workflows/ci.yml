@@ -117,6 +117,7 @@ jobs:
           python -m unittest
           tests.test_app
           tests.test_entrega_video
+          tests.test_produccion.PaqueteTests
           -v
 
       - name: Comprobar diagnostico de solo lectura en Windows

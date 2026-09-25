@@ -195,7 +195,7 @@ with open(
 ) as f:
     plantilla_generacion = f.read()
 
-VERSION_APLICACION = "2026.09.25.5"
+VERSION_APLICACION = "2026.09.25.6"
 app = FastAPI()
 
 
@@ -3101,9 +3101,15 @@ async def comprobar_imagen(
     )
 
 
-def redirigir_produccion(proyecto_id: str) -> RedirectResponse:
+def redirigir_produccion(
+    proyecto_id: str,
+    paquete_error: str | None = None,
+) -> RedirectResponse:
+    url = f"/produccion/{proyecto_id}"
+    if paquete_error:
+        url += "?paquete_error=" + quote(paquete_error[:400], safe="")
     return RedirectResponse(
-        url=f"/produccion/{proyecto_id}",
+        url=url,
         status_code=303,
     )
 
@@ -3280,6 +3286,7 @@ async def abrir_produccion(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     contexto["request"] = request
+    contexto["paquete_error"] = request.query_params.get("paquete_error", "")[:400]
     return templates.TemplateResponse(
         request=request,
         name="produccion.html",
@@ -3503,11 +3510,54 @@ async def crear_paquete_proyecto(proyecto_id: str):
     try:
         _, resultado = cargar_proyecto(proyecto_id)
         directorio = obtener_directorio_proyecto(proyecto_id)
-        crear_paquete(directorio, resultado)
+        # El ZIP hace lecturas, hashes y compresión de varios medios. No debe
+        # bloquear el event loop, que también atiende la página y sus vídeos.
+        await run_in_threadpool(crear_paquete, directorio, resultado)
     except FileNotFoundError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+        logging.getLogger(__name__).info(
+            "No se pudo crear el paquete del proyecto %s: %s",
+            proyecto_id,
+            error,
+        )
+        return redirigir_produccion(proyecto_id, str(error))
     except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+        logging.getLogger(__name__).info(
+            "Paquete bloqueado por validación para el proyecto %s: %s",
+            proyecto_id,
+            error,
+        )
+        return redirigir_produccion(proyecto_id, str(error))
+    except PermissionError:
+        logging.getLogger(__name__).exception(
+            "Windows/OneDrive bloqueó un archivo al crear el paquete del proyecto %s",
+            proyecto_id,
+        )
+        return redirigir_produccion(
+            proyecto_id,
+            "Windows o OneDrive mantiene un archivo bloqueado. "
+            "No se ha confirmado el ZIP. Cierra el reproductor del vídeo, "
+            "espera a que OneDrive termine de sincronizar y vuelve a intentarlo.",
+        )
+    except OSError:
+        logging.getLogger(__name__).exception(
+            "Error de acceso al crear el paquete del proyecto %s",
+            proyecto_id,
+        )
+        return redirigir_produccion(
+            proyecto_id,
+            "Windows o OneDrive no pudo leer o escribir un archivo del proyecto. "
+            "Los originales se conservan; espera a que OneDrive termine y vuelve a intentarlo.",
+        )
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Error inesperado al crear el paquete del proyecto %s",
+            proyecto_id,
+        )
+        return redirigir_produccion(
+            proyecto_id,
+            "Ha ocurrido un error inesperado al verificar el ZIP. "
+            "El detalle técnico se ha guardado en el registro del servidor.",
+        )
 
     return redirigir_produccion(proyecto_id)
 
