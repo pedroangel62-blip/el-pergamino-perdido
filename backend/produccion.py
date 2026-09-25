@@ -463,9 +463,37 @@ def ejecutar(comando: list[str], tiempo_maximo: int = 600) -> None:
 
     if resultado.returncode != 0:
         detalle = resultado.stderr.strip()[-4000:]
-        raise RuntimeError(f"FFmpeg no pudo completar la operación: {detalle}")
+        raise RuntimeError(
+            "FFmpeg no pudo completar la operación "
+            f"(código {resultado.returncode}): {detalle}"
+        )
 
 
+def publicar_borrador(temporal_salida: str, salida: str) -> None:
+    """Publica un MP4 validado sin reutilizar un archivo bloqueado.
+
+    El montaje se realiza fuera de OneDrive. La última copia se hace a un
+    temporal situado junto al destino para que ``os.replace`` sea atómico
+    incluso cuando la carpeta del proyecto está en otra unidad.
+    """
+    directorio = os.path.dirname(os.path.abspath(salida))
+    os.makedirs(directorio, exist_ok=True)
+    descriptor, temporal_publicacion = tempfile.mkstemp(
+        prefix=".video-publicando-",
+        suffix=".mp4",
+        dir=directorio,
+    )
+    os.close(descriptor)
+
+    try:
+        shutil.copyfile(temporal_salida, temporal_publicacion)
+        if os.path.getsize(temporal_publicacion) <= 0:
+            raise RuntimeError("El vídeo temporal publicado está vacío.")
+        os.replace(temporal_publicacion, salida)
+    except Exception:
+        if os.path.exists(temporal_publicacion):
+            os.remove(temporal_publicacion)
+        raise
 def obtener_duracion(ruta: str) -> float:
     comprobar_ffmpeg()
 
@@ -2303,15 +2331,36 @@ def generar_borrador(
         f"0 de {TOTAL_IMAGENES} imágenes procesadas.",
     )
 
-    with tempfile.TemporaryDirectory(
-        prefix="montaje-",
-        dir=directorio_proyecto,
-    ) as temporal:
+    # OneDrive puede bloquear o sincronizar los MP4 mientras FFmpeg aún los
+    # está escribiendo. Todas las entradas y salidas intermedias viven en el
+    # temporal del sistema; solo el resultado validado vuelve al proyecto.
+    with tempfile.TemporaryDirectory(prefix="montaje-") as temporal:
+        imagenes_locales = []
+        for indice, imagen in enumerate(imagenes, start=1):
+            imagen_local = os.path.join(temporal, f"imagen-{indice:02}.png")
+            shutil.copyfile(imagen, imagen_local)
+            imagenes_locales.append(imagen_local)
+
+        voz_local = os.path.join(temporal, "voz.mp3")
+        shutil.copyfile(voz, voz_local)
+        musica_local = os.path.join(
+            temporal,
+            "musica" + os.path.splitext(musica)[1],
+        )
+        shutil.copyfile(musica, musica_local)
+        sello_local = os.path.join(temporal, ARCHIVO_SELLO_CIERRE)
+        shutil.copyfile(sello, sello_local)
+        actualizar_progreso_montaje(
+            directorio_proyecto,
+            10,
+            "Preparando imágenes",
+            "Recursos copiados al temporal del sistema; OneDrive no interviene en el montaje.",
+        )
         clips = []
 
         for indice, (imagen, segmento, corte) in enumerate(
             zip(
-                imagenes,
+                imagenes_locales,
                 sincronizacion,
                 plan_fotogramas[:TOTAL_IMAGENES],
                 strict=True,
@@ -2339,7 +2388,7 @@ def generar_borrador(
 
         clip_cierre = os.path.join(temporal, "clip-09-sello.mp4")
         _crear_clip_cierre(
-            sello,
+            sello_local,
             clip_cierre,
             ancho,
             alto,
@@ -2454,8 +2503,8 @@ def generar_borrador(
         )
         ajuste_audio = _mezclar_video_audio(
             video_base,
-            voz,
-            musica,
+            voz_local,
+            musica_local,
             inicio_cierre_video,
             duracion_total,
             temporal_salida,
@@ -2481,7 +2530,7 @@ def generar_borrador(
             "Comprobación final",
             "Audio, resolución, fotogramas y sincronización verificados.",
         )
-        os.replace(temporal_salida, salida)
+        publicar_borrador(temporal_salida, salida)
         # Verificar el archivo publicado, no solo el temporal de FFmpeg.
         with open(salida, "rb") as publicado:
             if not publicado.read(1):

@@ -37,6 +37,7 @@ from backend.produccion import (
     iniciar_generacion_borrador,
     obtener_duracion,
     preparar_sincronizacion,
+    publicar_borrador,
     recuperar_montaje_interrumpido,
     registrar_proceso_montaje,
     validar_anclas_plan_visual,
@@ -516,6 +517,30 @@ class PublicacionTests(unittest.TestCase):
         self.assertIn("fíjalo manualmente", texto)
 
 
+class PublicacionArchivoTests(unittest.TestCase):
+    def test_publica_desde_temporal_externo_y_limpia_su_temporal(self):
+        with (
+            tempfile.TemporaryDirectory() as temporal,
+            tempfile.TemporaryDirectory() as proyecto,
+        ):
+            origen = os.path.join(temporal, "video-borrador.mp4")
+            destino = os.path.join(proyecto, "video_borrador_nuevo.mp4")
+            contenido = b"mp4-validado-sintetico"
+            with open(origen, "wb") as archivo:
+                archivo.write(contenido)
+
+            publicar_borrador(origen, destino)
+
+            with open(destino, "rb") as archivo:
+                self.assertEqual(archivo.read(), contenido)
+            self.assertEqual(
+                [
+                    nombre
+                    for nombre in os.listdir(proyecto)
+                    if nombre.startswith(".video-publicando-")
+                ],
+                [],
+            )
 @unittest.skipUnless(
     shutil.which("ffmpeg") and shutil.which("ffprobe"),
     "FFmpeg no está instalado",
