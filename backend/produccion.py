@@ -152,15 +152,59 @@ def obtener_ruta_montaje_en_curso(directorio_proyecto: str) -> str:
     return os.path.join(directorio_proyecto, ARCHIVO_MONTAJE_EN_CURSO)
 
 
+def _consultar_proceso_windows(pid: int) -> tuple[bool, str | None]:
+    """Consulta estado e identidad sin enviar señales ni terminar el proceso."""
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    kernel.GetProcessTimes.argtypes = [wintypes.HANDLE] + [
+        ctypes.POINTER(wintypes.FILETIME)
+    ] * 4
+    kernel.GetProcessTimes.restype = wintypes.BOOL
+
+    # SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, nunca PROCESS_TERMINATE.
+    handle = kernel.OpenProcess(0x00100000 | 0x1000, False, pid)
+    if not handle:
+        error = ctypes.get_last_error()
+        if error == 87:  # ERROR_INVALID_PARAMETER: el PID ya no existe.
+            return False, None
+        if error == 5:  # No borrar el montaje de un proceso que no podemos consultar.
+            return True, None
+        raise ctypes.WinError(error)
+    try:
+        espera = kernel.WaitForSingleObject(handle, 0)
+        if espera == 0:
+            return False, None
+        if espera != 258:  # WAIT_TIMEOUT: sigue ejecutándose.
+            raise ctypes.WinError(ctypes.get_last_error())
+        tiempos = [wintypes.FILETIME() for _ in range(4)]
+        if not kernel.GetProcessTimes(handle, *(ctypes.byref(t) for t in tiempos)):
+            return True, None
+        inicio = (tiempos[0].dwHighDateTime << 32) | tiempos[0].dwLowDateTime
+        return True, str(inicio)
+    finally:
+        kernel.CloseHandle(handle)
+
+
 def _inicio_proceso(pid: int) -> str | None:
-    """Devuelve el instante de arranque del proceso cuando /proc está disponible."""
+    """Identifica el arranque, también si Windows reutiliza un PID."""
+    if os.name == "nt":
+        return _consultar_proceso_windows(pid)[1]
     try:
         with open(f"/proc/{pid}/stat", "r", encoding="utf-8") as archivo:
-            campos = archivo.read().split()
-    except (OSError, ValueError):
+            # El nombre entre paréntesis puede contener espacios.
+            campos = archivo.read().rsplit(")", 1)[1].split()
+    except (OSError, ValueError, IndexError):
         return None
 
-    return campos[21] if len(campos) > 21 else None
+    return campos[19] if len(campos) > 19 else None
 
 
 def _proceso_montaje_activo(marcador: dict) -> bool:
@@ -172,6 +216,14 @@ def _proceso_montaje_activo(marcador: dict) -> bool:
     if pid <= 0:
         return False
 
+    if os.name == "nt":
+        activo, inicio_actual = _consultar_proceso_windows(pid)
+        inicio_guardado = marcador.get("inicio_proceso")
+        return activo and not (
+            inicio_guardado and inicio_actual and inicio_guardado != inicio_actual
+        )
+
+    # Solo POSIX: en Windows os.kill(pid, 0) termina el proceso.
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -318,6 +370,11 @@ def comprobar_ffmpeg() -> None:
             )
 
 
+def _opciones_ffmpeg() -> dict:
+    """También los procesos hijos de pythonw deben ejecutarse sin consola."""
+    return {"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}
+
+
 def ejecutar(comando: list[str], tiempo_maximo: int = 600) -> None:
     try:
         resultado = subprocess.run(
@@ -327,6 +384,7 @@ def ejecutar(comando: list[str], tiempo_maximo: int = 600) -> None:
             stderr=subprocess.PIPE,
             text=True,
             timeout=tiempo_maximo,
+            **_opciones_ffmpeg(),
         )
     except subprocess.TimeoutExpired as error:
         raise RuntimeError("FFmpeg superó el tiempo máximo de ejecución.") from error
@@ -361,6 +419,7 @@ def obtener_duracion(ruta: str) -> float:
             stderr=subprocess.PIPE,
             text=True,
             timeout=30,
+            **_opciones_ffmpeg(),
         )
     except subprocess.TimeoutExpired as error:
         raise RuntimeError("No se pudo medir la duración del archivo.") from error
@@ -1384,6 +1443,7 @@ def contar_fotogramas_video(ruta: str) -> int:
         stderr=subprocess.PIPE,
         text=True,
         timeout=120,
+        **_opciones_ffmpeg(),
     )
 
     if resultado.returncode != 0:
@@ -1423,6 +1483,7 @@ def obtener_firmas_fotogramas(ruta: str) -> list[str]:
         stderr=subprocess.PIPE,
         text=True,
         timeout=120,
+        **_opciones_ffmpeg(),
     )
 
     if resultado.returncode != 0:
@@ -1782,6 +1843,7 @@ def medir_volumen_maximo(
         stderr=subprocess.PIPE,
         text=True,
         timeout=120,
+        **_opciones_ffmpeg(),
     )
     coincidencia = re.search(
         r"max_volume:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB",
@@ -1995,6 +2057,7 @@ def validar_salida_multimedia(
         stderr=subprocess.PIPE,
         text=True,
         timeout=30,
+        **_opciones_ffmpeg(),
     )
 
     if sondeo.returncode != 0:
@@ -2343,6 +2406,10 @@ def generar_borrador(
             "Audio, resolución, fotogramas y sincronización verificados.",
         )
         os.replace(temporal_salida, salida)
+        # Verificar el archivo publicado, no solo el temporal de FFmpeg.
+        with open(salida, "rb") as publicado:
+            if not publicado.read(1):
+                raise RuntimeError("El vídeo publicado está vacío.")
 
     desviacion_maxima_ms = max(
         abs(float(corte["desviacion_inicio_ms"]))

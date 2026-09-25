@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from html import escape as escape_html
 import ipaddress
 import json
+import logging
 import os
 import re
 import secrets
@@ -193,7 +194,13 @@ with open(
 ) as f:
     plantilla_generacion = f.read()
 
+VERSION_APLICACION = "2026.09.25.1"
 app = FastAPI()
+
+
+@app.get("/api/version")
+def version_aplicacion():
+    return {"version": VERSION_APLICACION}
 
 
 def obtener_cliente_openai() -> OpenAI:
@@ -226,16 +233,61 @@ VIDEO_BLOQUE_BYTES = 1024 * 1024
 VIDEO_TRANSFER_CHUNK_BYTES = 256 * 1024
 
 
-def iterar_rango_video(ruta: str, inicio: int, final: int):
-    restante = final - inicio + 1
-    with open(ruta, "rb") as archivo:
-        archivo.seek(inicio)
-        while restante > 0:
-            bloque = archivo.read(min(VIDEO_BLOQUE_BYTES, restante))
-            if not bloque:
-                break
-            restante -= len(bloque)
-            yield bloque
+def abrir_video_lectura(ruta: str):
+    """Abre y lee ANTES de enviar HTTP 200/206; conserva el mismo descriptor."""
+    archivo = None
+    try:
+        archivo = open(ruta, "rb")
+        if not archivo.read(1):
+            raise HTTPException(status_code=409, detail="El vídeo está vacío; debe regenerarse.")
+        archivo.seek(0)
+        return archivo
+    except OSError as error:
+        if archivo is not None:
+            archivo.close()
+        logging.getLogger(__name__).warning(
+            "Lectura de vídeo fallida: ruta=%s errno=%s winerror=%s error=%s",
+            os.path.abspath(ruta), error.errno, getattr(error, "winerror", None), error,
+        )
+        if isinstance(error, FileNotFoundError):
+            codigo, detalle = 404, "El vídeo solicitado ya no existe."
+        elif isinstance(error, PermissionError):
+            codigo, detalle = 423, (
+                "Windows no permite leer el MP4 de origen. El archivo está bloqueado "
+                "o sus permisos impiden abrirlo. La reproducción y la copia no pueden "
+                "continuar hasta recuperar el acceso al archivo."
+            )
+        else:
+            codigo, detalle = 503, "No se puede leer el vídeo en este momento."
+        raise HTTPException(status_code=codigo, detail=detalle) from error
+    except BaseException:
+        if archivo is not None:
+            archivo.close()
+        raise
+
+
+class RespuestaVideoAbierto(StreamingResponse):
+    """Cierra el descriptor incluso cuando se desconecta el navegador."""
+
+    def __init__(self, archivo, *args, **kwargs):
+        self.archivo = archivo
+        super().__init__(*args, **kwargs)
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            self.archivo.close()
+
+
+def iterar_rango_video(archivo, primer_bloque: bytes, restante: int):
+    yield primer_bloque
+    while restante > 0:
+        bloque = archivo.read(min(VIDEO_BLOQUE_BYTES, restante))
+        if not bloque:
+            raise OSError("La lectura del vídeo terminó antes del tamaño anunciado.")
+        restante -= len(bloque)
+        yield bloque
 
 
 def respuesta_video_http(
@@ -245,110 +297,63 @@ def respuesta_video_http(
     media_type: str = "video/mp4",
     content_disposition: str | None = None,
 ) -> Response:
-    tamano = os.path.getsize(ruta)
-    cabeceras_base = {
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "no-store",
-    }
-    if content_disposition:
-        cabeceras_base["Content-Disposition"] = content_disposition
-    rango = request.headers.get("range", "").strip()
-
-    cabeceras_completas = {
-        **cabeceras_base,
-        "Content-Length": str(tamano),
-    }
-
-    if request.method == "HEAD":
-        return Response(
-            status_code=200,
-            media_type=media_type,
-            headers=cabeceras_completas,
-        )
-
-    if not rango:
-        # Enviar también el cuerpo completo por bloques evita que un proxy
-        # intermedio espere a que FileResponse termine de preparar el fichero.
-        return StreamingResponse(
-            iterar_rango_video(ruta, 0, tamano - 1),
-            media_type=media_type,
-            headers=cabeceras_completas,
-        )
-
-    if not rango.lower().startswith("bytes=") or "," in rango:
-        return Response(
-            status_code=416,
-            headers={"Content-Range": f"bytes */{tamano}"},
-        )
-
-    especificacion = rango[6:].strip()
+    archivo = abrir_video_lectura(ruta)
+    entregado = False
     try:
-        inicio_texto, final_texto = especificacion.split("-", 1)
-        if not inicio_texto:
-            longitud = int(final_texto)
-            if longitud <= 0:
-                raise ValueError
-            inicio = max(tamano - longitud, 0)
-            final = tamano - 1
-        else:
-            inicio = int(inicio_texto)
-            final = (
-                int(final_texto)
-                if final_texto
-                else tamano - 1
-            )
-            if inicio < 0 or inicio >= tamano:
-                raise ValueError
-            final = min(final, tamano - 1)
-            if final < inicio:
-                raise ValueError
-    except (TypeError, ValueError):
-        return Response(
-            status_code=416,
-            headers={"Content-Range": f"bytes */{tamano}"},
-        )
+        tamano = os.fstat(archivo.fileno()).st_size
+        cabeceras = {"Accept-Ranges": "bytes", "Cache-Control": "no-store"}
+        if content_disposition:
+            cabeceras["Content-Disposition"] = content_disposition
+        inicio, final, codigo = 0, tamano - 1, 200
+        # Range solo se aplica a GET; HEAD informa de la representación completa.
+        rango = request.headers.get("range", "").strip() if request.method == "GET" else ""
+        if rango:
+            try:
+                if not rango.lower().startswith("bytes=") or "," in rango:
+                    raise ValueError
+                inicio_texto, final_texto = rango[6:].strip().split("-", 1)
+                if not inicio_texto:
+                    longitud = int(final_texto)
+                    if longitud <= 0:
+                        raise ValueError
+                    inicio = max(tamano - longitud, 0)
+                else:
+                    inicio = int(inicio_texto)
+                    final = min(int(final_texto), tamano - 1) if final_texto else tamano - 1
+                if inicio < 0 or inicio >= tamano or final < inicio:
+                    raise ValueError
+            except (TypeError, ValueError):
+                return Response(
+                    status_code=416,
+                    headers={**cabeceras, "Content-Range": f"bytes */{tamano}"},
+                )
+            codigo = 206
+            cabeceras["Content-Range"] = f"bytes {inicio}-{final}/{tamano}"
+        longitud = final - inicio + 1
+        cabeceras["Content-Length"] = str(longitud)
+        if request.method == "HEAD":
+            return Response(status_code=codigo, media_type=media_type, headers=cabeceras)
 
-    longitud = final - inicio + 1
-    cabeceras = {
-        **cabeceras_base,
-        "Content-Range": f"bytes {inicio}-{final}/{tamano}",
-        "Content-Length": str(longitud),
-    }
-    if request.method == "HEAD":
-        return Response(
-            status_code=206,
+        # Probar también la primera lectura del rango antes de publicar cabeceras.
+        archivo.seek(inicio)
+        primero = archivo.read(min(VIDEO_BLOQUE_BYTES, longitud))
+        if not primero:
+            raise HTTPException(status_code=409, detail="El vídeo cambió durante la lectura.")
+        respuesta = RespuestaVideoAbierto(
+            archivo,
+            iterar_rango_video(archivo, primero, longitud - len(primero)),
+            status_code=codigo,
             media_type=media_type,
             headers=cabeceras,
         )
-
-    return StreamingResponse(
-        iterar_rango_video(ruta, inicio, final),
-        status_code=206,
-        media_type=media_type,
-        headers=cabeceras,
-    )
-
-
-def respuesta_video_archivo(
-    ruta: str,
-    *,
-    media_type: str = "video/mp4",
-    nombre_descarga: str | None = None,
-) -> FileResponse:
-    """Entrega un archivo multimedia con FileResponse nativo.
-
-    Evita errores de conexión de proxies al usar generadores de streaming.
-    """
-    cabeceras = {
-        "Cache-Control": "no-store",
-        "Accept-Ranges": "bytes",
-    }
-    return FileResponse(
-        ruta,
-        media_type=media_type,
-        filename=nombre_descarga,
-        headers=cabeceras,
-    )
+        entregado = True
+        return respuesta
+    except OSError as error:
+        logging.getLogger(__name__).warning("No se pudo preparar el vídeo: %s", error)
+        raise HTTPException(status_code=503, detail="No se pudo leer el rango del vídeo.") from error
+    finally:
+        if not entregado:
+            archivo.close()
 
 
 def obtener_ruta_video_proyecto(proyecto_id: str, nombre: str) -> str:
@@ -371,19 +376,18 @@ def leer_fragmento_video(
     inicio: int,
     longitud: int,
 ) -> dict:
-    tamano = os.path.getsize(ruta)
     if inicio < 0 or longitud <= 0 or longitud > VIDEO_TRANSFER_CHUNK_BYTES:
         raise HTTPException(
             status_code=416,
             detail="El fragmento solicitado no es válido.",
         )
-    if inicio >= tamano:
-        raise HTTPException(
-            status_code=416,
-            detail="El fragmento solicitado queda fuera del vídeo.",
-        )
-
-    with open(ruta, "rb") as archivo:
+    with abrir_video_lectura(ruta) as archivo:
+        tamano = os.fstat(archivo.fileno()).st_size
+        if inicio >= tamano:
+            raise HTTPException(
+                status_code=416,
+                detail="El fragmento solicitado queda fuera del vídeo.",
+            )
         archivo.seek(inicio)
         contenido = archivo.read(longitud)
 
@@ -398,15 +402,18 @@ def leer_fragmento_video(
 @app.get(
     "/api/proyectos/{proyecto_id}/video_borrador/info",
 )
-async def informacion_video_borrador(proyecto_id: str):
+def informacion_video_borrador(proyecto_id: str):
     ruta = obtener_ruta_video_proyecto(
         proyecto_id,
         "video_borrador.mp4",
     )
+    with abrir_video_lectura(ruta) as archivo:
+        tamano = os.fstat(archivo.fileno()).st_size
     return {
         "nombre": "video_borrador.mp4",
         "tipo": "video/mp4",
-        "tamano_total": os.path.getsize(ruta),
+        "tamano_total": tamano,
+        "legible": True,
         "tamano_bloque": VIDEO_TRANSFER_CHUNK_BYTES,
         "url_fragmentos": (
             f"/api/proyectos/{proyecto_id}/video_borrador/chunk"
@@ -417,7 +424,7 @@ async def informacion_video_borrador(proyecto_id: str):
 @app.get(
     "/api/proyectos/{proyecto_id}/video_borrador/chunk",
 )
-async def fragmento_video_borrador(
+def fragmento_video_borrador(
     proyecto_id: str,
     offset: int = 0,
     length: int = VIDEO_TRANSFER_CHUNK_BYTES,
@@ -464,7 +471,7 @@ async def estado_montaje_proyecto(proyecto_id: str):
     "/proyectos/{proyecto_id}/video_borrador.mp4",
     methods=["GET", "HEAD"],
 )
-async def servir_video_borrador(
+def servir_video_borrador(
     proyecto_id: str,
     request: Request,
 ):
@@ -472,14 +479,14 @@ async def servir_video_borrador(
         proyecto_id,
         "video_borrador.mp4",
     )
-    return respuesta_video_archivo(ruta)
+    return respuesta_video_http(request, ruta)
 
 
 @app.api_route(
     "/proyectos/{proyecto_id}/video_final.mp4",
     methods=["GET", "HEAD"],
 )
-async def servir_video_final(
+def servir_video_final(
     proyecto_id: str,
     request: Request,
 ):
@@ -487,14 +494,14 @@ async def servir_video_final(
         proyecto_id,
         "video_final.mp4",
     )
-    return respuesta_video_archivo(ruta)
+    return respuesta_video_http(request, ruta)
 
 
 @app.api_route(
     "/media/proyectos/{proyecto_id}/video_borrador.mp4",
     methods=["GET", "HEAD"],
 )
-async def servir_video_borrador_media(
+def servir_video_borrador_media(
     proyecto_id: str,
     request: Request,
 ):
@@ -502,14 +509,14 @@ async def servir_video_borrador_media(
         proyecto_id,
         "video_borrador.mp4",
     )
-    return respuesta_video_archivo(ruta)
+    return respuesta_video_http(request, ruta)
 
 
 @app.api_route(
     "/media/proyectos/{proyecto_id}/video_final.mp4",
     methods=["GET", "HEAD"],
 )
-async def servir_video_final_media(
+def servir_video_final_media(
     proyecto_id: str,
     request: Request,
 ):
@@ -524,7 +531,7 @@ async def servir_video_final_media(
     "/descargas/proyectos/{proyecto_id}/video_borrador",
     methods=["GET", "HEAD"],
 )
-async def descargar_video_borrador(
+def descargar_video_borrador(
     proyecto_id: str,
     request: Request,
 ):
@@ -532,50 +539,55 @@ async def descargar_video_borrador(
         proyecto_id,
         "video_borrador.mp4",
     )
-    return respuesta_video_archivo(
-        ruta,
+    return respuesta_video_http(
+        request, ruta,
         media_type="application/octet-stream",
-        nombre_descarga="video_borrador.mp4",
+        content_disposition='attachment; filename="video_borrador.mp4"',
     )
 
 
 @app.post(
     "/api/proyectos/{proyecto_id}/video_borrador/copiar-descargas",
 )
-async def copiar_video_borrador_a_descargas(proyecto_id: str):
-    """Copia el vídeo a Descargas usando la ruta real de Windows."""
-    try:
-        ruta_origen = obtener_ruta_video_proyecto(
-            proyecto_id,
-            "video_borrador.mp4",
-        )
-        carpeta_usuario = (
-            os.environ.get("USERPROFILE", "").strip()
-            or os.path.expanduser("~")
-        )
-        carpeta_descargas = os.path.join(carpeta_usuario, "Downloads")
-        os.makedirs(carpeta_descargas, exist_ok=True)
-        ruta_destino = os.path.join(
-            carpeta_descargas,
-            "video_borrador.mp4",
-        )
-        shutil.copy2(ruta_origen, ruta_destino)
-        return {
-            "ok": True,
-            "mensaje": "Vídeo copiado a la carpeta Descargas.",
-            "ruta": ruta_destino,
-            "tamano_bytes": os.path.getsize(ruta_destino),
-        }
-    except HTTPException:
-        raise
-    except OSError as error:
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "No se pudo copiar el vídeo a Descargas de Windows: "
-                f"{error}"
-            ),
-        ) from error
+def copiar_video_borrador_a_descargas(proyecto_id: str):
+    """Copia sin truncar una descarga anterior si falla la lectura de origen."""
+    ruta_origen = obtener_ruta_video_proyecto(proyecto_id, "video_borrador.mp4")
+    temporal = None
+    # Abrir el origen antes de modificar nada en Descargas.
+    with abrir_video_lectura(ruta_origen) as origen:
+        try:
+            carpeta_usuario = os.environ.get("USERPROFILE", "").strip() or os.path.expanduser("~")
+            carpeta_descargas = os.path.join(carpeta_usuario, "Downloads")
+            os.makedirs(carpeta_descargas, exist_ok=True)
+            ruta_destino = os.path.join(carpeta_descargas, "video_borrador.mp4")
+            tamano = os.fstat(origen.fileno()).st_size
+            descriptor, temporal = tempfile.mkstemp(
+                prefix=".pergamino-", suffix=".mp4", dir=carpeta_descargas,
+            )
+            with os.fdopen(descriptor, "wb") as destino:
+                shutil.copyfileobj(origen, destino, length=VIDEO_BLOQUE_BYTES)
+            if os.path.getsize(temporal) != tamano:
+                raise OSError("La copia está incompleta.")
+            os.replace(temporal, ruta_destino)
+            temporal = None
+            return {
+                "ok": True,
+                "mensaje": "Vídeo copiado a Descargas del equipo que ejecuta El Pergamino.",
+                "ruta": ruta_destino,
+                "tamano_bytes": tamano,
+            }
+        except OSError as error:
+            logging.getLogger(__name__).warning("Copia de vídeo fallida: %s", error)
+            raise HTTPException(
+                status_code=503,
+                detail="No se pudo completar la copia a Descargas. Se conserva cualquier copia anterior.",
+            ) from error
+        finally:
+            if temporal is not None:
+                try:
+                    os.remove(temporal)
+                except OSError:
+                    logging.getLogger(__name__).warning("No se pudo retirar la copia temporal.")
 
 
 app.mount(
@@ -596,6 +608,7 @@ templates = Jinja2Templates(
     directory="backend/templates",
     context_processors=[contexto_indice_temas]
 )
+templates.env.globals["version_aplicacion"] = VERSION_APLICACION
 
 
 def normalizar_texto(texto: str) -> str:

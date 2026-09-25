@@ -582,9 +582,12 @@
         {% endif %}
 
         {% if borrador_url and produccion.estado != 'generando_borrador' %}
-            <div class="estado correcto">
-                Vídeo borrador listo para revisión. La generación ha terminado;
-                ya puedes reproducirlo y revisar fundidos y zooms.
+            <div class="estado">
+                {% if produccion.estado == 'error' %}
+                    El último montaje falló. El archivo mostrado corresponde al borrador anterior.
+                {% else %}
+                    Borrador guardado. Comprobando que el archivo se puede abrir.
+                {% endif %}
             </div>
             <a
                 class="descarga"
@@ -593,11 +596,12 @@
                 data-info-url="{{ borrador_info_url }}"
                 download="video_borrador.mp4"
             >Descargar vídeo borrador</a>
-            <form method="post"
+            <form method="post" id="copiar-video-descargas"
                   action="/api/proyectos/{{ proyecto_id }}/video_borrador/copiar-descargas"
-                  target="_blank">
+                  >
                 <button type="submit">Copiar vídeo a Descargas de Windows</button>
             </form>
+            <p id="copiar-video-estado" role="status" aria-live="polite"></p>
             <video
                 id="video-borrador"
                 controls
@@ -605,9 +609,8 @@
                 data-info-url="{{ borrador_info_url }}"
                 data-media-url="{{ borrador_url }}"
                 data-download-url="{{ borrador_descarga_url }}"
-                src="{{ borrador_url }}"
             ></video>
-            <p id="video-borrador-estado" class="resumen">Cargando el vídeo borrador…</p>
+            <p id="video-borrador-estado" class="resumen" role="status" aria-live="polite">Comprobando acceso al vídeo…</p>
 
             {% if produccion.control_visual_verificado %}
                 <div class="estado correcto">
@@ -671,6 +674,7 @@
             <a class="descarga" href="{{ paquete_url }}" download>Descargar proyecto completo</a>
         {% endif %}
     </section>
+    <p class="resumen">Versión {{ version_aplicacion }}</p>
 </main>
 
 <script>
@@ -680,166 +684,69 @@
         const descarga = document.getElementById('descargar-video-borrador');
         if (!video || !estadoVideo || !descarga) return;
 
-        const infoUrl = video.dataset.infoUrl;
-        const mediaUrl = video.dataset.mediaUrl;
-        const downloadUrl = video.dataset.downloadUrl;
-        let blobUrl = null;
-        let preparado = false;
-
         const mostrarEstado = (mensaje, error = false) => {
             estadoVideo.textContent = mensaje;
             estadoVideo.classList.toggle('estado', error);
             estadoVideo.classList.toggle('error', error);
         };
-
-        // El navegador gestiona directamente los rangos HTTP del MP4.
-        // Evitamos fetch/base64 porque algunos proxies privados cortan esa respuesta.
-        if (mediaUrl) {
-            video.src = mediaUrl;
-            video.load();
-            descarga.href = downloadUrl || mediaUrl;
-            descarga.download = 'video_borrador.mp4';
-            preparado = true;
-            mostrarEstado('Vídeo servido directamente. Ya puedes reproducirlo o descargarlo.');
-            return;
-        }
-
-        const decodificarBase64 = (texto) => {
-            const binario = atob(texto);
-            const bytes = new Uint8Array(binario.length);
-            for (let indice = 0; indice < binario.length; indice += 1) {
-                bytes[indice] = binario.charCodeAt(indice);
-            }
-            return bytes;
+        const comprobarLectura = async () => {
+            const respuesta = await fetch(video.dataset.infoUrl, {cache: 'no-store'});
+            const datos = await respuesta.json();
+            if (!respuesta.ok) throw new Error(datos.detail || 'No se puede leer el vídeo.');
+            return datos;
         };
 
-        const cargarDirectamente = async () => {
-            if (!mediaUrl) {
-                throw new Error('No se ha encontrado la ruta directa del vídeo.');
-            }
-            mostrarEstado('La transferencia por bloques falló; probando descarga directa…');
-            const respuesta = await fetch(mediaUrl + (mediaUrl.includes('?') ? '&' : '?') + 'v=' + Date.now(), {
-                cache: 'no-store',
-            });
-            if (!respuesta.ok) {
-                throw new Error('La descarga directa también falló (' + respuesta.status + ').');
-            }
-            const datos = await respuesta.blob();
-            if (!datos.size) {
-                throw new Error('La descarga directa devolvió un vídeo vacío.');
-            }
-            blobUrl = URL.createObjectURL(datos);
-            video.src = blobUrl;
-            video.load();
-            descarga.href = blobUrl;
-            descarga.download = 'video_borrador.mp4';
-            preparado = true;
-            mostrarEstado('Vídeo preparado mediante descarga directa. Ya puedes reproducirlo o descargarlo.');
-        };
-
-        const cargarPorBloques = async () => {
-            if (!infoUrl) {
-                throw new Error('No se ha encontrado la información del vídeo.');
-            }
-
-            mostrarEstado('Preparando la transferencia del vídeo…');
-            const respuestaInfo = await fetch(infoUrl, { cache: 'no-store' });
-            if (!respuestaInfo.ok) {
-                throw new Error('El servidor no pudo informar del vídeo (' + respuestaInfo.status + ').');
-            }
-
-            const info = await respuestaInfo.json();
-            const total = Number(info.tamano_total);
-            const tamanoBloque = Number(info.tamano_bloque);
-            if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(tamanoBloque)) {
-                throw new Error('La información del vídeo está incompleta.');
-            }
-
-            const bloques = [];
-            let recibidos = 0;
-            for (let offset = 0; offset < total; offset += tamanoBloque) {
-                const longitud = Math.min(tamanoBloque, total - offset);
-                const url = info.url_fragmentos
-                    + '?offset=' + offset
-                    + '&length=' + longitud
-                    + '&v=' + Date.now();
-                const respuesta = await fetch(url, { cache: 'no-store' });
-                if (!respuesta.ok) {
-                    throw new Error('Falló el bloque ' + (offset + 1) + ' (' + respuesta.status + ').');
-                }
-
-                const fragmento = await respuesta.json();
-                if (
-                    Number(fragmento.inicio) !== offset
-                    || Number(fragmento.longitud) <= 0
-                    || Number(fragmento.tamano_total) !== total
-                ) {
-                    throw new Error('El servidor devolvió un bloque de vídeo inválido.');
-                }
-
-                const bytes = decodificarBase64(fragmento.datos_base64);
-                bloques.push(bytes);
-                recibidos += bytes.byteLength;
-                mostrarEstado(
-                    'Cargando vídeo… '
-                    + Math.round((recibidos / total) * 100)
-                    + '% ('
-                    + (recibidos / 1048576).toFixed(1)
-                    + ' / '
-                    + (total / 1048576).toFixed(1)
-                    + ' MB)'
-                );
-            }
-
-            const blob = new Blob(bloques, { type: info.tipo || 'video/mp4' });
-            blobUrl = URL.createObjectURL(blob);
-            video.src = blobUrl;
-            video.load();
-            descarga.href = blobUrl;
-            descarga.download = info.nombre || 'video_borrador.mp4';
-            preparado = true;
-            mostrarEstado('Vídeo preparado en el navegador. Ya puedes reproducirlo o descargarlo.');
-        };
-
-        descarga.addEventListener('click', (evento) => {
-            if (!preparado) {
-                evento.preventDefault();
-                mostrarEstado('El vídeo todavía se está cargando; espera a que llegue al 100%.');
-            }
-        });
-
+        // Registrar todos los eventos ANTES de iniciar la carga.
         video.addEventListener('loadedmetadata', () => {
-            const duracion = Number.isFinite(video.duration)
-                ? Math.round(video.duration)
-                : null;
-            mostrarEstado(
-                duracion
-                    ? 'Vídeo cargado · duración aproximada: ' + duracion + ' segundos.'
-                    : 'Vídeo cargado y listo para reproducir.'
-            );
+            mostrarEstado('Datos del vídeo recibidos. Cargando imágenes y audio…');
         });
-
-        video.addEventListener('error', () => {
-            mostrarEstado(
-                'El vídeo se recibió, pero el navegador no pudo interpretarlo.',
-                true
-            );
+        video.addEventListener('loadeddata', () => {
+            mostrarEstado('Vídeo cargado. Puedes pulsar Play.');
         });
-
-        window.addEventListener('beforeunload', () => {
-            if (blobUrl) URL.revokeObjectURL(blobUrl);
+        video.addEventListener('playing', () => {
+            mostrarEstado('Reproduciendo vídeo borrador.');
         });
-
-        cargarPorBloques().catch(async (error) => {
+        video.addEventListener('error', async () => {
+            mostrarEstado('No se ha podido cargar el vídeo. Comprobando el archivo…', true);
             try {
-                await cargarDirectamente();
-            } catch (fallbackError) {
+                await comprobarLectura();
                 mostrarEstado(
-                    'No se pudo cargar el vídeo: ' + fallbackError.message,
+                    'El archivo es legible, pero el navegador no pudo reproducirlo. '
+                    + 'Error de reproducción: ' + (video.error?.code || 'desconocido') + '.',
                     true
                 );
+            } catch (error) {
+                mostrarEstado(error.message, true);
             }
         });
+
+        comprobarLectura().then(() => {
+            descarga.href = video.dataset.downloadUrl;
+            mostrarEstado('Archivo accesible. Cargando el vídeo…');
+            video.src = video.dataset.mediaUrl;
+            video.load();
+        }).catch((error) => mostrarEstado(error.message, true));
+
+        const copia = document.getElementById('copiar-video-descargas');
+        const estadoCopia = document.getElementById('copiar-video-estado');
+        if (copia && estadoCopia) {
+            copia.addEventListener('submit', async (evento) => {
+                evento.preventDefault();
+                const boton = copia.querySelector('button');
+                boton.disabled = true;
+                estadoCopia.textContent = 'Copiando el vídeo a Descargas…';
+                try {
+                    const respuesta = await fetch(copia.action, {method: 'POST'});
+                    const datos = await respuesta.json();
+                    if (!respuesta.ok) throw new Error(datos.detail || 'No se pudo copiar el vídeo.');
+                    estadoCopia.textContent = datos.mensaje + ' ' + datos.ruta;
+                } catch (error) {
+                    estadoCopia.textContent = error.message;
+                } finally {
+                    boton.disabled = false;
+                }
+            });
+        }
     })();
 
     (() => {
