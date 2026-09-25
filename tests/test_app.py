@@ -893,7 +893,11 @@ class AplicacionTests(unittest.TestCase):
 
     def test_error_inesperado_al_empaquetar_no_devuelve_pagina_500(self):
         self.crear_proyecto()
-        with patch.object(main, "crear_paquete", side_effect=RuntimeError("zip corrupto")):
+        with patch.object(
+            main,
+            "crear_paquete",
+            side_effect=RuntimeError("zip corrupto"),
+        ):
             respuesta = self.cliente.post(
                 "/produccion/pergamino-prueba/crear-paquete",
                 follow_redirects=False,

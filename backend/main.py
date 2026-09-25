@@ -3286,7 +3286,10 @@ async def abrir_produccion(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     contexto["request"] = request
-    contexto["paquete_error"] = request.query_params.get("paquete_error", "")[:400]
+    contexto["paquete_error"] = request.query_params.get(
+        "paquete_error",
+        "",
+    )[:400]
     return templates.TemplateResponse(
         request=request,
         name="produccion.html",
