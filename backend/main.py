@@ -195,7 +195,7 @@ with open(
 ) as f:
     plantilla_generacion = f.read()
 
-VERSION_APLICACION = "2026.09.25.2"
+VERSION_APLICACION = "2026.09.25.3"
 app = FastAPI()
 
 
